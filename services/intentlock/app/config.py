@@ -101,6 +101,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
+    # Hosted shopping agent (apps/agent) that runs purchase requests for IntentLock-hosted agents
+    AGENT_SERVICE_URL: Optional[str] = None
+    AGENT_RUN_SECRET: Optional[str] = None
+
     # ------------------------------------------------------------------ #
     # Runtime (not in MANIFEST)
     # ------------------------------------------------------------------ #

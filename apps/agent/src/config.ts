@@ -2,6 +2,7 @@
  * Environment access. Values are read at call time (never copied at import) and never logged.
  * Under Node, a local `.env` is loaded if present (Bun and `ast project start` inject env themselves).
  */
+import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +20,15 @@ const here = dirname(fileURLToPath(import.meta.url));
   }
 })();
 
+// Per-run overrides (a hosted run acting as one user's agent) without touching process.env.
+const overrides = new AsyncLocalStorage<Record<string, string>>();
+
+export function withEnv<T>(values: Record<string, string>, fn: () => Promise<T>): Promise<T> {
+  return overrides.run(values, fn);
+}
+
 export function env(name: string): string | undefined {
-  const v = process.env[name];
+  const v = overrides.getStore()?.[name] ?? process.env[name];
   return v === undefined || v === "" || v === "__FILL_ME__" ? undefined : v;
 }
 

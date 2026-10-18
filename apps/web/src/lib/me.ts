@@ -23,6 +23,19 @@ export interface Summary {
   recent_orders: Order[];
 }
 
+export interface AgentRunView {
+  id: string;
+  status: "running" | "ordered" | "failed";
+  summary: string | null;
+  errors: string[];
+  order_id: string | null;
+  order_status: Order["status"] | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+export type MyAgent = Agent & { managed: boolean };
+
 export interface PurchaseRequest {
   id: string;
   agent_id: string;
@@ -31,6 +44,8 @@ export interface PurchaseRequest {
   signed_at: string;
   signature: string;
   orders: number;
+  agent_managed: boolean;
+  run: AgentRunView | null;
 }
 
 export interface RuleInput {
@@ -75,15 +90,17 @@ export const me = {
   orders: (view: OrderView = "all") => call<Order[]>(`orders?view=${view}`),
   order: (orderId: string) => call<GetOrderResponse>(`orders/${id(orderId)}`),
   approve: (orderId: string, req: OrderApprovalRequest) => call<Order>(`orders/${id(orderId)}/approval`, "POST", req),
-  agents: () => call<Agent[]>("agents"),
-  connectAgent: (b: { name: string; public_key: string; device_id?: string }) => call<Agent>("agents", "POST", b),
-  revokeAgent: (agentId: string) => call<Agent>(`agents/${id(agentId)}/revoke`, "POST"),
+  agents: () => call<MyAgent[]>("agents"),
+  createHostedAgent: (name: string) => call<MyAgent>("agents/hosted", "POST", { name }),
+  connectAgent: (b: { name: string; public_key: string; device_id?: string }) => call<MyAgent>("agents", "POST", b),
+  revokeAgent: (agentId: string) => call<MyAgent>(`agents/${id(agentId)}/revoke`, "POST"),
   rules: () => call<Mandate[]>("mandates"),
   createRule: (b: RuleInput) => call<Mandate>("mandates", "POST", b),
   updateRule: (ruleId: string, b: Partial<RuleInput>) => call<Mandate>(`mandates/${id(ruleId)}`, "PATCH", b),
   endRule: (ruleId: string) => call<Mandate>(`mandates/${id(ruleId)}/revoke`, "POST"),
   requests: () => call<PurchaseRequest[]>("requests"),
   createRequest: (b: { agent_id: string; request_text: string }) => call<PurchaseRequest>("requests", "POST", b),
+  runRequest: (requestId: string) => call<AgentRunView>(`requests/${id(requestId)}/run`, "POST"),
   payment: () => call<{ connected: boolean }>("payment"),
   paymentSetup: () => call<{ approve_url: string }>("payment/setup", "POST"),
 };

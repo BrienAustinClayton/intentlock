@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Copy, Check, Plug, X } from "lucide-react";
+import { Bot, Check, Copy, Plug, Sparkles, X } from "lucide-react";
 import { FormError, inputClass } from "@/components/auth/AuthFrame";
 import {
   EmptyState,
@@ -18,7 +18,7 @@ import {
   when,
 } from "@/components/ui";
 import { me } from "@/lib/me";
-import type { Agent } from "@/lib/types";
+import { type MyAgent } from "@/lib/me";
 
 function CopyId({ value }: { value: string }) {
   const [done, setDone] = useState(false);
@@ -36,8 +36,9 @@ function CopyId({ value }: { value: string }) {
 }
 
 export default function AgentsPage() {
-  const [rows, setRows] = useState<Agent[] | null>(null);
-  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<MyAgent[] | null>(null);
+  const [open, setOpen] = useState<"hosted" | "own" | null>(null);
+  const [hostedName, setHostedName] = useState("My shopping agent");
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [device, setDevice] = useState("");
@@ -60,7 +61,7 @@ export default function AgentsPage() {
       setName("");
       setKey("");
       setDevice("");
-      setOpen(false);
+      setOpen(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -68,7 +69,23 @@ export default function AgentsPage() {
     }
   }
 
-  async function disconnect(a: Agent) {
+  async function createHosted(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const a = await me.createHostedAgent(hostedName.trim());
+      setRows((r) => [a, ...(r ?? [])]);
+      setOpen(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnect(a: MyAgent) {
     if (!window.confirm(`Disconnect ${a.name}? It will no longer be able to check out on your behalf.`)) return;
     try {
       const updated = await me.revokeAgent(a.id);
@@ -82,30 +99,68 @@ export default function AgentsPage() {
     <div>
       <PageHeader
         title="Agents"
-        description="AI agents allowed to shop for you. Each one signs its checkouts with a private key; IntentLock verifies the signature with the public key you register here."
+        description="AI agents allowed to shop for you. Every checkout an agent makes is signed, checked against your rules, and only then paid."
         actions={
           !open && (
-            <button type="button" onClick={() => setOpen(true)} className="intentlock-btn-primary">
-              <Plug className="w-4 h-4" strokeWidth={1.8} />
-              Connect agent
-            </button>
+            <>
+              <button type="button" onClick={() => (setOpen("own"), setError(null))} className="intentlock-btn-outline">
+                <Plug className="w-4 h-4" strokeWidth={1.8} />
+                Connect your own
+              </button>
+              <button type="button" onClick={() => (setOpen("hosted"), setError(null))} className="intentlock-btn-primary">
+                <Sparkles className="w-4 h-4" strokeWidth={1.8} />
+                Create agent
+              </button>
+            </>
           )
         }
       />
 
       <ErrorNote message={loadError} />
 
-      {open && (
+      {open === "hosted" && (
+        <Panel className="mb-5">
+          <form onSubmit={createHosted} className="p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-sm font-semibold">Create a shopping agent</h2>
+                <p className="text-xs text-fg-muted max-w-xl">
+                  IntentLock runs this agent for you. It only shops for purchase requests you send, and every checkout still
+                  has to pass your spending rules. No keys or setup needed.
+                </p>
+              </div>
+              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="p-1 rounded-md text-fg-dim hover:text-fg hover:bg-fg/5">
+                <X className="w-4 h-4" strokeWidth={1.8} />
+              </button>
+            </div>
+            <label className="block space-y-1.5 max-w-sm">
+              <span className="block text-[13px] font-medium text-fg-2">Name</span>
+              <input required maxLength={100} value={hostedName} onChange={(e) => setHostedName(e.target.value)} className={inputClass} />
+            </label>
+            <FormError message={error} />
+            <div className="flex items-center gap-2">
+              <button type="submit" disabled={busy || !hostedName.trim()} className="intentlock-btn-primary">
+                {busy ? "Creating…" : "Create agent"}
+              </button>
+              <button type="button" onClick={() => setOpen(null)} className="intentlock-btn-outline">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Panel>
+      )}
+
+      {open === "own" && (
         <Panel className="mb-5">
           <form onSubmit={connect} className="p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-sm font-semibold">Connect an agent</h2>
+                <h2 className="text-sm font-semibold">Connect your own agent</h2>
                 <p className="text-xs text-fg-muted">
                   Paste the agent&apos;s Ed25519 public key (base64url, 43 characters). The private key never leaves the agent.
                 </p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="p-1 rounded-md text-fg-dim hover:text-fg hover:bg-fg/5">
+              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="p-1 rounded-md text-fg-dim hover:text-fg hover:bg-fg/5">
                 <X className="w-4 h-4" strokeWidth={1.8} />
               </button>
             </div>
@@ -136,7 +191,7 @@ export default function AgentsPage() {
               <button type="submit" disabled={busy || !name.trim() || !key.trim()} className="intentlock-btn-primary">
                 {busy ? "Connecting…" : "Connect"}
               </button>
-              <button type="button" onClick={() => setOpen(false)} className="intentlock-btn-outline">
+              <button type="button" onClick={() => setOpen(null)} className="intentlock-btn-outline">
                 Cancel
               </button>
             </div>
@@ -148,8 +203,16 @@ export default function AgentsPage() {
         {rows && rows.length === 0 ? (
           <EmptyState
             icon={Bot}
-            title="No agents connected"
-            body="Connect the AI agent that shops for you. Until then, IntentLock rejects every checkout because no signature can be verified."
+            title="No agents yet"
+            body="Create an agent and IntentLock will shop for your purchase requests, inside your spending rules."
+            action={
+              !open && (
+                <button type="button" onClick={() => setOpen("hosted")} className="intentlock-btn-primary btn-sm">
+                  <Sparkles className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  Create agent
+                </button>
+              )
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -157,6 +220,7 @@ export default function AgentsPage() {
               <thead className={theadClass}>
                 <tr>
                   <th className={th}>Name</th>
+                  <th className={th}>Type</th>
                   <th className={th}>Agent ID</th>
                   <th className={th}>Status</th>
                   <th className={th}>Device</th>
@@ -166,18 +230,21 @@ export default function AgentsPage() {
               </thead>
               <tbody>
                 {!rows ? (
-                  <SkeletonRows rows={2} cols={6} />
+                  <SkeletonRows rows={2} cols={7} />
                 ) : (
                   rows.map((a) => (
                     <tr key={a.id} className={rowClass}>
                       <td className={`${td} text-fg font-medium`}>{a.name}</td>
+                      <td className={td}>
+                        {a.managed ? <Tag tone="brand">Hosted by IntentLock</Tag> : <Tag>Your own</Tag>}
+                      </td>
                       <td className={td}>
                         <CopyId value={a.id} />
                       </td>
                       <td className={td}>
                         {a.revoked_at ? <Tag tone="neutral">Disconnected</Tag> : <Tag tone="success" dot>Active</Tag>}
                       </td>
-                      <td className={`${td} text-fg-dim`}>{a.device_id === "unspecified" ? "" : a.device_id}</td>
+                      <td className={`${td} text-fg-dim`}>{a.managed || a.device_id === "unspecified" ? "" : a.device_id}</td>
                       <td className={`${td} text-fg-dim whitespace-nowrap`}>{when(a.created_at)}</td>
                       <td className={`${td} text-right`}>
                         {!a.revoked_at && (

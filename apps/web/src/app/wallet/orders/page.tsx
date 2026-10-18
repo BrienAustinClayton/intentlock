@@ -120,16 +120,16 @@ export default function WalletOrdersPage() {
   const pendingApprovals = orders.filter((o) => o.status === "pending_approval");
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Orders & Settlement Ledger
           </h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-sm text-gray-600">
             Real-time audit log of autonomous checkout requests and human approval holds.
             {isChecking(orders) && (
-              <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+              <span className="text-gray-900 font-medium">
                 {" "}• Pipeline in progress, auto-refreshing...
               </span>
             )}
@@ -137,9 +137,9 @@ export default function WalletOrdersPage() {
         </div>
         <Link
           href="/wallet/request"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-gray-800 transition shadow-xs"
         >
-          <span>+ Create Intent Request</span>
+          + Create Intent Request
         </Link>
       </div>
 

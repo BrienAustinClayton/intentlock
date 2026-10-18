@@ -94,12 +94,12 @@ export default function WalletRequestPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Create Agent Intent Request
         </h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        <p className="mt-1 text-sm text-gray-600">
           Sign a cryptographically verifiable purchase prompt. The agent uses this text to buy items, and IntentLock verifies every cart line against it.
         </p>
       </div>
@@ -107,12 +107,12 @@ export default function WalletRequestPage() {
       <WalletNav />
 
       {/* Request Form */}
-      <div className="saas-card p-6">
+      <div className="saas-card p-5">
         <form onSubmit={handleCreateIntent} className="space-y-4">
           <div>
             <label
               htmlFor="agent-select"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-semibold text-gray-700 mb-1"
             >
               Assigned Shopping Agent
             </label>
@@ -120,7 +120,7 @@ export default function WalletRequestPage() {
               id="agent-select"
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-mono text-gray-900"
             >
               {DEMO_AGENTS.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -133,7 +133,7 @@ export default function WalletRequestPage() {
           <div>
             <label
               htmlFor="request-text"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-semibold text-gray-700 mb-1"
             >
               Natural Language Intent Prompt
             </label>
@@ -143,10 +143,10 @@ export default function WalletRequestPage() {
               onChange={(e) => setRequestText(e.target.value)}
               rows={4}
               placeholder="e.g. 2 organic whole milks and fresh sourdough bread under $25 from FreshMart"
-              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white leading-relaxed"
+              className="w-full rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-900 placeholder:text-gray-400 leading-relaxed"
             />
             {intentError && (
-              <p className="text-xs mt-1.5 text-rose-600 dark:text-rose-400 font-medium">
+              <p className="text-xs mt-1.5 text-rose-600 font-medium">
                 {intentError}
               </p>
             )}
@@ -154,7 +154,7 @@ export default function WalletRequestPage() {
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
             disabled={intentLoading}
           >
             {intentLoading ? "Signing Intent with Ed25519..." : "Sign & Create Intent"}
@@ -164,29 +164,29 @@ export default function WalletRequestPage() {
 
       {/* Intent Created Success Box */}
       {intentId && intentSig && (
-        <div className="saas-card p-6 border-indigo-500/30 bg-indigo-50/15 dark:bg-indigo-950/20 space-y-4">
+        <div className="saas-card p-5 border-gray-300 bg-gray-50/50 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="saas-badge saas-badge-success text-xs font-semibold">
                 ✓ Cryptographically Signed
               </span>
-              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+              <span className="text-xs font-semibold text-gray-900">
                 Intent Stored in Gateway
               </span>
             </div>
-            <span className="font-mono text-xs text-slate-500">
+            <span className="font-mono text-xs text-gray-500">
               User: {DEMO_USER_ID}
             </span>
           </div>
 
-          <div className="rounded-lg border border-slate-200/80 bg-white/80 p-3.5 dark:border-slate-800 dark:bg-slate-900/60 font-mono text-xs space-y-1.5">
+          <div className="rounded-md border border-gray-200 bg-white p-3 font-mono text-xs space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Intent ID:</span>
-              <span className="font-bold text-slate-900 dark:text-white">{intentId}</span>
+              <span className="text-gray-500">Intent ID:</span>
+              <span className="font-bold text-gray-900">{intentId}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Signature:</span>
-              <span className="text-indigo-600 dark:text-indigo-400" title={intentSig}>
+              <span className="text-gray-500">Signature:</span>
+              <span className="text-gray-900 font-mono" title={intentSig}>
                 {shortSig(intentSig)}
               </span>
             </div>
@@ -194,7 +194,7 @@ export default function WalletRequestPage() {
 
           <div className="flex items-center gap-3 pt-1">
             <button
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
               onClick={handleRunAgent}
               disabled={agentLoading}
             >
@@ -202,7 +202,7 @@ export default function WalletRequestPage() {
             </button>
             <Link
               href="/wallet/orders"
-              className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white underline font-medium"
+              className="text-xs text-gray-600 hover:text-gray-900 underline font-medium"
             >
               View Orders Ledger &rarr;
             </Link>

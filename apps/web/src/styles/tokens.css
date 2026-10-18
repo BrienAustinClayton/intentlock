@@ -74,23 +74,24 @@
   --color-neutral-950: #020617;
 
   /* Semantic aliases – light mode */
-  --color-bg: #f8fafc;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-subtle: #f1f5f9;
-  --color-surface-hover: #e2e8f0;
-  --color-border: #e2e8f0;
+  --color-surface-subtle: #f8fafc;
+  --color-surface-raised: #fafafa;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e5e7eb;
   --color-border-subtle: #f1f5f9;
-  --color-border-strong: #cbd5e1;
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
+  --color-border-strong: #d1d5db;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
   --color-brand: var(--color-primary-600);
   --color-brand-hover: var(--color-primary-700);
 
-  /* Elevation & Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
-  --shadow-card: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.06);
+  /* Elevation & Shadows – minimal */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-card: var(--shadow-xs);
+  --shadow-md: var(--shadow-sm);
 
   /* Status tokens */
   --color-status-received: var(--color-neutral-500);
@@ -107,23 +108,24 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Semantic aliases – dark mode */
-    --color-bg: #090d16;
-    --color-surface: #0f172a;
-    --color-surface-subtle: #1e293b;
-    --color-surface-hover: #334155;
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-subtle: rgba(255, 255, 255, 0.05);
-    --color-border-strong: rgba(255, 255, 255, 0.18);
-    --color-text: #f8fafc;
-    --color-text-muted: #94a3b8;
-    --color-brand: #6366f1;
-    --color-brand-hover: #818cf8;
+    --color-bg: #0a0a0a;
+    --color-surface: #111111;
+    --color-surface-subtle: #1a1a1a;
+    --color-surface-raised: #171717;
+    --color-surface-hover: #262626;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-subtle: rgba(255, 255, 255, 0.04);
+    --color-border-strong: rgba(255, 255, 255, 0.14);
+    --color-text: #fafafa;
+    --color-text-muted: #a1a1aa;
+    --color-brand: #818cf8;
+    --color-brand-hover: #a5b4fc;
 
     /* Elevation & Shadows - dark mode */
-    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
-    --shadow-card: 0 4px 8px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 12px 20px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+    --shadow-card: var(--shadow-xs);
+    --shadow-md: var(--shadow-sm);
 
     /* Status tokens – dark */
     --color-status-received: var(--color-neutral-400);

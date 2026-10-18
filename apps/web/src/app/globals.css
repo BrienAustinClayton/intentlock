@@ -33,8 +33,9 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   text-wrap: balance;
+  font-weight: 600;
 }
 
 p {
@@ -50,13 +51,14 @@ code, pre, kbd, samp {
 .saas-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 8px;
+  box-shadow: none;
+  transition: border-color 0.15s ease;
 }
 
 .saas-card:hover {
   border-color: var(--color-border-strong);
+  box-shadow: none;
 }
 
 .saas-card-interactive {
@@ -65,7 +67,7 @@ code, pre, kbd, samp {
 
 .saas-card-interactive:hover {
   border-color: var(--color-brand);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .saas-badge {
@@ -114,9 +116,7 @@ code, pre, kbd, samp {
 /* Brand token utility classes - backward compatible */
 .intentlock-topnav {
   border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-bg);
 }
 
 .intentlock-brand {

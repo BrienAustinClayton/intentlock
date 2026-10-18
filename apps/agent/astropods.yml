@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://astropods.com/schema/package.json
+spec: blueprint/v1
+name: intentlock-agent
+
+agent:
+  build:
+    context: .
+    dockerfile: Dockerfile
+  interfaces:
+    messaging: true
+    frontend: true # public host; POST /run {intent_id} is served on PORT (80 when deployed)
+
+models:
+  # Astro AI Gateway: managed model access (injects ASTRO_GATEWAY_URL + ASTRO_GATEWAY_API_KEY at deploy).
+  default:
+    provider: gateway
+    models: [claude-sonnet-4-6]
+
+inputs:
+  INTENTLOCK_API_URL:
+    name: INTENTLOCK_API_URL
+    datatype: string
+    description: IntentLock API base URL (Render URL when deployed). Locally from Docker use http://host.docker.internal:8000
+  INTENTLOCK_SIGN_BASE_URL:
+    name: INTENTLOCK_SIGN_BASE_URL
+    datatype: string
+    optional: true
+    description: Signed @target-uri base; must equal the API's PUBLIC_BASE_URL. Only set when it differs from INTENTLOCK_API_URL (local Docker).
+  AGENT_ID:
+    name: AGENT_ID
+    datatype: string
+    default: agt_demo_shopper
+    description: Registered agent id (keyid of every signed request)
+  AGENT_PRIVATE_KEY:
+    name: AGENT_PRIVATE_KEY
+    datatype: string
+    secret: true
+    description: Ed25519 raw 32-byte private key, base64url no padding
+  CHANNEL3_API_KEY:
+    name: CHANNEL3_API_KEY
+    datatype: string
+    secret: true
+    optional: true
+    description: Only used when LIVE=1 (direct Channel3 search)
+  LIVE:
+    name: LIVE
+    datatype: string
+    optional: true
+    default: "0"
+    description: "1 = also query Channel3 live"
+
+dev:
+  interfaces:
+    messaging:
+      adapters: [web]
+    frontend:
+      port: 8808

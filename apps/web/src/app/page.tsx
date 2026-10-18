@@ -43,7 +43,7 @@ export default function HomePage() {
   const steps = s
     ? [
         { done: s.payment_connected, label: "Connect a payment method", body: "IntentLock holds funds and only pays once checks pass.", href: "/payment" },
-        { done: s.agents_active > 0, label: "Connect your shopping agent", body: "Register the agent's public key so we can verify its signature.", href: "/agents" },
+        { done: s.agents_active > 0, label: "Create your shopping agent", body: "IntentLock runs it for you, or connect an agent you already use.", href: "/agents" },
         { done: s.rules_active > 0, label: "Set a spending rule", body: "Budget, categories and stores your agent is allowed to use.", href: "/rules" },
         { done: s.requests > 0, label: "Send a purchase request", body: "Tell your agent what to buy. We check every order against it.", href: "/requests" },
       ]

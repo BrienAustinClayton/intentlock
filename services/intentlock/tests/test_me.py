@@ -116,3 +116,112 @@ def test_bad_public_key(client, two):
     (_, ha), _ = two
     r = client.post("/me/agents", headers=ha, json={"name": "x", "public_key": "not-a-key"})
     assert r.status_code == 422 and r.json()["error"] == "invalid_public_key"
+
+
+# --------------------------------------------------------------------------- #
+# Hosted agents and runs
+# --------------------------------------------------------------------------- #
+
+from app import hosted_agents  # noqa: E402
+from app.config import settings  # noqa: E402
+from app.models import Agent, AgentRun  # noqa: E402
+
+
+class _Resp:
+    def __init__(self, status, body):
+        self.status_code, self._b = status, body
+
+    def json(self):
+        return self._b
+
+
+@pytest.fixture()
+def hosted(monkeypatch, db):
+    monkeypatch.setattr(settings, "AUTH_SECRET", "test-secret")
+    monkeypatch.setattr(settings, "AGENT_SERVICE_URL", "http://agent.test")
+    monkeypatch.setattr(settings, "AGENT_RUN_SECRET", "run-secret")
+    calls, reply = [], {"value": _Resp(200, {"order_id": None, "summary": "No chocolate in the catalog.", "errors": []})}
+
+    def fake_post(url, **kw):
+        calls.append((url, kw))
+        r = reply["value"]
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+    monkeypatch.setattr(hosted_agents.httpx, "post", fake_post)
+    real = hosted_agents.execute_run
+    monkeypatch.setattr(hosted_agents, "execute_run", lambda rid: real(rid, db=db))
+    return calls, reply
+
+
+def _hosted_agent(client, h):
+    r = client.post("/me/agents/hosted", headers=h, json={"name": "Shopper"})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_hosted_agent_key_is_sealed_and_never_returned(client, db, two, hosted):
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    assert a["managed"] is True and "secret_enc" not in a
+    row = db.get(Agent, a["id"])
+    assert row.secret_enc.startswith("v1.")
+    key = hosted_agents.unseal(row.secret_enc, row.id)
+    from app.crypto.keys import load_private_key, public_key_b64
+    assert public_key_b64(load_private_key(key)) == row.public_key
+    with pytest.raises(Exception):
+        hosted_agents.unseal(row.secret_enc, "agt_other")
+    assert all("secret" not in k for x in client.get("/me/agents", headers=ha).json() for k in x)
+
+
+def test_request_runs_hosted_agent_and_records_failure(client, two, hosted):
+    calls, _ = hosted
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    r = client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "Chocolates worth $2"})
+    assert r.status_code == 201, r.text
+    assert r.json()["run"]["status"] == "running"
+    url, kw = calls[0]
+    assert url == "http://agent.test/run" and kw["headers"]["Authorization"] == "Bearer run-secret"
+    assert kw["json"]["agent_id"] == a["id"] and kw["json"]["agent_private_key"]
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and run["summary"] == "No chocolate in the catalog."
+
+
+def test_run_that_orders_and_rerun_rules(client, db, two, hosted):
+    calls, reply = hosted
+    (alice, ha), (_, hb) = two
+    a = _hosted_agent(client, ha)
+    reply["value"] = hosted_agents.httpx.ConnectError("down")
+    req = client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "USB-C cable"}).json()
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and "reach" in run["summary"]
+
+    o = _order(db, alice, req["id"], a["id"], "captured")
+    reply["value"] = _Resp(200, {"order_id": o.id, "summary": "Bought it.", "errors": []})
+    assert client.post(f"/me/requests/{req['id']}/run", headers=hb).status_code == 404
+    assert client.post(f"/me/requests/{req['id']}/run", headers=ha).status_code == 202
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "ordered" and run["order_id"] == o.id and run["order_status"] == "captured"
+    assert client.post(f"/me/requests/{req['id']}/run", headers=ha).json()["error"] == "already_ordered"
+    assert db.query(AgentRun).count() == 2
+
+
+def test_own_agent_requests_are_not_run(client, two, hosted):
+    calls, _ = hosted
+    (_, ha), _ = two
+    a = _agent(client, ha)
+    req = client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "milk"}).json()
+    assert req["run"] is None and calls == []
+    assert client.post(f"/me/requests/{req['id']}/run", headers=ha).json()["error"] == "not_hosted"
+
+
+def test_agent_service_error_is_reported(client, two, hosted):
+    _, reply = hosted
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    reply["value"] = _Resp(403, {"reason": "intent belongs to a different agent"})
+    client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "milk please"})
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and "different agent" in run["summary"]

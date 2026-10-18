@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bot, MessageSquarePlus, MessageSquareText, X } from "lucide-react";
+import { Bot, Loader2, MessageSquarePlus, MessageSquareText, RotateCw, X } from "lucide-react";
 import { FormError, inputClass } from "@/components/auth/AuthFrame";
 import {
   EmptyState,
   ErrorNote,
+  OrderStatusTag,
   PageHeader,
   Panel,
   SkeletonRows,
@@ -19,8 +20,7 @@ import {
   theadClass,
   when,
 } from "@/components/ui";
-import { me, type PurchaseRequest } from "@/lib/me";
-import type { Agent } from "@/lib/types";
+import { me, type MyAgent, type PurchaseRequest } from "@/lib/me";
 
 const EXAMPLES = [
   "2 litres of organic whole milk and a sourdough loaf, under $15",
@@ -31,13 +31,77 @@ const EXAMPLES = [
 export default function RequestsClient() {
   const params = useSearchParams();
   const [rows, setRows] = useState<PurchaseRequest[] | null>(null);
-  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [agents, setAgents] = useState<MyAgent[] | null>(null);
   const [open, setOpen] = useState(params.get("new") === "1");
   const [agentId, setAgentId] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [why, setWhy] = useState<PurchaseRequest | null>(null);
+  const shopping = rows?.some((r) => r.run?.status === "running") ?? false;
+
+  useEffect(() => {
+    if (!shopping) return;
+    const t = setInterval(() => {
+      me.requests().then(setRows, () => {});
+    }, 4000);
+    return () => clearInterval(t);
+  }, [shopping]);
+
+  async function retry(r: PurchaseRequest) {
+    try {
+      const run = await me.runRequest(r.id);
+      setRows((rs) => (rs ?? []).map((x) => (x.id === r.id ? { ...x, run } : x)));
+      setWhy(null);
+    } catch (err) {
+      setLoadError((err as Error).message);
+    }
+  }
+
+  function status(r: PurchaseRequest) {
+    const run = r.run;
+    if (run?.status === "running") {
+      return (
+        <Tag tone="brand">
+          <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
+          Agent shopping
+        </Tag>
+      );
+    }
+    if (run?.status === "ordered" && run.order_id && run.order_status) {
+      return (
+        <Link href={`/orders/${run.order_id}`} title="Open order">
+          <OrderStatusTag status={run.order_status} />
+        </Link>
+      );
+    }
+    if (run?.status === "failed") {
+      return (
+        <span className="inline-flex items-center gap-2">
+          <Tag tone="danger">Failed</Tag>
+          <button type="button" onClick={() => setWhy(r)} className="text-xs text-indigo-400 hover:text-indigo-300 transition">
+            See why
+          </button>
+        </span>
+      );
+    }
+    if (r.orders > 0) {
+      return (
+        <Link href="/orders">
+          <Tag tone="success">{r.orders === 1 ? "1 order" : `${r.orders} orders`}</Tag>
+        </Link>
+      );
+    }
+    if (r.agent_managed) {
+      return (
+        <button type="button" onClick={() => retry(r)} className="intentlock-btn-outline btn-sm">
+          Run now
+        </button>
+      );
+    }
+    return <Tag tone="neutral">Waiting for your agent</Tag>;
+  }
 
   useEffect(() => {
     Promise.all([me.requests(), me.agents()]).then(
@@ -74,7 +138,7 @@ export default function RequestsClient() {
     <div>
       <PageHeader
         title="Purchase requests"
-        description="Tell your agent what to buy. IntentLock signs the request and checks every order your agent places against it."
+        description="Tell your agent what to buy. Hosted agents start shopping right away; every order is checked against your request before anything is paid."
         actions={
           !open &&
           !noAgents && (
@@ -154,7 +218,7 @@ export default function RequestsClient() {
             <FormError message={error} />
             <div className="flex items-center gap-2">
               <button type="submit" disabled={busy || text.trim().length < 3 || !(agentId || agents?.[0]?.id)} className="intentlock-btn-primary">
-                {busy ? "Signing…" : "Sign and send"}
+                {busy ? "Sending…" : "Send to agent"}
               </button>
               <button type="button" onClick={() => setOpen(false)} className="intentlock-btn-outline">
                 Cancel
@@ -170,7 +234,7 @@ export default function RequestsClient() {
             <EmptyState
               icon={MessageSquareText}
               title="No purchase requests yet"
-              body="Each request you send is signed by IntentLock. Your agent fetches it, shops, and every checkout is compared with it."
+              body="Each request is signed by IntentLock and sent to your agent. Every checkout it makes is compared with what you asked for."
             />
           ) : (
             <div className="overflow-x-auto">
@@ -194,15 +258,7 @@ export default function RequestsClient() {
                           <span className="line-clamp-2">{r.request_text}</span>
                         </td>
                         <td className={td}>{r.agent_name ?? r.agent_id}</td>
-                        <td className={td}>
-                          {r.orders > 0 ? (
-                            <Link href="/orders">
-                              <Tag tone="success">{r.orders === 1 ? "1 order" : `${r.orders} orders`}</Tag>
-                            </Link>
-                          ) : (
-                            <Tag tone="neutral">Waiting for agent</Tag>
-                          )}
-                        </td>
+                        <td className={`${td} whitespace-nowrap`}>{status(r)}</td>
                         <td className={`${td} font-mono text-xs text-fg-dim`}>{r.id}</td>
                         <td className={`${td} text-fg-dim whitespace-nowrap`}>{when(r.signed_at)}</td>
                       </tr>
@@ -213,6 +269,59 @@ export default function RequestsClient() {
             </div>
           )}
         </Panel>
+      )}
+      {why && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="why-title">
+          <button type="button" aria-label="Close" onClick={() => setWhy(null)} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+          <div className="popover relative w-full max-w-lg p-5 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="why-title" className="text-sm font-semibold">Why this request failed</h2>
+                <p className="text-xs text-fg-muted">
+                  {why.agent_name ?? "Your agent"} · {when(why.run?.finished_at ?? why.run?.started_at)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setWhy(null)} aria-label="Close" className="p-1 rounded-md text-fg-dim hover:text-fg hover:bg-fg/5">
+                <X className="w-4 h-4" strokeWidth={1.8} />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-fg-dim">You asked for</div>
+              <p className="text-sm text-fg-2">{why.request_text}</p>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-fg-dim">The agent said</div>
+              <p className="text-sm text-fg whitespace-pre-wrap rounded-lg bg-fg/[0.04] px-3 py-2.5">
+                {why.run?.summary || "The agent didn't give a reason."}
+              </p>
+            </div>
+            {why.run && why.run.errors.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-fg-dim">Errors</div>
+                <ul className="text-xs text-rose-400 space-y-1 font-mono">
+                  {why.run.errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="text-xs text-fg-dim">
+              Agents can only buy from the IntentLock store catalog: groceries, electronics accessories and gift cards.
+              Rephrasing the request or widening your spending rules can help.
+            </p>
+            <div className="flex items-center gap-2">
+              {why.agent_managed && (
+                <button type="button" onClick={() => retry(why)} className="intentlock-btn-primary btn-sm">
+                  <RotateCw className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  Try again
+                </button>
+              )}
+              <button type="button" onClick={() => setWhy(null)} className="intentlock-btn-outline btn-sm">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

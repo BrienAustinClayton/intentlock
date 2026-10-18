@@ -57,6 +57,8 @@ class Agent(Base):
     public_key = Column(String, nullable=False)
     device_id = Column(String, nullable=False)
     verified = Column(Boolean, nullable=False, default=False)
+    managed = Column(Boolean, nullable=False, default=False, server_default="false")
+    secret_enc = Column(Text, nullable=True)  # AES-GCM sealed private key, hosted agents only
     revoked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -305,3 +307,19 @@ class UserSession(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     revoked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AgentRun(Base):
+    """One hosted-agent attempt at a purchase request, with what the agent reported."""
+    __tablename__ = "agent_runs"
+
+    id = Column(String, primary_key=True)
+    intent_id = Column(String, ForeignKey("intents.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    status = Column(String, nullable=False)  # running | ordered | failed
+    summary = Column(Text, nullable=True)
+    errors = Column(JSONB, nullable=True)
+    order_id = Column(String, nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True), nullable=True)

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -19,10 +19,11 @@ from app.api.vault import vault_setup
 from app.auth import current_user
 from app.crypto.keys import load_public_key
 from app.db import get_db
+from app import hosted_agents
 from app.ids import new_id
 from app.intents import create_intent, intent_to_dict
 from app.mandates import create_mandate, list_mandates_for_user, mandate_to_dict, revoke_mandate, update_mandate
-from app.models import Agent, Intent, Mandate, Order, User
+from app.models import Agent, AgentRun, Intent, Mandate, Order, User
 from app.service_errors import ServiceError
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -33,6 +34,10 @@ BUCKETS: dict[str, tuple[str, ...]] = {
     "blocked": ("voided", "rejected", "failed"),
     "in_progress": ("received", "authorized", "checking"),
 }
+
+
+def _agent_view(a: Agent) -> dict[str, Any]:
+    return {**_agent_out(a), "managed": bool(a.managed)}
 
 
 def _not_found(what: str) -> HTTPException:
@@ -149,7 +154,7 @@ def agents(user: User = Depends(current_user), db: Session = Depends(get_db)) ->
     rows = db.execute(
         select(Agent).where(Agent.user_id == user.id).order_by(Agent.created_at.desc())
     ).scalars().all()
-    return [_agent_out(a) for a in rows]
+    return [_agent_view(a) for a in rows]
 
 
 @router.post("/agents", status_code=201)
@@ -164,7 +169,24 @@ def connect_agent(body: AgentConnect, user: User = Depends(current_user), db: Se
     db.add(agent)
     db.commit()
     db.refresh(agent)
-    return _agent_out(agent)
+    return _agent_view(agent)
+
+
+class HostedAgentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    name: str = Field(min_length=1, max_length=100)
+
+
+@router.post("/agents/hosted", status_code=201)
+def create_hosted_agent(body: HostedAgentCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    try:
+        agent = hosted_agents.new_hosted_agent(user.id, body.name)
+    except hosted_agents.HostedAgentError as e:
+        raise HTTPException(e.status, detail={"error": e.code, "reason": e.message})
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+    return _agent_view(agent)
 
 
 @router.post("/agents/{agent_id}/revoke")
@@ -174,7 +196,7 @@ def revoke_agent(agent_id: str, user: User = Depends(current_user), db: Session 
         agent.revoked_at = datetime.now(timezone.utc)
         db.commit()
     db.refresh(agent)
-    return _agent_out(agent)
+    return _agent_view(agent)
 
 
 # --------------------------------------------------------------------------- #
@@ -227,21 +249,47 @@ class RequestCreate(BaseModel):
     request_text: str = Field(min_length=3, max_length=2000)
 
 
+def _latest_runs(db: Session, user: User, intent_ids: list[str]) -> dict[str, dict]:
+    if not intent_ids:
+        return {}
+    runs = db.execute(
+        select(AgentRun).where(AgentRun.user_id == user.id, AgentRun.intent_id.in_(intent_ids))
+        .order_by(AgentRun.started_at.asc())
+    ).scalars().all()
+    latest = {r.intent_id: r for r in runs}
+    orders = {o.id: o for o in db.execute(
+        select(Order).where(Order.id.in_([r.order_id for r in latest.values() if r.order_id]))
+    ).scalars()} if any(r.order_id for r in latest.values()) else {}
+    return {i: hosted_agents.run_to_dict(r, orders.get(r.order_id)) for i, r in latest.items()}
+
+
+def _request_view(i: Intent, agent: Agent | None, orders: int, run: dict | None) -> dict[str, Any]:
+    return {**intent_to_dict(i), "agent_name": agent.name if agent else None,
+            "agent_managed": bool(agent and agent.managed), "orders": orders, "run": run}
+
+
 @router.get("/requests")
-def intents(user: User = Depends(current_user), db: Session = Depends(get_db)) -> list[dict]:
+def requests(user: User = Depends(current_user), db: Session = Depends(get_db)) -> list[dict]:
     rows = db.execute(
         select(Intent).where(Intent.user_id == user.id).order_by(Intent.signed_at.desc()).limit(200)
     ).scalars().all()
     order_counts = dict(db.execute(
         select(Order.intent_id, func.count()).where(Order.user_id == user.id).group_by(Order.intent_id)
     ).all())
-    names = {a.id: a.name for a in db.execute(select(Agent).where(Agent.user_id == user.id)).scalars()}
-    return [{**intent_to_dict(i), "agent_name": names.get(i.agent_id), "orders": order_counts.get(i.id, 0)}
-            for i in rows]
+    agents = {a.id: a for a in db.execute(select(Agent).where(Agent.user_id == user.id)).scalars()}
+    runs = _latest_runs(db, user, [i.id for i in rows])
+    return [_request_view(i, agents.get(i.agent_id), order_counts.get(i.id, 0), runs.get(i.id)) for i in rows]
+
+
+def _start(db: Session, background: BackgroundTasks, user: User, intent_id: str, agent: Agent) -> dict:
+    run = hosted_agents.start_run(db, intent_id, user.id, agent.id)
+    background.add_task(hosted_agents.execute_run, run.id)
+    return hosted_agents.run_to_dict(run)
 
 
 @router.post("/requests", status_code=201)
-def add_intent(body: RequestCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def add_request(body: RequestCreate, background: BackgroundTasks, user: User = Depends(current_user),
+                db: Session = Depends(get_db)):
     agent = _own_agent(db, user, body.agent_id)
     if agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_revoked", "reason": "This agent is disconnected."})
@@ -249,7 +297,28 @@ def add_intent(body: RequestCreate, user: User = Depends(current_user), db: Sess
         i = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=body.request_text)
     except ServiceError as e:
         raise HTTPException(e.status_code, detail={"error": e.error, "reason": e.reason})
-    return {**intent_to_dict(i), "agent_name": agent.name, "orders": 0}
+    run = _start(db, background, user, i.id, agent) if agent.managed else None
+    return _request_view(i, agent, 0, run)
+
+
+@router.post("/requests/{request_id}/run", status_code=202)
+def rerun_request(request_id: str, background: BackgroundTasks, user: User = Depends(current_user),
+                  db: Session = Depends(get_db)):
+    i = db.get(Intent, request_id)
+    if i is None or i.user_id != user.id:
+        raise _not_found("purchase request")
+    agent = _own_agent(db, user, i.agent_id)
+    if not agent.managed:
+        raise HTTPException(409, detail={"error": "not_hosted",
+                                         "reason": "Only agents hosted by IntentLock can be run from here."})
+    if agent.revoked_at is not None:
+        raise HTTPException(409, detail={"error": "agent_revoked", "reason": "This agent is disconnected."})
+    current = _latest_runs(db, user, [i.id]).get(i.id)
+    if current and current["status"] == "running":
+        raise HTTPException(409, detail={"error": "already_running", "reason": "The agent is already working on this."})
+    if current and current["status"] == "ordered":
+        raise HTTPException(409, detail={"error": "already_ordered", "reason": "This request already has an order."})
+    return _start(db, background, user, i.id, agent)
 
 
 # --------------------------------------------------------------------------- #

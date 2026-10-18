@@ -79,25 +79,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      style={{
-        border: "1px solid var(--color-border)",
-        borderRadius: "8px",
-        padding: "1.25rem",
-        marginBottom: "1rem",
-        background: "var(--color-surface)",
-      }}
-    >
-      <h2
-        style={{
-          fontSize: "0.85rem",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "var(--color-text-muted)",
-          marginBottom: "0.75rem",
-        }}
-      >
+    <section className="saas-card p-6 mb-4">
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
         {title}
       </h2>
       {children}

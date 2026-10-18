@@ -64,46 +64,55 @@ const SCENARIO_LABELS: Record<string, string> = {
   hidden_gift_card: "Hidden Gift Card",
   wrong_variant: "Wrong Variant",
   overpriced_merchant: "Overpriced Merchant",
-  bot_farm: "Bot Farm",
-  revoked_agent: "Revoked Agent",
+  bot_farm: "Bot Farm Network",
+  revoked_agent: "Revoked Agent Key",
+};
+
+const SCENARIO_CATEGORIES: Record<string, { label: string; badge: string }> = {
+  normal: { label: "Baseline Order", badge: "saas-badge-neutral" },
+  hidden_gift_card: { label: "Prompt Injection", badge: "saas-badge-danger" },
+  wrong_variant: { label: "Intent Drift", badge: "saas-badge-warning" },
+  overpriced_merchant: { label: "Price Anomaly", badge: "saas-badge-warning" },
+  bot_farm: { label: "Fraud Clustering", badge: "saas-badge-danger" },
+  revoked_agent: { label: "Access Control", badge: "saas-badge-brand" },
 };
 
 function scenarioLabel(s: string): string {
   return SCENARIO_LABELS[s] ?? s;
 }
 
-function decisionColor(d: string): string {
-  if (d === "capture") return "var(--color-status-captured)";
-  if (d === "void" || d === "reject") return "var(--color-status-voided)";
-  if (d === "hold") return "var(--color-status-pending-approval)";
-  return "var(--color-text-muted)";
+function DecisionBadge({ decision }: { decision: string }) {
+  const d = decision?.toLowerCase();
+  let badgeClass = "saas-badge-neutral";
+  if (d === "capture") badgeClass = "saas-badge-success";
+  else if (d === "hold") badgeClass = "saas-badge-warning";
+  else if (d === "void" || d === "reject") badgeClass = "saas-badge-danger";
+
+  return (
+    <span className={`saas-badge ${badgeClass} uppercase font-mono font-semibold text-[11px]`}>
+      {decision}
+    </span>
+  );
 }
 
-function resultIcon(r: CheckResult): string {
-  if (r === "pass") return "✓";
-  if (r === "fail" || r === "error") return "✗";
-  if (r === "flag") return "⚑";
-  return "–";
-}
-
-function resultColor(r: CheckResult): string {
-  if (r === "pass") return "var(--color-status-captured)";
-  if (r === "fail" || r === "error") return "var(--color-status-voided)";
-  if (r === "flag") return "var(--color-status-pending-approval)";
-  return "var(--color-text-muted)";
+function resultBadgeClass(r: CheckResult): string {
+  if (r === "pass") return "saas-badge-success";
+  if (r === "flag") return "saas-badge-warning";
+  if (r === "fail" || r === "error") return "saas-badge-danger";
+  return "saas-badge-neutral";
 }
 
 function stepLabel(s: CheckStep | string): string {
   const LABELS: Partial<Record<CheckStep, string>> = {
-    verify_agent: "Verify Agent",
-    check_mandate: "Check Mandate",
-    authorize_payment: "Authorize Payment",
-    scan_injection: "Scan Injection",
-    intent_diff: "Intent Diff",
-    graph_risk: "Graph Risk",
-    decide: "Decide",
-    capture_or_void: "Capture / Void",
-    build_proof: "Build Proof",
+    verify_agent: "1. Verify Agent (RFC 9421)",
+    check_mandate: "2. Check Mandate",
+    authorize_payment: "3. PayPal Authorize",
+    scan_injection: "4. Scan Injection",
+    intent_diff: "5. Intent Diff",
+    graph_risk: "6. Graph Risk",
+    decide: "7. Code Policy",
+    capture_or_void: "8. Capture / Void",
+    build_proof: "9. Proof of Intent",
   };
   return LABELS[s as CheckStep] ?? s;
 }
@@ -143,7 +152,6 @@ function extractHiddenTexts(html: string): string[] {
         // ignore invalid selector
       }
     }
-    // Also look for HTML comments that might contain instructions
     const commentRe = /<!--([\s\S]*?)-->/g;
     let m: RegExpExecArray | null;
     while ((m = commentRe.exec(html)) !== null) {
@@ -157,79 +165,37 @@ function extractHiddenTexts(html: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// ChecksTimeline
 // ---------------------------------------------------------------------------
-
-function DecisionChip({ decision }: { decision: string }) {
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase"
-      style={{
-        background: decisionColor(decision) + "22",
-        color: decisionColor(decision),
-      }}
-    >
-      {decision}
-    </span>
-  );
-}
 
 function ChecksTimeline({ checks }: { checks: Check[] }) {
   if (checks.length === 0) return null;
   return (
-    <ol className="space-y-1 mt-3">
-      {checks.map((c) => (
-        <li
-          key={c.id}
-          className="flex items-start gap-2 text-xs py-1"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
-        >
-          <span
-            style={{
-              minWidth: "1.1rem",
-              fontWeight: 700,
-              fontSize: "0.95rem",
-              color: resultColor(c.result),
-            }}
-          >
-            {resultIcon(c.result)}
-          </span>
-          <div className="flex-1 flex items-center gap-2 flex-wrap">
-            <span className="font-medium" style={{ color: "var(--color-text)" }}>
-              {stepLabel(c.step)}
-            </span>
-            <span style={{ color: resultColor(c.result), fontWeight: 600 }}>
-              {c.result}
-            </span>
-            {c.score !== null && c.score !== undefined && (
-              <span style={{ color: "var(--color-text-muted)" }}>
-                score: {c.score}
+    <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800/80 dark:bg-slate-950/40">
+      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+        Pipeline Execution Telemetry ({checks.length} Checks)
+      </div>
+      <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
+        {checks.map((c) => (
+          <div key={c.id} className="flex items-center justify-between py-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`saas-badge ${resultBadgeClass(c.result)} font-mono text-[10px] uppercase`}>
+                {c.result}
               </span>
-            )}
-            <span style={{ color: "var(--color-text-muted)" }}>
-              {c.duration_ms}ms
-            </span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">
+                {stepLabel(c.step)}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 font-mono text-slate-500 text-[11px]">
+              {c.score !== null && c.score !== undefined && (
+                <span>score: {c.score}</span>
+              )}
+              <span>{c.duration_ms}ms</span>
+            </div>
           </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function Spinner() {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        width: "1rem",
-        height: "1rem",
-        border: "2px solid var(--color-border)",
-        borderTopColor: "var(--color-brand)",
-        borderRadius: "50%",
-        animation: "spin 0.7s linear infinite",
-        verticalAlign: "middle",
-      }}
-    />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -254,57 +220,52 @@ function ScenarioCard({
     isDone &&
     state.result?.actual_decision === state.result?.expected_decision;
 
+  const category = SCENARIO_CATEGORIES[info.scenario] ?? {
+    label: "Security Test",
+    badge: "saas-badge-neutral",
+  };
+
   const attackPages = info.page_urls
     .map(pageUrlInfo)
     .filter((p) => p.isAttack);
 
   return (
-    <div
-      className="rounded-xl border p-5 space-y-3"
-      style={{
-        borderColor:
-          isDone
-            ? matched
-              ? "var(--color-status-captured)"
-              : "var(--color-status-voided)"
-            : "var(--color-border)",
-        background: "var(--color-surface)",
-        transition: "border-color 0.25s",
-      }}
-    >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2
-            className="text-base font-bold"
-            style={{ color: "var(--color-text)" }}
-          >
+    <div className="saas-card p-6 transition-all duration-200">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className={`saas-badge ${category.badge}`}>
+            {category.label}
+          </span>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
             {scenarioLabel(info.scenario)}
           </h2>
-          <p
-            className="text-xs mt-0.5 font-mono"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            {info.scenario} · agent: {info.agent_id}
-          </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            expected:
-          </span>
-          <DecisionChip decision={info.expected_decision} />
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 font-medium">Expected:</span>
+          <DecisionBadge decision={info.expected_decision} />
         </div>
       </div>
 
+      {/* Meta row */}
+      <div className="mt-2 flex items-center gap-3 font-mono text-xs text-slate-500">
+        <span>scenario: <strong className="text-slate-700 dark:text-slate-300">{info.scenario}</strong></span>
+        <span>•</span>
+        <span>agent: <strong className="text-slate-700 dark:text-slate-300">{info.agent_id}</strong></span>
+        <span>•</span>
+        <span>merchant: <strong className="text-slate-700 dark:text-slate-300">{info.merchant}</strong></span>
+      </div>
+
       {/* Narration */}
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
         {info.narration}
       </p>
 
-      {/* Page links */}
+      {/* Pages & Attack Inspection */}
       {info.page_urls.length > 0 && (
-        <div className="flex items-start gap-2 flex-wrap text-xs">
-          <span style={{ color: "var(--color-text-muted)" }}>Pages:</span>
+        <div className="mt-3 flex items-center gap-2 flex-wrap text-xs">
+          <span className="text-slate-500 font-medium">Test Pages:</span>
           {info.page_urls.map((url) => {
             const { href, label, isAttack } = pageUrlInfo(url);
             return (
@@ -313,203 +274,150 @@ function ScenarioCard({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline"
-                style={{
-                  color: isAttack
-                    ? "var(--color-status-voided)"
-                    : "var(--color-brand)",
-                }}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-[11px] font-medium border transition ${
+                  isAttack
+                    ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20"
+                    : "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200"
+                }`}
               >
-                {label}
+                <span>{label}</span>
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
               </a>
             );
           })}
-        </div>
-      )}
 
-      {/* Reveal hidden text */}
-      {attackPages.length > 0 && (
-        <div>
-          {state.revealPhase === "idle" && (
+          {/* Reveal hidden instructions button */}
+          {attackPages.length > 0 && state.revealPhase === "idle" && (
             <button
-              className="text-xs underline"
-              style={{ color: "var(--color-text-muted)", cursor: "pointer" }}
               onClick={() => onReveal(info.scenario, attackPages[0].href)}
-              aria-label={`Reveal hidden instructions for ${scenarioLabel(info.scenario)}`}
+              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-2 cursor-pointer"
             >
-              Reveal hidden instructions
+              Inspect Hidden CSS Injections &rarr;
             </button>
           )}
-          {state.revealPhase === "loading" && (
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              <Spinner /> Loading...
-            </span>
-          )}
-          {state.revealPhase === "done" && state.revealTexts.length > 0 && (
-            <div
-              className="rounded p-3 mt-1"
-              style={{
-                background: "var(--color-danger-100, #fff1f2)",
-                border: "1px solid var(--color-status-voided)",
-              }}
-            >
-              <p
-                className="text-xs font-bold mb-1"
-                style={{ color: "var(--color-status-voided)" }}
-              >
-                Hidden instructions found:
-              </p>
-              {state.revealTexts.map((t, i) => (
-                <p
-                  key={i}
-                  className="text-xs font-mono mt-1"
-                  style={{ color: "var(--color-text)", wordBreak: "break-word" }}
-                >
-                  {t}
-                </p>
-              ))}
-            </div>
-          )}
-          {state.revealPhase === "done" && state.revealTexts.length === 0 && (
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              No hidden instructions detected.
-            </p>
-          )}
-          {state.revealPhase === "error" && (
-            <p className="text-xs" style={{ color: "var(--color-status-voided)" }}>
-              {state.revealError ?? "Failed to load page."}
-            </p>
-          )}
         </div>
       )}
 
-      {/* Run button */}
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          className="intentlock-btn-primary"
-          disabled={isRunning}
-          onClick={() => onRun(info.scenario)}
-          style={{ fontSize: "0.8rem", padding: "0.4rem 1rem" }}
-        >
-          {isRunning ? (
-            <>
-              <Spinner /> Running...
-            </>
-          ) : isDone ? (
-            "Re-run"
-          ) : (
-            "Run"
-          )}
-        </button>
+      {/* Hidden injection revelation block */}
+      {state.revealPhase === "loading" && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+          Scanning DOM for hidden injection payload...
+        </div>
+      )}
+      {state.revealPhase === "done" && state.revealTexts.length > 0 && (
+        <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs dark:bg-rose-950/40">
+          <div className="flex items-center gap-1.5 font-semibold text-rose-700 dark:text-rose-300 mb-2">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>Detected Hidden Adversarial Instructions in HTML:</span>
+          </div>
+          <div className="space-y-1 font-mono text-[11px] text-rose-800 dark:text-rose-200">
+            {state.revealTexts.map((t, idx) => (
+              <div key={idx} className="rounded bg-rose-500/10 px-2 py-1 border border-rose-500/20">
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {state.revealPhase === "done" && state.revealTexts.length === 0 && (
+        <div className="mt-3 text-xs text-slate-500">
+          No hidden CSS injection vectors detected in page DOM.
+        </div>
+      )}
+      {state.revealPhase === "error" && (
+        <div className="mt-3 text-xs text-rose-600 dark:text-rose-400">
+          {state.revealError ?? "Failed to inspect target page."}
+        </div>
+      )}
 
-        {/* Result summary inline */}
+      {/* Action and Execution Result */}
+      <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onRun(info.scenario)}
+            disabled={isRunning}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition cursor-pointer ${
+              isRunning
+                ? "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 cursor-not-allowed"
+                : isDone
+                ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            }`}
+          >
+            {isRunning ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Evaluating Pipeline...</span>
+              </>
+            ) : isDone ? (
+              <span>Re-evaluate Scenario</span>
+            ) : (
+              <span>Execute Verification</span>
+            )}
+          </button>
+
+          {isDone && state.result && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-500">Outcome:</span>
+              <DecisionBadge decision={state.result.actual_decision} />
+              {matched ? (
+                <span className="saas-badge saas-badge-success font-semibold text-[11px]">
+                  ✓ Verified As Expected
+                </span>
+              ) : (
+                <span className="saas-badge saas-badge-danger font-semibold text-[11px]">
+                  ✗ Mismatch
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Links to Order & Proof */}
         {isDone && state.result && (
-          <span className="text-sm font-semibold" style={{ color: matched ? "var(--color-status-captured)" : "var(--color-status-voided)" }}>
-            {matched ? "Pass" : "Unexpected"}{" "}
-            {matched ? "✓" : "✗"}
-          </span>
+          <div className="flex items-center gap-3 text-xs">
+            <Link
+              href={`/wallet/orders/${state.result.order_id}`}
+              className="text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-medium"
+            >
+              Order Details &rarr;
+            </Link>
+            <Link
+              href={`/proof/${state.result.order_id}`}
+              className="inline-flex items-center gap-1 rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/20"
+            >
+              <span>Proof Certificate</span>
+            </Link>
+          </div>
         )}
       </div>
 
       {/* Error state */}
       {state.phase === "error" && state.error && (
-        <div
-          className="rounded px-3 py-2 text-xs"
-          style={{
-            background: "#fff1f2",
-            border: "1px solid var(--color-status-voided)",
-            color: "var(--color-status-voided)",
-          }}
-        >
-          {state.error}
+        <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300">
+          <strong>Error during execution:</strong> {state.error}
         </div>
       )}
 
-      {/* Result block */}
-      {isDone && state.result && (
-        <div className="space-y-3 pt-1">
-          {/* Actual vs Expected */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              actual:
-            </span>
-            <DecisionChip decision={state.result.actual_decision} />
-            {matched ? (
-              <span
-                className="text-xs font-semibold"
-                style={{ color: "var(--color-status-captured)" }}
-              >
-                as expected
-              </span>
-            ) : (
-              <span
-                className="text-xs font-semibold"
-                style={{ color: "var(--color-status-voided)" }}
-              >
-                expected {state.result.expected_decision}
-              </span>
-            )}
-          </div>
-
-          {/* Status chip */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              status:
-            </span>
-            {(() => {
-              const st = getOrderStatusStyle(state.result.status as Parameters<typeof getOrderStatusStyle>[0]);
-              return (
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                  style={{
-                    background: st.hex + "22",
-                    color: st.chipTextHex ?? st.hex,
-                  }}
-                >
-                  {state.result.status}
-                </span>
-              );
-            })()}
-          </div>
-
-          {/* First reason */}
-          {state.result.reasons.length > 0 && (
-            <p className="text-xs" style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>
-              {state.result.reasons[0]}
-              {state.result.reasons.length > 1 && (
-                <> + {state.result.reasons.length - 1} more</>
-              )}
-            </p>
-          )}
-
-          {/* Checks timeline */}
-          <ChecksTimeline checks={state.checks} />
-
-          {/* Links */}
-          <div className="flex items-center gap-3 text-xs flex-wrap pt-1">
-            <Link
-              href={`/wallet/orders/${state.result.order_id}`}
-              className="underline"
-              style={{ color: "var(--color-brand)" }}
-            >
-              Order
-            </Link>
-            <Link
-              href={`/proof/${state.result.order_id}`}
-              className="underline"
-              style={{ color: "var(--color-brand)" }}
-            >
-              Proof
-            </Link>
-          </div>
-        </div>
+      {/* Telemetry Timeline */}
+      {isDone && state.checks.length > 0 && (
+        <ChecksTimeline checks={state.checks} />
       )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// LabClient
+// LabClient Main Component
 // ---------------------------------------------------------------------------
 
 const DEMO_USER = "usr_demo_priya";
@@ -567,7 +475,6 @@ export default function LabClient({
         const raw = await runLabScenario(scenario as LabScenario, {
           user_id: DEMO_USER,
         });
-        // Backend also returns reasons and scenario (extra fields beyond LabRunResponse type)
         const res = raw as unknown as FullRunResult;
 
         updateState(scenario, { phase: "fetching" });
@@ -609,18 +516,14 @@ export default function LabClient({
 
   const handleRunAll = useCallback(async () => {
     setRunAll({ ...IDLE_RUN_ALL, phase: "resetting" });
-
-    // Reset all scenario states
     setStates(
       Object.fromEntries(scenarios.map((s) => [s.scenario, { ...IDLE_STATE }]))
     );
 
-    // Call /lab/reset
     try {
       await labReset();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "Reset failed";
+      const msg = err instanceof ApiError ? err.message : "Reset failed";
       setRunAll({ ...IDLE_RUN_ALL, phase: "done", error: msg });
       return;
     }
@@ -670,88 +573,93 @@ export default function LabClient({
     runAll.phase === "resetting" || runAll.phase === "running";
 
   return (
-    <div
-      className="mx-auto max-w-3xl w-full px-6 py-10 space-y-6"
-      style={{ color: "var(--color-text)" }}
-    >
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--color-text)" }}
-          >
-            Attack Lab
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Trigger any scenario through the live pipeline and inspect the
-            decision.
-          </p>
-        </div>
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Top Banner / Toolbar */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-6 sm:p-8 shadow-xs dark:border-slate-800/80 dark:bg-slate-900/60">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2">
+              <span>Security Evaluation Harness</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Attack Lab Console
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+              Trigger repeatable adversarial vectors through IntentLock&apos;s real-time checkout pipeline.
+              Verify injection defense, intent drift classification, and graph fraud scores.
+            </p>
+          </div>
 
-        {/* Run All button + summary */}
-        <div className="flex flex-col items-end gap-2">
-          <button
-            className="intentlock-btn-primary"
-            disabled={isRunAllActive}
-            onClick={() => handleRunAll()}
-          >
-            {runAll.phase === "resetting" ? (
-              <>
-                <Spinner /> Resetting...
-              </>
-            ) : runAll.phase === "running" ? (
-              <>
-                <Spinner /> Running {runAll.progress}/{runAll.total}...
-              </>
-            ) : (
-              "Run all"
-            )}
-          </button>
-
-          {runAll.phase === "done" && (
-            <p
-              className="text-sm font-semibold"
-              style={{
-                color:
-                  runAll.passed === runAll.total
-                    ? "var(--color-status-captured)"
-                    : "var(--color-status-voided)",
-              }}
+          {/* Action Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              onClick={handleRunAll}
+              disabled={isRunAllActive}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-700 cursor-pointer disabled:opacity-50"
             >
-              {runAll.passed}/{runAll.total} as expected
-            </p>
-          )}
-          {runAll.error && (
-            <p className="text-xs" style={{ color: "var(--color-status-voided)" }}>
-              {runAll.error}
-            </p>
-          )}
+              {runAll.phase === "resetting" ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span>Resetting State...</span>
+                </>
+              ) : runAll.phase === "running" ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span>Running {runAll.progress}/{runAll.total}...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span>Run All 6 Scenarios</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Progress or Completion Banner */}
+        {runAll.phase === "done" && (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className={`saas-badge ${runAll.passed === runAll.total ? "saas-badge-success" : "saas-badge-warning"} text-sm font-semibold`}>
+                {runAll.passed === runAll.total ? "✓ All Scenarios Passed" : "⚠ Completed with Discrepancies"}
+              </span>
+              <span className="text-xs text-slate-600 dark:text-slate-400">
+                {runAll.passed} of {runAll.total} scenarios matched their expected security decisions.
+              </span>
+            </div>
+            <span className="font-mono text-xs text-slate-500">
+              User: {DEMO_USER}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Scenario cards */}
-      {SCENARIOS_ORDER.map((s) => {
-        const info = scenarios.find((i) => i.scenario === s);
-        if (!info) return null;
-        const state = states[s] ?? { ...IDLE_STATE };
-        return (
-          <ScenarioCard
-            key={s}
-            info={info}
-            state={state}
-            onRun={handleRun}
-            onReveal={handleReveal}
-          />
-        );
-      })}
-
-      {/* CSS keyframe for spinner */}
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Scenarios Grid */}
+      <div className="space-y-4">
+        {SCENARIOS_ORDER.map((s) => {
+          const info = scenarios.find((i) => i.scenario === s);
+          if (!info) return null;
+          const state = states[s] ?? { ...IDLE_STATE };
+          return (
+            <ScenarioCard
+              key={s}
+              info={info}
+              state={state}
+              onRun={handleRun}
+              onReveal={handleReveal}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

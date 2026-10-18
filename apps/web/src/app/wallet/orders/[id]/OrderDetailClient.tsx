@@ -142,14 +142,8 @@ function issueLabel(issue: IntentDiffIssue): string {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section
-      className="rounded-lg border p-5 space-y-3"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-    >
-      <h2
-        className="text-xs font-bold uppercase tracking-widest"
-        style={{ color: "var(--color-text-muted)" }}
-      >
+    <section className="saas-card p-6 space-y-3">
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         {title}
       </h2>
       {children}

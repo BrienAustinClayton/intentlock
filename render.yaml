@@ -1,0 +1,181 @@
+# Render Blueprint — IntentLock
+# https://render.com/docs/blueprint-spec
+#
+# Deploy: Render dashboard → New → Blueprint → select this repo.
+# After first deploy, fill in all env vars marked sync:false (see docs/DEPLOY.md).
+#
+# Skipped intentionally:
+#   - Cron for approval expiry: handled by a lifespan background task in the API (app/jobs/expire_approvals.py).
+#   - Render Workflows: PIPELINE_MODE=local routes all AI steps in-process. Add Workflows when scaling.
+
+databases:
+  - name: intentlock-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: 16
+
+services:
+  # ---------------------------------------------------------------------------
+  # API (Python / FastAPI)
+  # ---------------------------------------------------------------------------
+  - name: intentlock-api
+    type: web
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: services/intentlock
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: ./start.sh
+    healthCheckPath: /health
+    envVars:
+      # Database — Render gives postgres://...; app/db.py rewrites to postgresql+psycopg://
+      - key: DATABASE_URL
+        fromDatabase:
+          name: intentlock-db
+          property: connectionString
+
+      # Runtime mode
+      - key: PAYPAL_MODE
+        value: mock
+      - key: PIPELINE_MODE
+        value: local
+
+      # Public URLs — fill these in the dashboard after the first deploy
+      # (see docs/DEPLOY.md → Step 4: set post-deploy env vars).
+      # PUBLIC_BASE_URL must match the API's external URL byte-for-byte
+      # (no trailing slash); the agent rebuilds @target-uri from it.
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+
+      # LLM — fast (Groq, free)
+      - key: LLM_FAST_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_FAST_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_GUARD_MODEL
+        value: meta-llama/llama-prompt-guard-2-86m
+
+      # LLM — smart (Jev / TypeSafe System One)
+      - key: LLM_SMART_BASE_URL
+        value: https://api.typesafe.ai
+      - key: LLM_SMART_MODEL
+        value: jev-latest
+      - key: LLM_SMART_BUDGET_USD
+        value: "5"
+      - key: LLM_SMART_RESERVE_USD
+        value: "1"
+      - key: LLM_SMART_PRICE_IN_PER_MTOK
+        value: "0.042"
+      - key: LLM_SMART_PRICE_OUT_PER_MTOK
+        value: "0"
+
+      # Secrets — paste values in the Render dashboard (never committed to git)
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: LLM_FAST_API_KEY
+        sync: false
+      - key: LLM_SMART_API_KEY
+        sync: false
+      - key: CHANNEL3_API_KEY
+        sync: false
+      - key: RENDER_API_KEY
+        sync: false
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: INTENTLOCK_PROOF_PRIVATE_KEY
+        sync: false
+      - key: INTENTLOCK_PROOF_PUBLIC_KEY
+        sync: false
+      - key: INTENTLOCK_WALLET_PRIVATE_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Web (Next.js 16, pnpm monorepo, standalone output)
+  # ---------------------------------------------------------------------------
+  # rootDir is apps/web so that:
+  #   - process.cwd() = apps/web at runtime, matching the ../../data/ relative
+  #     paths used by the store/attack and store/normal route handlers.
+  #   - pnpm v10 walks up to find pnpm-workspace.yaml at the repo root so
+  #     `pnpm install --frozen-lockfile` works correctly from a sub-package.
+  - name: intentlock-web
+    type: web
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: apps/web
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter web build && mkdir -p .next/standalone/apps/web/.next && cp -r .next/static .next/standalone/apps/web/.next/static && (cp -r public .next/standalone/apps/web/public 2>/dev/null || true)
+    # standalone server.js lives at .next/standalone/server.js relative to apps/web.
+    # If your pnpm+Next.js version writes it to .next/standalone/apps/web/server.js,
+    # update this path (see docs/DEPLOY.md troubleshooting).
+    startCommand: node .next/standalone/apps/web/server.js
+    healthCheckPath: /
+    envVars:
+      # Next.js standalone server binds to HOSTNAME (default: localhost → needs 0.0.0.0 on Render)
+      - key: HOSTNAME
+        value: "0.0.0.0"
+
+      # API URL baked into client bundles at build time — fill before (re)deploy
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+
+      # Agent run endpoint (server-side, used by /api/run-agent)
+      - key: AGENT_RUN_URL
+        sync: false
+
+      # LLM — fast (server-side Risk Analyst only; never NEXT_PUBLIC_)
+      - key: LLM_FAST_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_FAST_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_FAST_API_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Agent (Mastra / Node.js, pnpm monorepo)
+  # ---------------------------------------------------------------------------
+  - name: intentlock-agent
+    type: web
+    runtime: node
+    plan: free
+    region: oregon
+    # Build from repo root so pnpm workspace resolution works, then filter to agent package.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm --filter agent start
+    healthCheckPath: /health
+    envVars:
+      # Bind on all interfaces (src/server.ts reads HOST from env, defaults to 127.0.0.1)
+      - key: HOST
+        value: "0.0.0.0"
+
+      # API URLs — must match PUBLIC_BASE_URL on the API service (same string, no trailing slash).
+      # Fill after first deploy (see docs/DEPLOY.md).
+      - key: INTENTLOCK_API_URL
+        sync: false
+      - key: INTENTLOCK_SIGN_BASE_URL
+        sync: false
+
+      # Agent identity
+      - key: AGENT_ID
+        value: agt_demo_shopper
+
+      # Secrets — paste values in the Render dashboard
+      - key: AGENT_PRIVATE_KEY
+        sync: false
+      - key: CHANNEL3_API_KEY
+        sync: false
+      - key: LLM_FAST_API_KEY
+        sync: false
+
+      # LLM — fast
+      - key: LLM_FAST_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_FAST_MODEL
+        value: openai/gpt-oss-120b

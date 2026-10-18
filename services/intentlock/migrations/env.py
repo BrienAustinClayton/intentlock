@@ -20,7 +20,9 @@ if "DATABASE_URL" not in os.environ:
 config = context.config
 
 # Override sqlalchemy.url from DATABASE_URL environment variable
-config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+# Render gives postgres://...; SQLAlchemy psycopg needs postgresql+psycopg://
+from app.db import normalize_db_url  # noqa: E402
+config.set_main_option("sqlalchemy.url", normalize_db_url(os.environ["DATABASE_URL"]))
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:

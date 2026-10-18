@@ -67,23 +67,23 @@ export default async function StoreProductPage({
   const variantGroups = groupVariants(p.variants ?? []);
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-        <Link href="/store/freshmart" className="hover:text-gray-900">
+        <Link href="/store/freshmart" className="hover:text-white">
           Stores
         </Link>
         <span>/</span>
-        <Link href={`/store/${encodeURIComponent(merchant)}`} className="capitalize hover:text-gray-900">
+        <Link href={`/store/${encodeURIComponent(merchant)}`} className="capitalize hover:text-white">
           {merchant}
         </Link>
         <span>/</span>
-        <span className="text-gray-800 truncate">{p.title}</span>
+        <span className="text-gray-200 truncate">{p.title}</span>
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         {/* Product Image */}
-        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-gray-50">
+        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-white/[0.02]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={p.image_url}
@@ -98,11 +98,11 @@ export default async function StoreProductPage({
             <span className="text-[11px] font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
               {p.category}
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
               {p.title}
             </h1>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-gray-900">
+              <span className="text-2xl font-bold font-mono text-white">
                 ${p.price.toFixed(2)}
               </span>
               <span className="text-xs text-gray-400 font-mono">{p.currency}</span>

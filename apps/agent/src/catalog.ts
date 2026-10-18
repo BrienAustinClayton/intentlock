@@ -1,4 +1,4 @@
-import { env, isLive } from "./config.ts";
+import { env } from "./config.ts";
 import { publicGet } from "./intentlock.ts";
 
 export interface Product {
@@ -14,6 +14,8 @@ export interface Product {
   page_candidates: string[]; // other public merchant pages (catalog offers) the scanner may be able to fetch
   variants: { name?: string; label?: string; product_id?: string }[];
   source: "catalog" | "channel3";
+  brand?: string;
+  category_title?: string;
 }
 
 const MERCHANT_CATEGORY: Record<string, string> = {
@@ -118,18 +120,29 @@ export async function catalogSearch(query: string, merchant: string | undefined,
   return [...seen.values()].slice(0, limit);
 }
 
-// ---- Channel3 (live, only when LIVE=1) ------------------------------------------------------------------------
+// ---- Channel3: the real product source ------------------------------------------------------------------------
 
 const C3 = "https://api.trychannel3.com";
+
+export const domainOf = (d: unknown): string | null => {
+  if (typeof d !== "string") return null;
+  const s = d.trim().toLowerCase().replace(/^www\./, "");
+  return /^[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?$/.test(s) ? s : null;
+};
 
 function fromChannel3(raw: any, merchant?: string): Product | null {
   try {
     const offer = raw.offers?.[0];
     const price = offer?.price?.price ?? raw.price?.price ?? raw.price;
+    const domain = domainOf(offer?.domain);
+    const path: any[] = Array.isArray(raw.category?.path) ? raw.category.path : [];
+    const top = path[0] ?? raw.category;
     return {
       product_id: String(raw.id ?? raw.product_id),
-      merchant: merchant ?? String(offer?.domain ?? "channel3"),
-      category: (merchant && MERCHANT_CATEGORY[merchant]) || "groceries",
+      merchant: merchant ?? domain ?? "channel3",
+      category: String(top?.slug ?? "other").slice(0, 64),
+      category_title: typeof top?.title === "string" ? top.title : undefined,
+      brand: typeof raw.brands?.[0]?.name === "string" ? raw.brands[0].name : undefined,
       title: String(raw.title ?? "").slice(0, 300),
       description: typeof raw.description === "string" ? raw.description : undefined,
       key_features: Array.isArray(raw.key_features) ? raw.key_features.map(String) : undefined,
@@ -145,24 +158,34 @@ function fromChannel3(raw: any, merchant?: string): Product | null {
   }
 }
 
-export async function channel3Search(query: string, limit: number, merchant?: string): Promise<Product[]> {
+export interface Channel3Filters {
+  maxPrice?: number;
+  minPrice?: number;
+}
+
+/** Live Channel3 search, in-stock offers only. Empty when no key is configured. */
+export async function channel3Search(query: string, limit: number, merchant?: string, f: Channel3Filters = {}): Promise<Product[]> {
   const key = env("CHANNEL3_API_KEY");
-  if (!isLive() || !key) return [];
+  if (!key) return [];
+  const filters: Record<string, unknown> = { availability: ["InStock"] };
+  if (f.maxPrice !== undefined || f.minPrice !== undefined) {
+    filters.price = { ...(f.minPrice !== undefined ? { min_price: f.minPrice } : {}), ...(f.maxPrice !== undefined ? { max_price: f.maxPrice } : {}) };
+  }
   const res = await fetch(`${C3}/v1/search`, {
     method: "POST",
     headers: { "x-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ query, limit }),
+    body: JSON.stringify({ query, limit, filters }),
     signal: AbortSignal.timeout(30_000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Channel3 search failed (HTTP ${res.status})`);
   const j: any = await res.json();
   const rows: any[] = Array.isArray(j) ? j : (j.products ?? []);
-  return rows.map((r) => fromChannel3(r, merchant)).filter((p): p is Product => p !== null);
+  return rows.map((r) => fromChannel3(r, merchant)).filter((p): p is Product => p !== null && p.currency === "USD");
 }
 
 export async function channel3Get(productId: string, merchant?: string): Promise<Product | null> {
   const key = env("CHANNEL3_API_KEY");
-  if (!isLive() || !key) return null;
+  if (!key) return null;
   const res = await fetch(`${C3}/v1/products/${encodeURIComponent(productId)}`, {
     headers: { "x-api-key": key },
     signal: AbortSignal.timeout(30_000),

@@ -73,6 +73,19 @@ MANDATE_TYPE = "intentlock.mandate.v1"
 BUDGET_PERIODS = ("week", "month", "once")
 SPEND_STATUSES = ("authorized", "checking", "pending_approval", "captured")
 SLUG_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
+# Stores are Channel3 merchant domains (walmart.com), legacy demo slugs (freshmart), or "*" for any store.
+MERCHANT_RE = re.compile(r"^(\*|[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?)$")
+ANY_MERCHANT = "*"
+
+
+def normalize_merchant(value: str) -> str:
+    s = value.strip().lower()
+    return s[4:] if s.startswith("www.") else s
+
+
+def merchant_allowed(merchant: str, allowed: Iterable[str]) -> bool:
+    allowed = set(allowed or [])
+    return ANY_MERCHANT in allowed or normalize_merchant(merchant) in allowed
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 CENT = Decimal("0.01")
 
@@ -91,8 +104,8 @@ def normalize_slugs(values: Iterable[str], field: str) -> list[str]:
     for v in values:
         if not isinstance(v, str):
             raise ServiceError(422, "invalid_field", f"{field} entries must be strings")
-        s = v.strip().lower()
-        if not SLUG_RE.match(s):
+        s = normalize_merchant(v) if field == "merchants" else v.strip().lower()
+        if not (MERCHANT_RE if field == "merchants" else SLUG_RE).match(s):
             raise ServiceError(422, "invalid_field", f"{field} contains an invalid slug")
         out.add(s)
     if not out:
@@ -462,8 +475,8 @@ def check_mandate(
         total = order_draft.total
         spent = max(Decimal(str(spent_in_period)), Decimal("0")).quantize(CENT)
         remaining = (Decimal(budget["amount"]) - spent).quantize(CENT)
-        merchant = order_draft.merchant.strip().lower()
-        if merchant not in c["merchants"]:
+        merchant = normalize_merchant(order_draft.merchant)
+        if not merchant_allowed(merchant, c["merchants"]):
             em = _echo(merchant)
             failures.append((
                 "merchant_not_allowed",
@@ -579,9 +592,11 @@ def select_mandate_for_agent(
         return None
     active = [m for m in rows if _is_active(m, now)]
     if merchant is not None:
-        mk = merchant.strip().lower()
         for m in active:
-            if mk in (m.merchants or []):
+            if normalize_merchant(merchant) in (m.merchants or []):
+                return m
+        for m in active:
+            if merchant_allowed(merchant, m.merchants or []):
                 return m
     if active:
         return active[0]

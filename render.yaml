@@ -210,3 +210,5 @@ services:
         value: https://api.groq.com/openai/v1
       - key: LLM_FAST_MODEL
         value: openai/gpt-oss-120b
+      - key: LLM_FAST_FALLBACK_MODEL
+        value: openai/gpt-oss-20b

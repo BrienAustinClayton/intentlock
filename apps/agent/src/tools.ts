@@ -18,7 +18,7 @@ const slim = (p: Product) => ({
   variants: p.variants.map((v) => v.label ?? v.name ?? "").filter(Boolean).slice(0, 5),
 });
 
-function remember(ps: Product[]): void {
+export function remember(ps: Product[]): void {
   const run = currentRun();
   for (const p of ps) run.products.set(p.product_id, p);
 }
@@ -49,7 +49,7 @@ export const searchProducts = createTool({
     let found = await catalogSearch(query, merchant, limit ?? 8);
     let source = "catalog";
     if (found.length < (limit ?? 8)) {
-      const live = await channel3Search(query, limit ?? 8, merchant?.toLowerCase());
+      const live = await channel3Search(query, limit ?? 8, merchant?.toLowerCase()).catch(() => []);
       if (live.length) {
         found = [...found, ...live].slice(0, limit ?? 8);
         source = "catalog+channel3";
@@ -227,37 +227,50 @@ export const checkout = createTool({
     order_id: z.string(), status: z.string(), decision: z.string(), reasons: z.array(z.string()), trace_id: z.string(),
   }),
   execute: async ({ intent_id, merchant, cart, page_urls, shipping_address }) => {
-    const run = currentRun();
-    if (run.checkouts.length > 0) throw new Error("checkout already done in this run");
-    if (run.intentId && run.intentId !== intent_id) throw new Error("intent_id does not match this run");
-    // Re-price from the catalog: the model never sets money.
-    const built = await linesFromItems(cart.map((c) => ({ product_id: c.product_id, variant: c.variant ?? undefined, qty: c.qty })));
-    if (built.merchant.toLowerCase() !== merchant.toLowerCase()) throw new Error("merchant does not match cart items");
-    // Only public http(s) pages can be scanned by the API (localhost is blocked as SSRF).
-    const urls = await fetchablePages([...(page_urls ?? []), ...built.page_urls, ...built.candidates]);
-    const traceId = run.traceId;
-    const body = {
+    const out = await submitCheckout(
       intent_id,
-      merchant: built.merchant,
-      cart: built.cart,
-      page_urls: [...new Set(urls)].slice(0, 10),
-      shipping_address: shipping_address ?? DEFAULT_ADDRESS,
-      trace_id: traceId,
-    };
-    let r: { order_id: string; status: string; decision: string; reasons?: string[] };
-    try {
-      r = await signedFetch("POST", "/checkout", body);
-    } catch (e) {
-      run.errors.push((e as Error).message);
-      throw e;
-    }
-    const out: CheckoutResult = {
-      order_id: r.order_id, status: r.status, decision: r.decision, reasons: r.reasons ?? [],
-    };
-    run.checkouts.push(out);
-    return { ...out, trace_id: traceId };
+      cart.map((c) => ({ product_id: c.product_id, variant: c.variant ?? undefined, qty: c.qty })),
+      { merchant, pageUrls: page_urls, shippingAddress: shipping_address },
+    );
+    return { ...out, trace_id: currentRun().traceId };
   },
 });
+
+/** Signed POST /checkout for items already remembered in this run. Prices come from the product data, never a model. */
+export async function submitCheckout(
+  intentId: string,
+  items: { product_id: string; variant?: string; qty: number }[],
+  opts: { merchant?: string; pageUrls?: string[]; shippingAddress?: Record<string, string> } = {},
+): Promise<CheckoutResult> {
+  const run = currentRun();
+  if (run.checkouts.length > 0) throw new Error("checkout already done in this run");
+  if (run.intentId && run.intentId !== intentId) throw new Error("intent_id does not match this run");
+  const built = await linesFromItems(items);
+  if (opts.merchant && built.merchant.toLowerCase() !== opts.merchant.toLowerCase()) {
+    throw new Error("merchant does not match cart items");
+  }
+  run.lastCart = { merchant: built.merchant, cart: built.cart, total: built.total };
+  // Only public http(s) pages can be scanned by the API (localhost is blocked as SSRF).
+  const urls = await fetchablePages([...(opts.pageUrls ?? []), ...built.page_urls, ...built.candidates]);
+  const body = {
+    intent_id: intentId,
+    merchant: built.merchant,
+    cart: built.cart,
+    page_urls: [...new Set(urls)].slice(0, 10),
+    shipping_address: opts.shippingAddress ?? DEFAULT_ADDRESS,
+    trace_id: run.traceId,
+  };
+  let r: { order_id: string; status: string; decision: string; reasons?: string[] };
+  try {
+    r = await signedFetch("POST", "/checkout", body);
+  } catch (e) {
+    run.errors.push((e as Error).message);
+    throw e;
+  }
+  const out: CheckoutResult = { order_id: r.order_id, status: r.status, decision: r.decision, reasons: r.reasons ?? [] };
+  run.checkouts.push(out);
+  return out;
+}
 
 // ---- propose_slot ----------------------------------------------------------------------------------------------
 

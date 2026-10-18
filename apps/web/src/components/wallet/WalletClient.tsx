@@ -164,7 +164,7 @@ function VaultSection({ userId, vaulted }: { userId: DemoUserId; vaulted: boolea
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 className="text-base font-bold text-slate-900 dark:text-fg">
               PayPal Vault Settlement
             </h2>
             {vaulted ? (
@@ -274,7 +274,7 @@ function AgentSection() {
     <section className="saas-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          <h2 className="text-base font-bold text-slate-900 dark:text-fg">
             Authorized Agent Credentials
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -318,7 +318,7 @@ function AgentSection() {
           >
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                <span className="text-sm font-semibold text-slate-900 dark:text-fg">
                   {agent.keyid}
                 </span>
                 {agent.revoked ? (
@@ -402,7 +402,7 @@ function MandateForm({
       onSubmit={handleSubmit}
       className="rounded-xl border border-indigo-500/30 bg-indigo-50/20 p-5 space-y-4 dark:border-indigo-500/20 dark:bg-slate-950/40"
     >
-      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+      <h3 className="text-sm font-bold text-slate-900 dark:text-fg">
         {editingId ? "Edit Spending Mandate" : "Create New Spending Mandate"}
       </h3>
 
@@ -416,7 +416,7 @@ function MandateForm({
           value={form.agent_id}
           onChange={(e) => setField("agent_id", e.target.value)}
           placeholder="agt_demo_shopper"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-mono dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-mono dark:border-slate-700 dark:bg-slate-900 dark:text-fg"
           list="agent-keys-list"
         />
         <datalist id="agent-keys-list">
@@ -499,7 +499,7 @@ function MandateForm({
             value={form.budget_amount}
             onChange={(e) => setField("budget_amount", e.target.value)}
             placeholder="200.00"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-fg"
           />
           {errors.budget_amount && (
             <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.budget_amount}</p>
@@ -513,7 +513,7 @@ function MandateForm({
           <select
             value={form.budget_period}
             onChange={(e) => setField("budget_period", e.target.value as BudgetPeriod)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-fg"
           >
             {BUDGET_PERIODS.map((p) => (
               <option key={p} value={p}>
@@ -534,7 +534,7 @@ function MandateForm({
             type="datetime-local"
             value={form.starts_at}
             onChange={(e) => setField("starts_at", e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-fg"
           />
           {errors.starts_at && (
             <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.starts_at}</p>
@@ -548,7 +548,7 @@ function MandateForm({
             type="datetime-local"
             value={form.expires_at}
             onChange={(e) => setField("expires_at", e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-fg"
           />
         </div>
       </div>
@@ -603,7 +603,7 @@ function MandateCard({ mandate, revoking, onEdit, onRevoke }: MandateCardProps) 
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+            <span className="font-mono text-xs font-bold text-slate-900 dark:text-fg">
               {mandate.id}
             </span>
             {isRevoked ? (
@@ -763,7 +763,7 @@ function MandateSection({ userId, agentKeys }: MandateSectionProps) {
     <section className="saas-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          <h2 className="text-base font-bold text-slate-900 dark:text-fg">
             Spending Mandates & Policies
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -853,7 +853,7 @@ export default function WalletClient() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-fg">
             Wallet & Spend Governance
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
@@ -871,7 +871,7 @@ export default function WalletClient() {
             id="user-select"
             value={userId}
             onChange={(e) => setUserId(e.target.value as DemoUserId)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-900 dark:text-white shadow-xs"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-900 dark:text-fg shadow-xs"
           >
             {DEMO_USERS.map((u) => (
               <option key={u.id} value={u.id}>

@@ -69,7 +69,7 @@ export default async function StoreMerchantPage({
   return (
     <div className="space-y-6">
       {/* Merchant Switcher Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-[#1c1f28] pb-3 overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b border-line pb-3 overflow-x-auto">
         {Object.entries(MERCHANTS).map(([key, m]) => {
           const isActive = key === merchant;
           return (
@@ -78,8 +78,8 @@ export default async function StoreMerchantPage({
               href={`/store/${key}`}
               className={`rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-medium transition shrink-0 ${
                 isActive
-                  ? "bg-[#212430] text-white font-semibold border border-white/10 shadow-xs"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  ? "bg-raised text-fg font-semibold border border-fg/10 shadow-xs"
+                  : "text-fg-muted hover:text-fg hover:bg-fg/5"
               }`}
             >
               {m.label}
@@ -92,19 +92,19 @@ export default async function StoreMerchantPage({
       <div className="saas-card p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
+            <span className="text-xs font-mono font-medium text-fg-muted uppercase tracking-wider block mb-1">
               {info.tag}
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-fg">
               {info.label}
             </h1>
-            <p className="mt-1 text-sm text-gray-400 max-w-2xl">
+            <p className="mt-1 text-sm text-fg-muted max-w-2xl">
               {info.description} Autonomous shopping agents browse this catalog to build checkout carts.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-gray-300 bg-white/[0.04] px-3 py-1.5 rounded-xl border border-white/10">
+            <span className="font-mono text-xs text-fg-2 bg-fg/[0.04] px-3 py-1.5 rounded-xl border border-fg/10">
               {products.length} Products
             </span>
           </div>
@@ -114,7 +114,7 @@ export default async function StoreMerchantPage({
       {/* Product Grid */}
       <div>
         {products.length === 0 ? (
-          <div className="saas-card p-12 text-center text-gray-500 text-sm">
+          <div className="saas-card p-12 text-center text-fg-dim text-sm">
             No products loaded for this merchant store.
           </div>
         ) : (
@@ -123,10 +123,10 @@ export default async function StoreMerchantPage({
               <Link
                 key={p.product_id}
                 href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(p.product_id)}`}
-                className="group saas-card overflow-hidden hover:border-white/20 flex flex-col justify-between"
+                className="group saas-card overflow-hidden hover:border-fg/20 flex flex-col justify-between"
               >
                 {/* Product image */}
-                <div className="relative aspect-square bg-white/[0.02] overflow-hidden flex items-center justify-center p-6 border-b border-white/[0.06]">
+                <div className="relative aspect-square bg-fg/[0.02] overflow-hidden flex items-center justify-center p-6 border-b border-fg/[0.06]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.image_url}
@@ -138,17 +138,17 @@ export default async function StoreMerchantPage({
                 {/* Product info */}
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[11px] font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
+                    <span className="text-[11px] font-mono font-medium text-fg-muted uppercase tracking-wider block mb-1">
                       {p.category}
                     </span>
-                    <h2 className="text-sm font-semibold text-white line-clamp-2 leading-snug">
+                    <h2 className="text-sm font-semibold text-fg line-clamp-2 leading-snug">
                       {p.title}
                     </h2>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-                    <span className="text-sm font-bold font-mono text-white">
-                      ${p.price.toFixed(2)} <span className="text-xs font-normal text-gray-400">{p.currency}</span>
+                  <div className="mt-4 pt-3 border-t border-fg/[0.06] flex items-center justify-between">
+                    <span className="text-sm font-bold font-mono text-fg">
+                      ${p.price.toFixed(2)} <span className="text-xs font-normal text-fg-muted">{p.currency}</span>
                     </span>
                     {p.offers.length > 0 && (
                       <span className="text-[11px] text-indigo-400 font-medium">

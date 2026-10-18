@@ -13,7 +13,7 @@ export default function WalletNav() {
   ];
 
   return (
-    <div className="flex items-center gap-1.5 border-b border-[#1c1f28] pb-3 mb-6 overflow-x-auto">
+    <div className="flex items-center gap-1.5 border-b border-line pb-3 mb-6 overflow-x-auto">
       {tabs.map((tab) => {
         const isActive = tab.exact ? pathname === tab.href : pathname?.startsWith(tab.href);
         return (
@@ -22,8 +22,8 @@ export default function WalletNav() {
             href={tab.href}
             className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition shrink-0 ${
               isActive
-                ? "bg-[#212430] text-white font-semibold border border-white/10 shadow-xs"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                ? "bg-raised text-fg font-semibold border border-fg/10 shadow-xs"
+                : "text-fg-muted hover:text-fg hover:bg-fg/5"
             }`}
           >
             {tab.label}

@@ -6,10 +6,10 @@ export default function ConsolePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
             Security & Trust Console
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-gray-400">
+          <p className="mt-1 text-xs sm:text-sm text-fg-muted">
             Real-time fraud telemetry, risk scores, and autonomous decision oversight.
           </p>
         </div>
@@ -25,13 +25,13 @@ export default function ConsolePage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Checkouts", value: "824", trend: "↑ 14% this month", trendColor: "text-emerald-400" },
-          { label: "Avg Fraud Risk", value: "14 / 100", trend: "Safe threshold (<30)", trendColor: "text-gray-400" },
+          { label: "Avg Fraud Risk", value: "14 / 100", trend: "Safe threshold (<30)", trendColor: "text-fg-muted" },
           { label: "Neutralized Attacks", value: "38", trend: "Prompt injection & bot farms", trendColor: "text-indigo-400" },
           { label: "Approval Holds", value: "12", trend: "Variant drift & price spikes", trendColor: "text-amber-400" },
         ].map((m) => (
           <div key={m.label} className="saas-card p-5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{m.label}</span>
-            <div className="mt-2 text-2xl font-bold font-mono text-white">{m.value}</div>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-fg-muted">{m.label}</span>
+            <div className="mt-2 text-2xl font-bold font-mono text-fg">{m.value}</div>
             <span className={`text-[11px] ${m.trendColor} mt-1.5 block font-medium`}>
               {m.trend}
             </span>
@@ -42,7 +42,7 @@ export default function ConsolePage() {
       {/* Decision Breakdown & Integration Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="saas-card p-6 lg:col-span-2 space-y-4">
-          <h2 className="text-sm font-semibold text-white">
+          <h2 className="text-sm font-semibold text-fg">
             Policy Decision Distribution
           </h2>
           <div className="space-y-3.5 text-xs">
@@ -54,10 +54,10 @@ export default function ConsolePage() {
             ].map((item) => (
               <div key={item.label} className="space-y-1.5">
                 <div className="flex justify-between font-medium">
-                  <span className="text-gray-300">{item.label}</span>
+                  <span className="text-fg-2">{item.label}</span>
                   <span className={`font-mono font-semibold ${item.textColor}`}>{item.pct}</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-fg/[0.06] overflow-hidden">
                   <div
                     className={`h-full rounded-full ${item.color}`}
                     style={{ width: item.width }}
@@ -71,30 +71,30 @@ export default function ConsolePage() {
         {/* Integration Status Card */}
         <div className="saas-card p-6 flex flex-col justify-between space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-white mb-3">
+            <h2 className="text-sm font-semibold text-fg mb-3">
               Gateways & Services
             </h2>
             <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-gray-300">PayPal Vault</span>
+              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+                <span className="text-fg-2">PayPal Vault</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Connected</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-gray-300">Channel3 Feed</span>
+              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+                <span className="text-fg-2">Channel3 Feed</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Synced</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-gray-300">FastAPI Gateway</span>
+              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+                <span className="text-fg-2">FastAPI Gateway</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Port 8000</span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-gray-300">Vector Embeddings</span>
+                <span className="text-fg-2">Vector Embeddings</span>
                 <span className="saas-badge saas-badge-neutral text-[10px]">0.82 Cosine</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-white/[0.08]">
+          <div className="pt-3 border-t border-fg/[0.08]">
             <Link
               href="/wallet"
               className="intentlock-btn-outline w-full text-xs font-medium justify-center"

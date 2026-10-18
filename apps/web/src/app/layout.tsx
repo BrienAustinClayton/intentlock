@@ -21,6 +21,8 @@ export const metadata: Metadata = {
     "AI-powered autonomous purchase verification layer. Real-time prompt injection scanning, semantic intent diffing, and cryptographic proof of intent for AI shopping agents.",
 };
 
+const THEME_INIT = `try{var t=localStorage.getItem("il-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({
   children,
 }: {
@@ -29,9 +31,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="dark"
+      suppressHydrationWarning
     >
-      <body className="min-h-full font-sans bg-[#0c0d12] text-gray-100 flex">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
+      <body className="min-h-full font-sans bg-canvas text-fg flex">
         {/* Persistent Left Sidebar */}
         <Sidebar />
 
@@ -43,7 +50,7 @@ export default function RootLayout({
             {children}
           </main>
           
-          <footer className="border-t border-[#1c1f28] py-4 px-8 text-xs text-gray-500 flex items-center justify-between">
+          <footer className="border-t border-line py-4 px-8 text-xs text-fg-dim flex items-center justify-between">
             <span>© 2026 IntentLock Gateway · Ed25519 & Channel3 Active</span>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">

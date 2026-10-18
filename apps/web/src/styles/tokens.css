@@ -1,39 +1,113 @@
 /*
- * IntentLock sleek dark dashboard tokens
- * Inspired by modern dark command centers (CargoFlow, Linear, Vercel)
+ * IntentLock theme tokens. Dark is the default; [data-theme="light"] overrides.
+ * Components read these through Tailwind utilities (text-fg, bg-canvas, border-line…)
+ * or directly via var(); never hardcode a neutral hex in a component.
  */
 
-:root {
-  /* Core dark palette (default mode) */
-  --color-bg: #0c0d12;
-  --color-sidebar: #0f1117;
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Neutrals */
+  --canvas: #0c0d12;
+  --sidebar: #0e0f14;
+  --input: #14161e;
+  --raised: #1e2130;
+  --line: #1c1f28;
+  --fg: #f3f4f6;
+  --fg-2: #d1d5db;
+  --fg-muted: #9ca3af;
+  --fg-dim: #6b7280;
+  --fg-faint: #4b5563;
+
+  /* Tactile surfaces */
+  --card-from: #171a24;
+  --card-to: #13151d;
+  --card-edge: rgba(255, 255, 255, 0.06);
+  --card-edge-hover: rgba(255, 255, 255, 0.1);
+  --key-from: #252834;
+  --key-to: #1b1d27;
+  --key-edge: #0b0c10;
+  --key-text: #e5e7eb;
+  --hl: rgba(255, 255, 255, 0.08);
+  --shade: rgba(0, 0, 0, 0.3);
+  --ring-soft: rgba(255, 255, 255, 0.04);
+  --drop: rgba(0, 0, 0, 0.5);
+  --well: rgba(0, 0, 0, 0.45);
+  --nav-active: rgba(255, 255, 255, 0.07);
+  --popover: #1b1d27;
+
+  /* Legacy names used by proof / order detail pages */
+  --color-bg: var(--canvas);
+  --color-sidebar: var(--sidebar);
   --color-surface: #151720;
   --color-surface-subtle: #1a1d28;
-  --color-surface-raised: #1e212e;
+  --color-surface-raised: var(--raised);
   --color-surface-hover: #222634;
   --color-border: rgba(255, 255, 255, 0.07);
   --color-border-subtle: rgba(255, 255, 255, 0.04);
   --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-text: #f3f4f6;
-  --color-text-muted: #94a3b8;
-  --color-text-dim: #64748b;
+  --color-text: var(--fg);
+  --color-text-muted: var(--fg-muted);
+  --color-text-dim: var(--fg-dim);
 
-  /* Accent – glowing purple/indigo */
+  /* Accent */
   --color-brand: #6366f1;
   --color-brand-glow: rgba(99, 102, 241, 0.35);
   --color-brand-hover: #4f46e5;
   --color-purple-pill: #7064e9;
 
-  /* Status tokens */
+  /* Status */
   --color-status-captured: #10b981;
   --color-status-voided: #f43f5e;
   --color-status-rejected: #e11d48;
   --color-status-pending-approval: #f59e0b;
   --color-status-checking: #818cf8;
 
-  /* Shadows with dark glow support */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.6);
   --shadow-card: 0 4px 12px 0 rgba(0, 0, 0, 0.4);
   --shadow-purple-glow: 0 0 20px rgba(112, 100, 233, 0.35);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #f5f6f8;
+  --sidebar: #fbfbfc;
+  --input: #ffffff;
+  --raised: #ffffff;
+  --line: #e4e6eb;
+  --fg: #111318;
+  --fg-2: #2f3440;
+  --fg-muted: #565d6b;
+  --fg-dim: #737a88;
+  --fg-faint: #a3a9b5;
+
+  --card-from: #ffffff;
+  --card-to: #fcfcfd;
+  --card-edge: rgba(15, 17, 24, 0.08);
+  --card-edge-hover: rgba(15, 17, 24, 0.14);
+  --key-from: #ffffff;
+  --key-to: #f1f2f5;
+  --key-edge: rgba(15, 17, 24, 0.16);
+  --key-text: #1f2430;
+  --hl: rgba(255, 255, 255, 0.9);
+  --shade: rgba(15, 17, 24, 0.06);
+  --ring-soft: rgba(15, 17, 24, 0.02);
+  --drop: rgba(15, 17, 24, 0.08);
+  --well: rgba(15, 17, 24, 0.08);
+  --nav-active: #ffffff;
+  --popover: #ffffff;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f8fa;
+  --color-surface-hover: #f0f1f4;
+  --color-border: rgba(15, 17, 24, 0.09);
+  --color-border-subtle: rgba(15, 17, 24, 0.05);
+  --color-border-strong: rgba(15, 17, 24, 0.18);
+
+  --shadow-xs: 0 1px 2px 0 rgba(15, 17, 24, 0.06);
+  --shadow-sm: 0 2px 4px 0 rgba(15, 17, 24, 0.08);
+  --shadow-card: 0 4px 12px 0 rgba(15, 17, 24, 0.06);
 }

@@ -54,13 +54,17 @@ export default function TopHeader() {
 
         {/* Engine status pills */}
         <div className="hidden md:flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Channel3 Live</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-medium text-indigo-400">
-            <span>Ed25519 Active</span>
-          </div>
+          <span className="saas-badge saas-badge-success">
+            <span className="tag-dot animate-pulse" />
+            Channel3 live
+          </span>
+          <span className="saas-badge saas-badge-brand">
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" />
+              <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+            </svg>
+            Ed25519 signing
+          </span>
         </div>
 
         {/* GitHub link */}

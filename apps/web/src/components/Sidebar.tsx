@@ -29,7 +29,7 @@ export default function Sidebar() {
           href: "/lab",
           label: "Attack Lab",
           badge: "Live",
-          badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+          badgeColor: "saas-badge-success",
           icon: (
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -63,7 +63,7 @@ export default function Sidebar() {
           href: "/wallet/orders",
           label: "Orders & Holds",
           badge: "2 review",
-          badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+          badgeColor: "saas-badge-warning",
           icon: (
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -133,16 +133,18 @@ export default function Sidebar() {
       {/* Brand Header */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-[#1c1f28]">
         <Link href="/" className="flex items-center gap-3 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm shadow-md shadow-indigo-500/25">
-            IL
-          </div>
+          <span className="icon-tile icon-tile-brand !w-8 !h-8 !rounded-[9px]">
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" />
+              <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor" fillOpacity="0.18" />
+              <path d="M12 14.5v2.5" />
+            </svg>
+          </span>
           {!collapsed && (
             <div className="truncate">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-gray-100 tracking-tight">IntentLock</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/5">
-                  v2.0
-                </span>
+                <span className="saas-badge saas-badge-neutral !px-1.5 !py-0.5 !text-[10px] font-mono">v2.0</span>
               </div>
               <p className="text-[11px] text-gray-500 truncate">Verification Gateway</p>
             </div>
@@ -179,7 +181,7 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
                     isActive
-                      ? "bg-[#212430] text-white shadow-xs"
+                      ? "bg-gradient-to-b from-[#252836] to-[#1d1f2a] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(0,0,0,0.6),0_1px_2px_rgba(0,0,0,0.5)]"
                       : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   }`}
                   title={item.label}
@@ -192,7 +194,7 @@ export default function Sidebar() {
                   </div>
                   {!collapsed && item.badge && (
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${item.badgeColor}`}
+                      className={`saas-badge !text-[10px] !px-1.5 !py-0.5 shrink-0 ${item.badgeColor}`}
                     >
                       {item.badge}
                     </span>
@@ -206,7 +208,7 @@ export default function Sidebar() {
 
       {/* Floating Status Checklist (Reference 2 Get Started Widget) */}
       {!collapsed && (
-        <div className="mx-3 mb-3 p-3 rounded-xl border border-white/[0.08] bg-[#14161f] space-y-2">
+        <div className="saas-card !rounded-xl mx-3 mb-3 p-3 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-gray-200">Gateway Status</span>
             <span className="flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
@@ -231,7 +233,7 @@ export default function Sidebar() {
       {/* User / Session Profile */}
       <div className="p-3 border-t border-[#1c1f28]">
         <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.03] border border-white/5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400 font-mono text-xs font-bold border border-indigo-500/20">
+          <div className="icon-tile !w-8 !h-8 !rounded-lg font-mono text-xs font-bold">
             P
           </div>
           {!collapsed && (

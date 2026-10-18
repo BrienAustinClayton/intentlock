@@ -51,7 +51,7 @@ function OrderRow({ order }: { order: Order }) {
           {/* Left: ID, merchant, agent */}
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+              <span className="font-mono text-xs font-bold text-slate-900 dark:text-fg">
                 {order.id}
               </span>
               <StatusChip status={order.status} />
@@ -67,7 +67,7 @@ function OrderRow({ order }: { order: Order }) {
           {/* Right: total + time */}
           <div className="text-right shrink-0 space-y-1">
             {order.total && (
-              <div className="text-sm font-bold font-mono text-slate-900 dark:text-white">
+              <div className="text-sm font-bold font-mono text-slate-900 dark:text-fg">
                 ${order.total} {order.currency ?? "USD"}
               </div>
             )}
@@ -123,10 +123,10 @@ export default function WalletOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
             Orders & Settlement Ledger
           </h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-fg-muted">
             Real-time audit log of autonomous checkout requests and human approval holds.
             {isChecking(orders) && (
               <span className="text-indigo-400 font-medium">

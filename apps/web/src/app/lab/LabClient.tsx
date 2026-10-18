@@ -77,7 +77,7 @@ function decisionColor(d: string): string {
   if (dl === "capture") return "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900";
   if (dl === "hold") return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900";
   if (dl === "void" || dl === "reject") return "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900";
-  return "text-gray-500 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
+  return "text-fg-dim bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
 }
 
 function DecisionBadge({ decision }: { decision: string }) {
@@ -92,7 +92,7 @@ function resultColor(r: CheckResult): string {
   if (r === "pass") return "text-emerald-600 dark:text-emerald-400";
   if (r === "flag") return "text-amber-600 dark:text-amber-400";
   if (r === "fail" || r === "error") return "text-rose-600 dark:text-rose-400";
-  return "text-gray-400";
+  return "text-fg-muted";
 }
 
 function stepLabel(s: CheckStep | string): string {
@@ -165,7 +165,7 @@ function ChecksTimeline({ checks }: { checks: Check[] }) {
   if (checks.length === 0) return null;
   return (
     <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
-      <div className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-fg-muted mb-2">
         Pipeline Telemetry · {checks.length} checks
       </div>
       <div className="space-y-1">
@@ -175,11 +175,11 @@ function ChecksTimeline({ checks }: { checks: Check[] }) {
               <span className={`font-mono text-[10px] font-semibold uppercase ${resultColor(c.result)}`}>
                 {c.result}
               </span>
-              <span className="font-medium text-gray-700 dark:text-gray-300">
+              <span className="font-medium text-fg-faint dark:text-fg-2">
                 {stepLabel(c.step)}
               </span>
             </div>
-            <div className="flex items-center gap-3 font-mono text-gray-400 text-[11px]">
+            <div className="flex items-center gap-3 font-mono text-fg-muted text-[11px]">
               {c.score !== null && c.score !== undefined && (
                 <span>score: {c.score}</span>
               )}
@@ -232,17 +232,17 @@ function ScenarioCard({
     <div className={`border border-gray-200 rounded-lg border-l-[3px] ${borderColor} p-5 dark:border-gray-800`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h2 className="text-[14px] font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-[14px] font-semibold text-gray-900 dark:text-fg">
           {scenarioLabel(info.scenario)}
         </h2>
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-gray-400">Expected:</span>
+          <span className="text-fg-muted">Expected:</span>
           <DecisionBadge decision={info.expected_decision} />
         </div>
       </div>
 
       {/* Meta row */}
-      <div className="mt-1.5 flex items-center gap-3 font-mono text-[11px] text-gray-400">
+      <div className="mt-1.5 flex items-center gap-3 font-mono text-[11px] text-fg-muted">
         <span>{info.scenario}</span>
         <span>·</span>
         <span>{info.agent_id}</span>
@@ -251,14 +251,14 @@ function ScenarioCard({
       </div>
 
       {/* Narration */}
-      <p className="mt-2 text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
+      <p className="mt-2 text-[12px] text-fg-dim dark:text-fg-muted leading-relaxed">
         {info.narration}
       </p>
 
       {/* Pages & Attack Inspection */}
       {info.page_urls.length > 0 && (
         <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px]">
-          <span className="text-gray-400 font-medium">Pages:</span>
+          <span className="text-fg-muted font-medium">Pages:</span>
           {info.page_urls.map((url) => {
             const { href, label, isAttack } = pageUrlInfo(url);
             return (
@@ -270,7 +270,7 @@ function ScenarioCard({
                 className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
                   isAttack
                     ? "border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400"
-                    : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400"
+                    : "border-gray-200 text-fg-dim hover:bg-gray-50 dark:border-gray-700 dark:text-fg-muted"
                 }`}
               >
                 {label}
@@ -292,7 +292,7 @@ function ScenarioCard({
 
       {/* Hidden injection revelation block */}
       {state.revealPhase === "loading" && (
-        <div className="mt-2 text-[11px] text-gray-400">
+        <div className="mt-2 text-[11px] text-fg-muted">
           Scanning DOM for hidden injection payload...
         </div>
       )}
@@ -311,7 +311,7 @@ function ScenarioCard({
         </div>
       )}
       {state.revealPhase === "done" && state.revealTexts.length === 0 && (
-        <div className="mt-2 text-[11px] text-gray-400">
+        <div className="mt-2 text-[11px] text-fg-muted">
           No hidden CSS injection vectors detected.
         </div>
       )}
@@ -329,9 +329,9 @@ function ScenarioCard({
             disabled={isRunning}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
               isRunning
-                ? "bg-white/10 text-gray-400 cursor-not-allowed"
+                ? "bg-fg/10 text-fg-muted cursor-not-allowed"
                 : isDone
-                ? "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+                ? "border border-fg/10 bg-fg/5 text-fg-2 hover:bg-fg/10"
                 : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm shadow-indigo-500/20"
             }`}
           >
@@ -352,7 +352,7 @@ function ScenarioCard({
 
           {isDone && state.result && (
             <div className="flex items-center gap-2 text-[11px]">
-              <span className="text-gray-400">Outcome:</span>
+              <span className="text-fg-muted">Outcome:</span>
               <DecisionBadge decision={state.result.actual_decision} />
               {matched ? (
                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ Match</span>
@@ -368,7 +368,7 @@ function ScenarioCard({
           <div className="flex items-center gap-3 text-[11px]">
             <Link
               href={`/wallet/orders/${state.result.order_id}`}
-              className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors"
+              className="text-fg-muted hover:text-fg-faint dark:hover:text-fg font-medium transition-colors"
             >
               Order →
             </Link>
@@ -558,10 +558,10 @@ export default function LabClient({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
             Attack Evaluation Lab
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-gray-400 max-w-2xl">
+          <p className="mt-1 text-xs sm:text-sm text-fg-muted max-w-2xl">
             Trigger real-time adversarial prompt injection, merchant divergence, and pricing exploit vectors against IntentLock&apos;s checkout verification pipeline.
           </p>
         </div>
@@ -601,11 +601,11 @@ export default function LabClient({
             <span className={`font-medium ${runAll.passed === runAll.total ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
               {runAll.passed === runAll.total ? "✓ All scenarios passed" : "⚠ Completed with discrepancies"}
             </span>
-            <span className="text-gray-400">
+            <span className="text-fg-muted">
               {runAll.passed}/{runAll.total} matched expected decisions
             </span>
           </div>
-          <span className="font-mono text-[11px] text-gray-400">
+          <span className="font-mono text-[11px] text-fg-muted">
             {DEMO_USER}
           </span>
         </div>

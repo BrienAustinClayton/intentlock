@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 :root {
   --background: var(--color-bg);
   --foreground: var(--color-text);
@@ -9,6 +11,16 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--sidebar);
+  --color-input: var(--input);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-dim: var(--fg-dim);
+  --color-fg-faint: var(--fg-faint);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -18,8 +30,8 @@
 }
 
 html, body {
-  background-color: #0c0d12 !important;
-  color: #f3f4f6;
+  background-color: var(--canvas);
+  color: var(--fg);
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
@@ -34,7 +46,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.025em;
   text-wrap: balance;
   font-weight: 600;
-  color: #f3f4f6;
+  color: var(--fg);
 }
 
 p {
@@ -55,11 +67,11 @@ code, pre, kbd, samp {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--fg) 24%, transparent);
 }
 
 /* ---------------------------------------------------------------
@@ -69,18 +81,18 @@ code, pre, kbd, samp {
    --------------------------------------------------------------- */
 
 .saas-card {
-  background: linear-gradient(180deg, #171a24 0%, #13151d 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, var(--card-from) 0%, var(--card-to) 100%);
+  border: 1px solid var(--card-edge);
   border-radius: 16px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 var(--hl),
+    0 1px 2px var(--drop),
+    0 8px 24px -12px var(--drop);
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .saas-card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--card-edge-hover);
 }
 
 .saas-card-interactive {
@@ -108,9 +120,9 @@ code, pre, kbd, samp {
   background: linear-gradient(180deg, rgb(var(--tag) / 0.16) 0%, rgb(var(--tag) / 0.07) 100%);
   border: 1px solid rgb(var(--tag) / 0.26);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
-    0 1px 1.5px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 var(--hl),
+    inset 0 -1px 0 var(--shade),
+    0 1px 1.5px var(--drop);
 }
 
 .saas-badge-success { --tag: 52 211 153; }
@@ -118,6 +130,12 @@ code, pre, kbd, samp {
 .saas-badge-danger { --tag: 251 113 133; }
 .saas-badge-neutral { --tag: 148 163 184; }
 .saas-badge-brand { --tag: 165 180 252; }
+
+[data-theme="light"] .saas-badge-success { --tag: 4 140 98; }
+[data-theme="light"] .saas-badge-warning { --tag: 180 83 9; }
+[data-theme="light"] .saas-badge-danger { --tag: 214 31 72; }
+[data-theme="light"] .saas-badge-neutral { --tag: 82 90 108; }
+[data-theme="light"] .saas-badge-brand { --tag: 79 70 229; }
 
 .tag-dot {
   width: 6px;
@@ -175,25 +193,25 @@ code, pre, kbd, samp {
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #e5e7eb;
-  background: linear-gradient(180deg, #252834 0%, #1b1d27 100%);
-  border: 1px solid #0b0c10;
+  color: var(--key-text);
+  background: linear-gradient(180deg, var(--key-from) 0%, var(--key-to) 100%);
+  border: 1px solid var(--key-edge);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.5);
+    inset 0 1px 0 var(--hl),
+    inset 0 -1px 0 var(--shade),
+    0 0 0 1px var(--ring-soft),
+    0 1px 2px var(--drop);
   transition: filter 0.15s ease, transform 0.08s ease;
   cursor: pointer;
 }
 
 .intentlock-btn-outline:hover {
-  filter: brightness(1.18);
+  filter: brightness(1.12);
 }
 
 .intentlock-btn-outline:active {
   transform: translateY(1px);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 2px 4px var(--well), 0 0 0 1px var(--ring-soft);
 }
 
 .intentlock-btn-primary:disabled,
@@ -205,18 +223,6 @@ code, pre, kbd, samp {
   cursor: not-allowed;
 }
 
-/* Icon chip inside a button, like the "+" in a New button */
-.btn-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.125rem;
-  height: 1.125rem;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.15);
-}
-
 /* Icon tiles (logo, agent avatars, empty states) */
 .icon-tile {
   display: inline-flex;
@@ -226,14 +232,14 @@ code, pre, kbd, samp {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 10px;
-  color: #c7d2fe;
-  background: linear-gradient(180deg, #262938 0%, #191b25 100%);
-  border: 1px solid #0a0b0f;
+  color: #a5b4fc;
+  background: linear-gradient(180deg, var(--key-from) 0%, var(--key-to) 100%);
+  border: 1px solid var(--key-edge);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 2px 4px rgba(0, 0, 0, 0.45);
+    inset 0 1px 0 var(--hl),
+    inset 0 -1px 0 var(--shade),
+    0 0 0 1px var(--ring-soft),
+    0 2px 4px var(--drop);
 }
 
 .icon-tile-brand {
@@ -249,11 +255,75 @@ code, pre, kbd, samp {
 
 .icon-tile-success { color: #6ee7b7; }
 .icon-tile-warning { color: #fcd34d; }
+[data-theme="light"] .icon-tile { color: #4f46e5; }
+[data-theme="light"] .icon-tile-success { color: #059669; }
+[data-theme="light"] .icon-tile-warning { color: #b45309; }
+[data-theme="light"] .icon-tile-brand { color: #ffffff; }
 
 /* Inputs read as recessed wells */
 input[type="text"], input[type="search"], input[type="number"], textarea, select {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 2px var(--well);
 }
+
+/* Sidebar nav: selected item is a lifted segment, like a segmented control */
+.nav-item-active {
+  color: var(--fg);
+  background: var(--nav-active);
+  box-shadow:
+    inset 0 1px 0 var(--hl),
+    0 0 0 1px var(--card-edge),
+    0 1px 2px var(--drop);
+}
+
+/* Popover menus */
+.popover {
+  background: var(--popover);
+  border: 1px solid var(--card-edge-hover);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 var(--hl),
+    0 12px 32px -8px rgba(0, 0, 0, 0.45),
+    0 2px 6px var(--drop);
+}
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  box-shadow: inset 0 1px 2px var(--well);
+}
+
+.segmented > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.segmented > button:hover { color: var(--fg); }
+
+:root:not([data-theme="light"]) .segmented > button[data-value="dark"],
+[data-theme="light"] .segmented > button[data-value="light"] {
+  color: var(--fg);
+  background: linear-gradient(180deg, var(--key-from) 0%, var(--key-to) 100%);
+  box-shadow: inset 0 1px 0 var(--hl), 0 0 0 1px var(--key-edge), 0 1px 2px var(--drop);
+}
+
+/* Accent text that was tuned for dark backgrounds gets a darker shade on light */
+[data-theme="light"] .text-emerald-300, [data-theme="light"] .text-emerald-400 { color: #047857; }
+[data-theme="light"] .text-amber-300, [data-theme="light"] .text-amber-400 { color: #b45309; }
+[data-theme="light"] .text-rose-300, [data-theme="light"] .text-rose-400 { color: #be123c; }
+[data-theme="light"] .text-indigo-300, [data-theme="light"] .text-indigo-400 { color: #4338ca; }
 
 /* Keyboard focus visibility */
 :focus-visible {

@@ -96,10 +96,10 @@ export default function WalletRequestPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-fg">
           Create Agent Intent Request
         </h1>
-        <p className="mt-1 text-sm text-gray-400">
+        <p className="mt-1 text-sm text-fg-muted">
           Sign a cryptographically verifiable purchase prompt. The agent uses this text to buy items, and IntentLock verifies every cart line against it.
         </p>
       </div>
@@ -112,7 +112,7 @@ export default function WalletRequestPage() {
           <div>
             <label
               htmlFor="agent-select"
-              className="block text-xs font-semibold text-gray-700 mb-1"
+              className="block text-xs font-semibold text-fg-faint mb-1"
             >
               Assigned Shopping Agent
             </label>
@@ -133,7 +133,7 @@ export default function WalletRequestPage() {
           <div>
             <label
               htmlFor="request-text"
-              className="block text-xs font-semibold text-gray-700 mb-1"
+              className="block text-xs font-semibold text-fg-faint mb-1"
             >
               Natural Language Intent Prompt
             </label>
@@ -143,7 +143,7 @@ export default function WalletRequestPage() {
               onChange={(e) => setRequestText(e.target.value)}
               rows={4}
               placeholder="e.g. 2 organic whole milks and fresh sourdough bread under $25 from FreshMart"
-              className="w-full rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-900 placeholder:text-gray-400 leading-relaxed"
+              className="w-full rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-900 placeholder:text-fg-muted leading-relaxed"
             />
             {intentError && (
               <p className="text-xs mt-1.5 text-rose-600 font-medium">
@@ -154,7 +154,7 @@ export default function WalletRequestPage() {
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-fg hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
             disabled={intentLoading}
           >
             {intentLoading ? "Signing Intent with Ed25519..." : "Sign & Create Intent"}
@@ -174,18 +174,18 @@ export default function WalletRequestPage() {
                 Intent Stored in Gateway
               </span>
             </div>
-            <span className="font-mono text-xs text-gray-500">
+            <span className="font-mono text-xs text-fg-dim">
               User: {DEMO_USER_ID}
             </span>
           </div>
 
           <div className="rounded-md border border-gray-200 bg-white p-3 font-mono text-xs space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Intent ID:</span>
+              <span className="text-fg-dim">Intent ID:</span>
               <span className="font-bold text-gray-900">{intentId}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Signature:</span>
+              <span className="text-fg-dim">Signature:</span>
               <span className="text-gray-900 font-mono" title={intentSig}>
                 {shortSig(intentSig)}
               </span>
@@ -194,7 +194,7 @@ export default function WalletRequestPage() {
 
           <div className="flex items-center gap-3 pt-1">
             <button
-              className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-xs font-medium text-fg hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
               onClick={handleRunAgent}
               disabled={agentLoading}
             >
@@ -202,7 +202,7 @@ export default function WalletRequestPage() {
             </button>
             <Link
               href="/wallet/orders"
-              className="text-xs text-gray-600 hover:text-gray-900 underline font-medium"
+              className="text-xs text-fg-faint hover:text-gray-900 underline font-medium"
             >
               View Orders Ledger &rarr;
             </Link>

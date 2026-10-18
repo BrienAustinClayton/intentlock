@@ -33,13 +33,13 @@ export default function SchedulePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
+          <span className="text-xs font-mono font-medium text-fg-muted uppercase tracking-wider block mb-1">
             Agent Mandate Timeline
           </span>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
             Purchase Schedule
           </h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-fg-muted">
             Automated recurring buying schedules synchronized with active spending mandates.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function SchedulePage() {
           <h2 className="text-sm font-semibold text-gray-900">
             Configured Procurement Schedules
           </h2>
-          <span className="font-mono text-xs text-gray-500">
+          <span className="font-mono text-xs text-fg-dim">
             CrudManager API: Ready
           </span>
         </div>
@@ -80,8 +80,8 @@ export default function SchedulePage() {
                     {s.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>Merchant: <strong className="font-medium text-gray-700">{s.merchant}</strong></span>
+                <div className="flex items-center gap-2 text-xs text-fg-dim">
+                  <span>Merchant: <strong className="font-medium text-fg-faint">{s.merchant}</strong></span>
                   <span>•</span>
                   <span>Frequency: {s.cron}</span>
                 </div>
@@ -92,7 +92,7 @@ export default function SchedulePage() {
                   <div className="font-mono font-semibold text-xs text-gray-900">
                     {s.budget}
                   </div>
-                  <div className="text-[11px] text-gray-400">Mandate Cap</div>
+                  <div className="text-[11px] text-fg-muted">Mandate Cap</div>
                 </div>
               </div>
             </div>
@@ -103,7 +103,7 @@ export default function SchedulePage() {
       {/* Bryntum Scheduler Integration Notice */}
       <div className="saas-card p-5 bg-gray-50/50">
         <div className="flex items-start gap-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-200/80 text-gray-700">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-200/80 text-fg-faint">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
               <line x1="16" y1="2" x2="16" y2="6" />
@@ -115,7 +115,7 @@ export default function SchedulePage() {
             <h3 className="text-sm font-semibold text-gray-900">
               Bryntum Scheduler Interactive Timeline
             </h3>
-            <p className="mt-1 text-xs text-gray-600 leading-relaxed">
+            <p className="mt-1 text-xs text-fg-faint leading-relaxed">
               Backend CrudManager sync endpoints (<code className="text-gray-800 font-mono text-[11px]">GET /schedule/load</code>, <code className="text-gray-800 font-mono text-[11px]">POST /schedule/sync</code>, and <code className="text-gray-800 font-mono text-[11px]">POST /schedule/propose</code>) are active. The interactive drag-and-drop timeline component embeds directly here.
             </p>
           </div>

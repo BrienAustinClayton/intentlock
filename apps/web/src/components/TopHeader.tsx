@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function TopHeader() {
@@ -20,12 +19,12 @@ export default function TopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 sm:px-8 border-b border-[#1c1f28] bg-[#0c0d12]/80 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 sm:px-8 border-b border-line bg-canvas/85 backdrop-blur-md">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-gray-500 font-medium">IntentLock</span>
-        <span className="text-gray-700">/</span>
-        <span className="text-gray-200 font-semibold">{getBreadcrumb()}</span>
+        <span className="text-fg-dim font-medium">IntentLock</span>
+        <span className="text-fg-faint">/</span>
+        <span className="text-fg font-semibold">{getBreadcrumb()}</span>
       </div>
 
       {/* Search & Actions */}
@@ -33,38 +32,23 @@ export default function TopHeader() {
         {/* Search bar matching Reference Image 1 */}
         <div className="relative hidden sm:flex items-center">
           <svg
-            className="absolute left-3 w-3.5 h-3.5 text-gray-400"
+            className="absolute left-3.5 w-4 h-4 text-fg-dim pointer-events-none"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
           >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <circle cx="11" cy="11" r="7" />
+            <line x1="20" y1="20" x2="16" y2="16" />
           </svg>
           <input
-            type="text"
-            placeholder="Search orders, agents, rules..."
-            className="w-64 rounded-xl bg-[#161821] border border-white/[0.08] pl-9 pr-8 py-1.5 text-xs text-gray-200 placeholder:text-gray-500 focus:outline-none focus:border-indigo-500/50 transition"
+            type="search"
+            placeholder="Search orders, agents, rules"
+            className="w-80 h-10 rounded-xl bg-input border border-line pl-10 pr-10 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/10 transition"
           />
-          <kbd className="absolute right-2.5 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-500 bg-white/5 border border-white/5">
+          <kbd className="absolute right-3 px-1.5 py-0.5 rounded-md text-[11px] font-mono text-fg-dim bg-fg/5 border border-line">
             /
           </kbd>
-        </div>
-
-        {/* Engine status pills */}
-        <div className="hidden md:flex items-center gap-2">
-          <span className="saas-badge saas-badge-success">
-            <span className="tag-dot animate-pulse" />
-            Channel3 live
-          </span>
-          <span className="saas-badge saas-badge-brand">
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" />
-              <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
-            </svg>
-            Ed25519 signing
-          </span>
         </div>
 
         {/* GitHub link */}
@@ -72,7 +56,7 @@ export default function TopHeader() {
           href="https://github.com/BrienAustinClayton/intentlock"
           target="_blank"
           rel="noreferrer"
-          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition"
+          className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-fg/5 transition"
           title="GitHub Repository"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

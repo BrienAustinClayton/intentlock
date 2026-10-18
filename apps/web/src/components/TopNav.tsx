@@ -27,7 +27,7 @@ export default function TopNav() {
             aria-label="IntentLock home"
             className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
           >
-            <span className="text-[15px] font-semibold tracking-tight text-gray-900 dark:text-white">
+            <span className="text-[15px] font-semibold tracking-tight text-gray-900 dark:text-fg">
               Intent<span className="text-indigo-600 dark:text-indigo-400">Lock</span>
             </span>
           </Link>
@@ -43,8 +43,8 @@ export default function TopNav() {
                     aria-current={isActive ? "page" : undefined}
                     className={`rounded-md px-2.5 py-1 text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "text-gray-900 dark:text-white"
-                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                        ? "text-gray-900 dark:text-fg"
+                        : "text-fg-dim hover:text-gray-900 dark:text-fg-muted dark:hover:text-fg"
                     }`}
                   >
                     {label}
@@ -57,7 +57,7 @@ export default function TopNav() {
 
         {/* Right: Minimal status */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400">
+          <div className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-medium text-fg-dim dark:border-gray-800 dark:text-fg-muted">
             <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
             <span>Online</span>
           </div>

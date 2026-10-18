@@ -79,7 +79,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Action toast */}
       {actionNotice && (
-        <div className="fixed top-20 right-8 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#1e2230] border border-indigo-500/40 text-xs text-white shadow-xl shadow-indigo-500/10">
+        <div className="saas-card !rounded-xl fixed top-20 right-8 z-50 flex items-center gap-3 px-4 py-2.5 text-xs text-white">
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span>{actionNotice}</span>
         </div>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             href="/lab"
             className="btn-approve-glow px-4 py-2 text-xs font-semibold inline-flex items-center gap-2"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            <span className="btn-chip"><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
             <span>Launch Attack Lab</span>
           </Link>
           <Link
@@ -178,16 +178,16 @@ export default function DashboardPage() {
           <div className="saas-card p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs">
-                  🤖
-                </div>
+                <span className="icon-tile">
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="9" cy="20" r="1.2" /><circle cx="18" cy="20" r="1.2" /><path d="M2.5 3.5h2.6l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.1" /></svg>
+                </span>
                 <div>
                   <h3 className="text-sm font-semibold text-white">Shopper Agent</h3>
                   <p className="text-xs text-gray-400 font-mono">agt_demo_shopper</p>
                 </div>
               </div>
               <span className="saas-badge saas-badge-success text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="tag-dot animate-pulse" />
                 Running
               </span>
             </div>
@@ -212,16 +212,16 @@ export default function DashboardPage() {
           <div className="saas-card p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs">
-                  🛡️
-                </div>
+                <span className="icon-tile icon-tile-success">
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 21.5s7.5-3.6 7.5-9.5V5.2L12 2.5 4.5 5.2V12c0 5.9 7.5 9.5 7.5 9.5z" /><path d="m9 12 2 2 4-4" /></svg>
+                </span>
                 <div>
                   <h3 className="text-sm font-semibold text-white">IntentDiff Sentinel</h3>
                   <p className="text-xs text-gray-400 font-mono">Channel3 Guard</p>
                 </div>
               </div>
               <span className="saas-badge saas-badge-success text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="tag-dot animate-pulse" />
                 Running
               </span>
             </div>
@@ -245,16 +245,16 @@ export default function DashboardPage() {
           <div className="saas-card p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs">
-                  ⚡
-                </div>
+                <span className="icon-tile icon-tile-warning">
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="11" cy="11" r="6.5" /><path d="m20.5 20.5-4.9-4.9" /><path d="M11 8v3.2" /><path d="M11 14h.01" /></svg>
+                </span>
                 <div>
                   <h3 className="text-sm font-semibold text-white">Injection Hunter</h3>
                   <p className="text-xs text-gray-400 font-mono">Payload Scanner</p>
                 </div>
               </div>
               <span className="saas-badge saas-badge-warning text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="tag-dot" />
                 Waiting review
               </span>
             </div>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
             }`}
           >
             <span>Needs approval</span>
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px]">
+            <span className="saas-badge saas-badge-brand !px-1.5 !py-0.5 !text-[10px]">
               {approvals.length}
             </span>
             {activeTab === "needs_approval" && (
@@ -306,7 +306,7 @@ export default function DashboardPage() {
             }`}
           >
             <span>Approved</span>
-            <span className="px-2 py-0.5 rounded-full bg-white/5 text-gray-400 text-[10px]">
+            <span className="saas-badge saas-badge-neutral !px-1.5 !py-0.5 !text-[10px]">
               {approvedList.length}
             </span>
             {activeTab === "approved" && (
@@ -323,7 +323,7 @@ export default function DashboardPage() {
             }`}
           >
             <span>Dismissed / Voided</span>
-            <span className="px-2 py-0.5 rounded-full bg-white/5 text-gray-400 text-[10px]">
+            <span className="saas-badge saas-badge-neutral !px-1.5 !py-0.5 !text-[10px]">
               {dismissedList.length}
             </span>
             {activeTab === "dismissed" && (
@@ -337,7 +337,7 @@ export default function DashboardPage() {
           <div>
             {approvals.length === 0 ? (
               <div className="saas-card p-12 text-center space-y-2">
-                <span className="text-2xl">✨</span>
+                <span className="icon-tile icon-tile-success !w-11 !h-11 !rounded-xl mx-auto mb-2"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12.5 4.5 4.5L19 7.5" /></svg></span>
                 <h3 className="text-sm font-semibold text-gray-200">All holds cleared</h3>
                 <p className="text-xs text-gray-400">
                   No pending checkout requests requiring operator approval at this time.
@@ -350,9 +350,7 @@ export default function DashboardPage() {
                     {/* Header: Agent + Timestamp */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 text-xs">
-                          🎯
-                        </div>
+                        <span className="icon-tile !w-6 !h-6 !rounded-md"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span>
                         <span className="text-xs text-gray-400">
                           {item.agentName}, {item.timestamp}
                         </span>

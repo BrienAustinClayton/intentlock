@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -----------------------------------------------------------------------
+  # api: Python service (services/intentlock) + packages/graph
+  # -----------------------------------------------------------------------
+  api:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: intentlock
+          POSTGRES_PASSWORD: intentlock
+          POSTGRES_DB: intentlock
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://intentlock:intentlock@localhost:5432/intentlock
+      TEST_DATABASE_URL: postgresql+psycopg://intentlock:intentlock@localhost:5432/intentlock_test
+      PAYPAL_MODE: mock
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.13.1"
+          enable-cache: true
+          cache-dependency-glob: |
+            services/intentlock/uv.lock
+            packages/graph/uv.lock
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install intentlock service deps
+        working-directory: services/intentlock
+        run: uv sync --frozen
+
+      # Generate fresh Ed25519 keys; written to GITHUB_ENV so subsequent steps
+      # pick them up. Keys are ephemeral to this run and never stored in the repo.
+      - name: Generate dummy signing keys
+        working-directory: services/intentlock
+        run: |
+          uv run python -c "
+          import base64, os
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          from cryptography.hazmat.primitives import serialization
+          gen = lambda: base64.urlsafe_b64encode(
+              Ed25519PrivateKey.generate().private_bytes(
+                  serialization.Encoding.Raw,
+                  serialization.PrivateFormat.Raw,
+                  serialization.NoEncryption(),
+              )
+          ).decode().rstrip('=')
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('INTENTLOCK_WALLET_PRIVATE_KEY=' + gen() + '\n')
+              f.write('INTENTLOCK_PROOF_PRIVATE_KEY=' + gen() + '\n')
+              f.write('AGENT_PRIVATE_KEY=' + gen() + '\n')
+          "
+
+      - name: Run Alembic migrations
+        working-directory: services/intentlock
+        run: uv run alembic upgrade head
+
+      # pytest -q runs all unmarked tests. Live LLM tests skip because
+      # they check `-m llm` in request.config and we don't pass that flag.
+      # Sandbox PayPal tests skip because RUN_SANDBOX != 1.
+      # PAYPAL_MODE=mock enables the payments marker tests.
+      - name: Test intentlock service
+        working-directory: services/intentlock
+        run: uv run pytest -q
+
+      - name: Install packages/graph deps
+        working-directory: packages/graph
+        run: uv sync --frozen
+
+      # graph tests derive intentlock_test from DATABASE_URL; the engine
+      # fixture creates the DB and runs alembic using services/intentlock/.venv
+      - name: Test packages/graph
+        working-directory: packages/graph
+        run: uv run pytest -q
+
+  # -----------------------------------------------------------------------
+  # web: Next.js app (apps/web)
+  # -----------------------------------------------------------------------
+  web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter web lint
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: pnpm --filter web build
+
+      - name: Test
+        run: pnpm --filter web test
+
+  # -----------------------------------------------------------------------
+  # agent: Mastra agent (apps/agent)
+  # The signing vector test is self-contained (reads data/eval/http_sig_vector.json).
+  # The checkout integration test calls apiUp() which returns false when
+  # INTENTLOCK_API_URL is unset (requireEnv throws, caught, returns false),
+  # so the integration test is skipped automatically.
+  # -----------------------------------------------------------------------
+  agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test signing vector (integration test skips without API)
+        run: pnpm --filter agent test

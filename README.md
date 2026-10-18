@@ -1,5 +1,7 @@
 # IntentLock
 
+![CI](https://github.com/BrienAustinClayton/intentlock/actions/workflows/ci.yml/badge.svg)
+
 **Mandates check the rules. IntentLock checks the meaning.**
 
 An AI-powered autonomous purchase verification layer that keeps AI shopping agents honest.

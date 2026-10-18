@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "description": "Fraud graph seed data for IntentLock lab and risk analysis.",
+  "nodes": [
+    {
+      "id": "usr_demo_priya",
+      "type": "user",
+      "name": "Priya",
+      "familiar_device": "dev_priya_macbook",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "dev_priya_macbook",
+      "type": "device",
+      "label": "Priya's MacBook Pro",
+      "familiar": true
+    },
+    {
+      "id": "agt_demo_shopper",
+      "type": "agent",
+      "name": "Priya Shopper",
+      "public_key": "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs",
+      "device_id": "dev_priya_macbook"
+    },
+    {
+      "id": "merchant_freshmart",
+      "type": "merchant",
+      "name": "freshmart",
+      "flagged": false
+    },
+    {
+      "id": "merchant_gadgethub",
+      "type": "merchant",
+      "name": "gadgethub",
+      "flagged": false
+    },
+    {
+      "id": "merchant_dealsdaily",
+      "type": "merchant",
+      "name": "dealsdaily",
+      "flagged": true,
+      "flag_reason": "High chargeback and bot traffic rate"
+    },
+    {
+      "id": "key_shared_bot_cluster",
+      "type": "key_fingerprint",
+      "fingerprint": "ed25519_bot_shared_key_hash_987",
+      "public_key": "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs"
+    },
+    {
+      "id": "dev_shared_bot_01",
+      "type": "device",
+      "label": "DataCenter VM 192.168.1.10",
+      "familiar": false
+    },
+    {
+      "id": "dev_shared_bot_02",
+      "type": "device",
+      "label": "DataCenter VM 192.168.1.11",
+      "familiar": false
+    },
+    {
+      "id": "agt_lab_bot_01",
+      "type": "agent",
+      "name": "Bot Agent 01",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_02",
+      "type": "agent",
+      "name": "Bot Agent 02",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_03",
+      "type": "agent",
+      "name": "Bot Agent 03",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_04",
+      "type": "agent",
+      "name": "Bot Agent 04",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_05",
+      "type": "agent",
+      "name": "Bot Agent 05",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_06",
+      "type": "agent",
+      "name": "Bot Agent 06",
+      "device_id": "dev_shared_bot_01"
+    },
+    {
+      "id": "agt_lab_bot_07",
+      "type": "agent",
+      "name": "Bot Agent 07",
+      "device_id": "dev_shared_bot_02"
+    },
+    {
+      "id": "agt_lab_bot_08",
+      "type": "agent",
+      "name": "Bot Agent 08",
+      "device_id": "dev_shared_bot_02"
+    },
+    {
+      "id": "agt_lab_bot_09",
+      "type": "agent",
+      "name": "Bot Agent 09",
+      "device_id": "dev_shared_bot_02"
+    },
+    {
+      "id": "agt_lab_bot_10",
+      "type": "agent",
+      "name": "Bot Agent 10",
+      "device_id": "dev_shared_bot_02"
+    },
+    {
+      "id": "agt_lab_bot_11",
+      "type": "agent",
+      "name": "Bot Agent 11",
+      "device_id": "dev_shared_bot_02"
+    },
+    {
+      "id": "agt_lab_bot_12",
+      "type": "agent",
+      "name": "Bot Agent 12",
+      "device_id": "dev_shared_bot_02"
+    }
+  ],
+  "edges": [
+    {
+      "source": "usr_demo_priya",
+      "target": "agt_demo_shopper",
+      "type": "OWNS"
+    },
+    {
+      "source": "agt_demo_shopper",
+      "target": "dev_priya_macbook",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_demo_shopper",
+      "target": "merchant_freshmart",
+      "type": "PLACED_ORDER",
+      "count": 8,
+      "time_span": "60_days"
+    },
+    {
+      "source": "agt_lab_bot_01",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_02",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_03",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_04",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_05",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_06",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_07",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_08",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_09",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_10",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_11",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_12",
+      "target": "key_shared_bot_cluster",
+      "type": "USES_KEY"
+    },
+    {
+      "source": "agt_lab_bot_01",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_02",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_03",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_04",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_05",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_06",
+      "target": "dev_shared_bot_01",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_07",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_08",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_09",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_10",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_11",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_12",
+      "target": "dev_shared_bot_02",
+      "type": "USES_DEVICE"
+    },
+    {
+      "source": "agt_lab_bot_07",
+      "target": "merchant_dealsdaily",
+      "type": "RAPID_ORDERS",
+      "order_count": 40,
+      "time_window_min": 10
+    }
+  ]
+}

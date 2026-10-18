@@ -362,6 +362,8 @@ def test_no_route_mutates_intents():
     assert {m.upper() for m in paths["/intents/{intent_id}"]} == {"GET"}
     # nothing else is named after intents (no hidden update route)
     assert sorted(p for p in paths if "intent" in p.lower()) == ["/intents", "/intents/{intent_id}"]
+    # the signed-in user's purchase requests are list + create only
+    assert {m.upper() for m in paths["/me/requests"]} == {"GET", "POST"}
 
 
 @pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE", "POST"])

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { ArrowRight, Check as CheckIcon, TriangleAlert, X } from "lucide-react";
 import { runLabScenario, labReset, getOrder, ApiError } from "@/lib/api";
 import { getOrderStatusStyle } from "@/lib/status";
 import type {
@@ -284,7 +285,7 @@ function ScenarioCard({
               onClick={() => onReveal(info.scenario, attackPages[0].href)}
               className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-1 cursor-pointer text-[11px]"
             >
-              Inspect Injections →
+              <span className="inline-flex items-center gap-1">Inspect injections<ArrowRight className="w-3.5 h-3.5" strokeWidth={2.2} /></span>
             </button>
           )}
         </div>
@@ -299,7 +300,7 @@ function ScenarioCard({
       {state.revealPhase === "done" && state.revealTexts.length > 0 && (
         <div className="mt-2 rounded border border-rose-200 bg-rose-50 p-3 text-[11px] dark:border-rose-900 dark:bg-rose-950/30">
           <div className="flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400 mb-1.5">
-            <span>⚠ Hidden Adversarial Instructions Detected:</span>
+            <TriangleAlert className="w-3.5 h-3.5" strokeWidth={2.2} /><span>Hidden instructions found on the page:</span>
           </div>
           <div className="space-y-1 font-mono text-[10px] text-rose-700 dark:text-rose-300">
             {state.revealTexts.map((t, idx) => (
@@ -355,9 +356,9 @@ function ScenarioCard({
               <span className="text-fg-muted">Outcome:</span>
               <DecisionBadge decision={state.result.actual_decision} />
               {matched ? (
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ Match</span>
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium"><CheckIcon className="w-3.5 h-3.5" strokeWidth={2.2} />Match</span>
               ) : (
-                <span className="text-rose-600 dark:text-rose-400 font-medium">✗ Mismatch</span>
+                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-medium"><X className="w-3.5 h-3.5" strokeWidth={2.2} />Mismatch</span>
               )}
             </div>
           )}
@@ -367,16 +368,10 @@ function ScenarioCard({
         {isDone && state.result && (
           <div className="flex items-center gap-3 text-[11px]">
             <Link
-              href={`/wallet/orders/${state.result.order_id}`}
-              className="text-fg-muted hover:text-fg-faint dark:hover:text-fg font-medium transition-colors"
-            >
-              Order →
-            </Link>
-            <Link
               href={`/proof/${state.result.order_id}`}
               className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
             >
-              Proof Certificate
+              Proof of intent
             </Link>
           </div>
         )}
@@ -558,11 +553,11 @@ export default function LabClient({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-fg">
-            Attack Evaluation Lab
+          <h1 className="text-xl font-semibold tracking-tight text-fg">
+            Attack simulator
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-fg-muted max-w-2xl">
-            Trigger real-time adversarial prompt injection, merchant divergence, and pricing exploit vectors against IntentLock&apos;s checkout verification pipeline.
+            Run six real attacks through the checkout checks: hidden instructions on a product page, the wrong item, an inflated price, a bot-farm store and a revoked agent. They run on a separate sandbox account, so your own orders and budget are untouched.
           </p>
         </div>
 
@@ -599,7 +594,7 @@ export default function LabClient({
         <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-800">
           <div className="flex items-center gap-2 text-[12px]">
             <span className={`font-medium ${runAll.passed === runAll.total ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-              {runAll.passed === runAll.total ? "✓ All scenarios passed" : "⚠ Completed with discrepancies"}
+              <span className="inline-flex items-center gap-1">{runAll.passed === runAll.total ? <CheckIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> : <TriangleAlert className="w-3.5 h-3.5" strokeWidth={2.2} />}{runAll.passed === runAll.total ? "All scenarios passed" : "Completed with differences"}</span>
             </span>
             <span className="text-fg-muted">
               {runAll.passed}/{runAll.total} matched expected decisions

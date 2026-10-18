@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/app/wallet/orders/orders.test.ts"
+    "test": "node --experimental-strip-types --test src/app/orders/orders.test.ts"
   },
   "dependencies": {
+    "lucide-react": "0.460.0",
     "next": "16.4.2",
     "openai": "^7.36.0",
     "react": "19.3.0",

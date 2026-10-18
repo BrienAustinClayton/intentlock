@@ -36,6 +36,12 @@
   --well: rgba(0, 0, 0, 0.45);
   --nav-active: rgba(255, 255, 255, 0.07);
   --popover: #1b1d27;
+  --btn-bg: #1e2029;
+  --btn-bg-hover: #252833;
+  --btn-edge: rgba(255, 255, 255, 0.07);
+  --btn-inset: inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  --edge-glow: rgba(129, 140, 248, 0.06);
+  --edge-glow-soft: rgba(129, 140, 248, 0.22);
 
   /* Legacy names used by proof / order detail pages */
   --color-bg: var(--canvas);
@@ -99,6 +105,12 @@
   --well: rgba(15, 17, 24, 0.08);
   --nav-active: #ffffff;
   --popover: #ffffff;
+  --btn-bg: #ffffff;
+  --btn-bg-hover: #f6f7f9;
+  --btn-edge: rgba(15, 17, 24, 0.12);
+  --btn-inset: inset 0 1px 0 #ffffff, inset 0 -1px 0 rgba(15, 17, 24, 0.07);
+  --edge-glow: rgba(79, 70, 229, 0.03);
+  --edge-glow-soft: rgba(79, 70, 229, 0.08);
 
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f8fa;

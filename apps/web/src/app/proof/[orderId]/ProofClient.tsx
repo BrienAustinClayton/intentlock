@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { Check as CheckIcon, Flag, X } from "lucide-react";
 import type { GetProofResponse, ProofBundle, CheckStep, CheckResult } from "@/lib/types";
 import { verifyProofAction } from "./actions";
 
@@ -22,10 +23,10 @@ function resultColor(r: CheckResult): string {
   return "#9ca3af";
 }
 
-function resultIcon(r: CheckResult): string {
-  if (r === "pass") return "✓";
-  if (r === "fail" || r === "error") return "✗";
-  if (r === "flag") return "⚑";
+function resultIcon(r: CheckResult) {
+  if (r === "pass") return <CheckIcon className="w-3.5 h-3.5" strokeWidth={2.2} />;
+  if (r === "fail" || r === "error") return <X className="w-3.5 h-3.5" strokeWidth={2.2} />;
+  if (r === "flag") return <Flag className="w-3.5 h-3.5" strokeWidth={2.2} />;
   return "–";
 }
 
@@ -225,7 +226,7 @@ export default function ProofClient({ proof }: { proof: GetProofResponse }) {
               color: "#fff",
             }}
           >
-            {valid ? "✓ Valid" : "✗ Invalid"}
+            <span className="inline-flex items-center gap-1">{valid ? <CheckIcon className="w-3.5 h-3.5" strokeWidth={2.2} /> : <X className="w-3.5 h-3.5" strokeWidth={2.2} />}{valid ? "Valid" : "Invalid"}</span>
           </span>
         </div>
         <div style={{ fontSize: "0.82rem", color: "var(--color-text-muted)", marginBottom: "0.4rem" }}>
@@ -284,7 +285,7 @@ export default function ProofClient({ proof }: { proof: GetProofResponse }) {
           }}
         >
           {verifyResult.tampered ? "Tamper demo — " : ""}
-          Signature is {verifyResult.valid ? "✓ valid" : "✗ invalid"}
+          Signature is {verifyResult.valid ? "valid" : "invalid"}
           {verifyResult.sha256 && (
             <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
               (sha256: <Mono>{verifyResult.sha256.slice(0, 16)}…</Mono>)

@@ -147,43 +147,7 @@ code, pre, kbd, samp {
 
 /* Buttons */
 .intentlock-btn-primary,
-.btn-approve-glow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #ffffff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-  background: linear-gradient(180deg, #8a7cf8 0%, #6a58e8 100%);
-  border: 1px solid #4f3fc9;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 6px 18px -6px rgba(106, 88, 232, 0.65);
-  transition: filter 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
-  cursor: pointer;
-}
-
-.intentlock-btn-primary:hover,
-.btn-approve-glow:hover {
-  filter: brightness(1.08);
-}
-
-.intentlock-btn-primary:active,
-.btn-approve-glow:active {
-  transform: translateY(1px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.25),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 1px 1px rgba(0, 0, 0, 0.4);
-}
-
+.btn-approve-glow,
 .intentlock-btn-outline {
   display: inline-flex;
   align-items: center;
@@ -193,34 +157,69 @@ code, pre, kbd, samp {
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--key-text);
-  background: linear-gradient(180deg, var(--key-from) 0%, var(--key-to) 100%);
-  border: 1px solid var(--key-edge);
-  box-shadow:
-    inset 0 1px 0 var(--hl),
-    inset 0 -1px 0 var(--shade),
-    0 0 0 1px var(--ring-soft),
-    0 1px 2px var(--drop);
-  transition: filter 0.15s ease, transform 0.08s ease;
+  transition: filter 0.15s ease, transform 0.08s ease, background 0.15s ease;
   cursor: pointer;
 }
 
-.intentlock-btn-outline:hover {
-  filter: brightness(1.12);
+/* Flat fills; depth comes only from a 1px inner highlight and shade. */
+.intentlock-btn-primary,
+.btn-approve-glow {
+  color: #ffffff;
+  background: #6c5ce7;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(0, 0, 0, 0.16), 0 1px 2px var(--drop);
 }
 
+.intentlock-btn-outline {
+  color: var(--key-text);
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-edge);
+  box-shadow: var(--btn-inset), 0 1px 2px var(--drop);
+}
+
+.intentlock-btn-primary:hover,
+.btn-approve-glow:hover {
+  background: #7a6bf0;
+}
+
+.intentlock-btn-outline:hover {
+  background: var(--btn-bg-hover);
+}
+
+.intentlock-btn-primary:active,
+.btn-approve-glow:active,
 .intentlock-btn-outline:active {
   transform: translateY(1px);
-  box-shadow: inset 0 2px 4px var(--well), 0 0 0 1px var(--ring-soft);
+  box-shadow: inset 0 1px 2px var(--well);
 }
 
 .intentlock-btn-primary:disabled,
 .btn-approve-glow:disabled,
 .intentlock-btn-outline:disabled {
   opacity: 0.5;
-  filter: none;
   transform: none;
   cursor: not-allowed;
+}
+
+.btn-sm {
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.8125rem;
+  border-radius: 8px;
+}
+
+/* Hairline edges with a very faint glow */
+.sidebar-edge {
+  border-right: 1px solid var(--line);
+  box-shadow: 1px 0 0 var(--edge-glow), 8px 0 28px -20px var(--edge-glow-soft);
+}
+
+.sidebar-edge-top {
+  border-top: 1px solid var(--line);
+}
+
+.header-edge {
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 var(--edge-glow), 0 10px 28px -22px var(--edge-glow-soft);
 }
 
 /* Icon tiles (logo, agent avatars, empty states) */

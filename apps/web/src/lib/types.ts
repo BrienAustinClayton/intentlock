@@ -82,6 +82,7 @@ export interface Agent {
   public_key: string;
   device_id: string;
   revoked_at: string | null;
+  created_at?: string | null;
 }
 
 export interface Mandate {

@@ -3,8 +3,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { getOrder, submitOrderApproval, ApiError } from "@/lib/api";
-import { getOrderStatusStyle } from "@/lib/status";
+import { ApiError } from "@/lib/api";
+import { me } from "@/lib/me";
+import { ArrowLeft, Check as CheckIcon, Flag, Minus, X } from "lucide-react";
+import { OrderStatusTag, merchantName, money } from "@/components/ui";
 import { SkeletonBlock } from "@/components/Skeleton";
 import type {
   Order,
@@ -73,11 +75,12 @@ function resultColor(r: CheckResult): string {
   return "var(--color-text-muted)";
 }
 
-function resultIcon(r: CheckResult): string {
-  if (r === "pass") return "✓";
-  if (r === "fail" || r === "error") return "✗";
-  if (r === "flag") return "⚑";
-  return "–";
+function resultIcon(r: CheckResult) {
+  const cls = "w-3.5 h-3.5";
+  if (r === "pass") return <CheckIcon className={cls} strokeWidth={2.2} />;
+  if (r === "fail" || r === "error") return <X className={cls} strokeWidth={2.2} />;
+  if (r === "flag") return <Flag className={cls} strokeWidth={2.2} />;
+  return <Minus className={cls} strokeWidth={2.2} />;
 }
 
 function decisionColor(d: string): string {
@@ -143,7 +146,7 @@ function issueLabel(issue: IntentDiffIssue): string {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="saas-card p-6 space-y-3">
-      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400">
         {title}
       </h2>
       {children}
@@ -331,7 +334,7 @@ function DecisionPanel({ decision, reasons }: { decision: string | null; reasons
     <Section title="Decision">
       <div className="flex items-center gap-2">
         <span
-          className="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold uppercase"
+          className="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold"
           style={{
             background: decisionColor(decision) + "22",
             color: decisionColor(decision),
@@ -399,7 +402,7 @@ function ApprovalPanel({
       <Section title="Approval">
         <div className="flex items-center gap-2">
           <span
-            className="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold uppercase"
+            className="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold"
             style={{
               background:
                 approval.decision === "approve"
@@ -428,7 +431,7 @@ function ApprovalPanel({
     setLoading(decision);
     setError(null);
     try {
-      await submitOrderApproval(orderId, { decision });
+      await me.approve(orderId, { decision });
       onApprovalDone();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -504,7 +507,7 @@ export default function OrderDetailClient({ orderId }: Props) {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getOrder(orderId)
+    me.order(orderId)
       .then((data) => {
         if (!active) return;
         setOrder(data);
@@ -543,7 +546,7 @@ export default function OrderDetailClient({ orderId }: Props) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl w-full px-6 py-10 space-y-5" aria-label="Loading order">
+      <div className="max-w-4xl w-full space-y-5" aria-label="Loading order">
         <div className="rounded-lg border p-5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
           <SkeletonBlock lines={3} />
         </div>
@@ -559,7 +562,7 @@ export default function OrderDetailClient({ orderId }: Props) {
 
   if (error || !order) {
     return (
-      <div className="mx-auto max-w-3xl w-full px-6 py-10">
+      <div className="max-w-4xl w-full">
         <div
           className="rounded-lg border px-4 py-3 text-sm"
           role="alert"
@@ -587,8 +590,8 @@ export default function OrderDetailClient({ orderId }: Props) {
           </div>
         </div>
         <p className="mt-3 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          <Link href="/wallet/orders" style={{ color: "var(--color-brand)" }}>
-            ← Back to orders
+          <Link href="/orders" style={{ color: "var(--color-brand)" }}>
+            <span className="inline-flex items-center gap-1.5"><ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.8} />Back to orders</span>
           </Link>
         </p>
       </div>
@@ -603,52 +606,19 @@ export default function OrderDetailClient({ orderId }: Props) {
       ? (intentDiffCheck.details as IntentDiffDetails)
       : null;
 
-  const statusStyle = getOrderStatusStyle(order.status);
-
   return (
-    <div className="mx-auto max-w-3xl w-full px-6 py-10 space-y-5">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 flex-wrap mb-2">
-          <Link
-            href="/wallet/orders"
-            className="text-sm"
-            style={{ color: "var(--color-brand)" }}
-          >
-            ← Orders
-          </Link>
+    <div className="max-w-4xl w-full space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Order {order.id.slice(-6).toUpperCase()}</h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            {merchantName(order.merchant)} · {fmtTime(order.created_at)}
+          </p>
+          <p className="mt-0.5 font-mono text-xs text-fg-dim">{order.id}</p>
         </div>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1
-              className="text-2xl font-bold font-mono"
-              style={{ color: "var(--color-text)" }}
-            >
-              {order.id}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Merchant: <strong>{order.merchant}</strong>
-              {" · "}Agent:{" "}
-              <span className="font-mono">{order.agent_id}</span>
-              {" · "}{fmtTime(order.created_at)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
-              style={{
-                background: statusStyle.hex + "22",
-                color: statusStyle.chipTextHex ?? statusStyle.hex,
-              }}
-            >
-              {statusStyle.label}
-            </span>
-            {order.total && (
-              <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>
-                {order.currency} {order.total}
-              </span>
-            )}
-          </div>
+        <div className="flex items-center gap-3">
+          <OrderStatusTag status={order.status} />
+          <span className="text-lg font-semibold tabular-nums">{money(order.total, order.currency)}</span>
         </div>
       </div>
 

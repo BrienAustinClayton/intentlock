@@ -15,8 +15,15 @@ export const STAGE_PATH: Record<Stage, string> = {
   app: "/",
 };
 
+// Behind Render's proxy nextUrl.origin is the internal address; the forwarded host is what the browser used.
+function requestOrigin(req: NextRequest): string {
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))?.split(",")[0].trim();
+  const proto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim() ?? req.nextUrl.protocol.replace(":", "");
+  return host ? `${proto}://${host}` : req.nextUrl.origin;
+}
+
 export function appUrl(req: NextRequest): string {
-  return (process.env.APP_URL || req.nextUrl.origin).replace(/\/$/, "");
+  return (process.env.APP_URL || requestOrigin(req)).replace(/\/$/, "");
 }
 
 function apiBase(): string {
@@ -86,7 +93,7 @@ export function shortCookie(res: NextResponse, name: string, value: string) {
 /** Reject cross-site form posts even if a browser ignores SameSite. */
 export function sameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
-  return !origin || origin === appUrl(req) || origin === req.nextUrl.origin;
+  return !origin || origin === appUrl(req) || origin === requestOrigin(req);
 }
 
 export function forbidden() {

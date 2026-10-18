@@ -99,6 +99,18 @@ services:
       - key: AGENT_PUBLIC_KEY  # public key of the demo shopper (apps/agent/.env); seeded onto agt_demo_shopper
         sync: false
 
+      # User sign-in: email codes via Resend, Google OAuth (redirect URI: <web URL>/api/auth/google/callback)
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: "IntentLock <onboarding@resend.dev>"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
   # ---------------------------------------------------------------------------
   # Web (Next.js 16, pnpm monorepo, standalone output)
   # ---------------------------------------------------------------------------
@@ -130,6 +142,10 @@ services:
 
       # Agent run endpoint (server-side, used by /api/run-agent)
       - key: AGENT_RUN_URL
+        sync: false
+
+      # Public URL of this web app; must equal WEB_ORIGIN on the API (session cookies + Google redirect)
+      - key: APP_URL
         sync: false
 
       # LLM — fast (server-side Risk Analyst only; never NEXT_PUBLIC_)

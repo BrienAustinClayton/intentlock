@@ -30,6 +30,17 @@ class User(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     paypal_payment_token = Column(String, nullable=True)
+    email = Column(String, nullable=True, unique=True)
+    email_verified_at = Column(DateTime(timezone=True), nullable=True)
+    google_sub = Column(String, nullable=True, unique=True)
+    avatar_url = Column(String, nullable=True)
+    country = Column(String(2), nullable=True)
+    currency = Column(String(3), nullable=True)
+    company = Column(String, nullable=True)
+    onboarding = Column(JSONB, nullable=True)
+    signup_completed_at = Column(DateTime(timezone=True), nullable=True)
+    onboarded_at = Column(DateTime(timezone=True), nullable=True)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     agents = relationship("Agent", back_populates="user")
@@ -267,4 +278,30 @@ class LLMCache(Base):
     profile = Column(String, nullable=False)
     model = Column(String, nullable=False)
     response = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AuthCode(Base):
+    """Email one-time sign-in code. Only an HMAC of the code is stored."""
+    __tablename__ = "auth_codes"
+
+    id = Column(String, primary_key=True)
+    email = Column(String, nullable=False, index=True)
+    code_hash = Column(String, nullable=False)
+    attempts = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    consumed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserSession(Base):
+    """Login session. Only a SHA-256 of the bearer token is stored."""
+    __tablename__ = "user_sessions"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True)
+    user_agent = Column(String(300), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

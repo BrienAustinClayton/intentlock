@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useMe } from "@/lib/useMe";
 
 interface ApprovalItem {
   id: string;
@@ -55,6 +56,7 @@ const INITIAL_APPROVALS: ApprovalItem[] = [
 ];
 
 export default function DashboardPage() {
+  const me = useMe();
   const [activeTab, setActiveTab] = useState<"needs_approval" | "approved" | "dismissed">("needs_approval");
   const [approvals, setApprovals] = useState<ApprovalItem[]>(INITIAL_APPROVALS);
   const [approvedList, setApprovedList] = useState<ApprovalItem[]>([]);
@@ -89,7 +91,7 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-fg">
-            Good morning, Priya
+            {me ? `Welcome back, ${me.name.split(" ")[0]}` : "Welcome back"}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-fg-muted">
             Autonomous Commerce Gatekeeper · Active Shift 07:00–19:00 · Ed25519 Mandate Enforced

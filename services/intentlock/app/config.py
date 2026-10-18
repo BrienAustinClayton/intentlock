@@ -93,6 +93,15 @@ class Settings(BaseSettings):
     PUBLIC_BASE_URL: Optional[str] = None
 
     # ------------------------------------------------------------------ #
+    # User auth: email one-time codes (Resend) + Google sign-in
+    # ------------------------------------------------------------------ #
+    AUTH_SECRET: Optional[str] = None  # HMAC key for sign-in codes
+    RESEND_API_KEY: Optional[str] = None
+    RESEND_FROM: Optional[str] = None
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+
+    # ------------------------------------------------------------------ #
     # Runtime (not in MANIFEST)
     # ------------------------------------------------------------------ #
     PORT: int = 8000

@@ -18,6 +18,7 @@ from app.config import settings
 from app.errors import http_exception_handler, unhandled_exception_handler
 from app.api import (
     agents,
+    auth,
     approvals,
     catalog,
     checkout,
@@ -115,6 +116,7 @@ async def health() -> dict[str, Any]:
 # ------------------------------------------------------------------ #
 # Routers
 # ------------------------------------------------------------------ #
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(vault.router)
 app.include_router(agents.router)

@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.local
+*.env
+!.env.example
+services/intentlock/.env
+data/seed/.spike_*
+apps/agent/.env
+apps/web/.env.local
+.venv-creds/
+
+# JS / Node
+node_modules/
+.next/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+dist/
+*.egg-info/
+
+# OS
+.DS_Store
+data/graph_flags.json
+
+# internal build planning + agent tooling (local only)
+plans/
+.claude/
+.coverage

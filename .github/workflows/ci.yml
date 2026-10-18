@@ -33,6 +33,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+psycopg://intentlock:intentlock@localhost:5432/intentlock
+      TEST_DATABASE_URL: postgresql+psycopg://intentlock:intentlock@localhost:5432/intentlock_test
       PAYPAL_MODE: mock
 
     steps:

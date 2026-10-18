@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "$0")"
+
+# uv sync installs into .venv, which is not on PATH at runtime: call it explicitly.
+PY=.venv/bin/python
 
 # Run DB migrations (idempotent)
-alembic upgrade head
+$PY -m alembic upgrade head
 
-# Seed demo user/agent (idempotent – safe to re-run on every deploy)
-uv run python scripts/seed_demo.py
+# Seed demo user/agent and Attack Lab fixtures (idempotent, safe on every deploy)
+$PY scripts/seed_demo.py
+$PY ../../scripts/load_lab.py
 
-# Load Attack Lab fixtures (idempotent – safe to re-run on every deploy)
-# Path is relative to this rootDir (services/intentlock)
-uv run python ../../scripts/load_lab.py
-
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
+exec $PY -m uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"

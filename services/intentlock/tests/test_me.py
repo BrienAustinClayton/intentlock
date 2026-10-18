@@ -129,7 +129,8 @@ from app.models import Agent, AgentRun  # noqa: E402
 
 class _Resp:
     def __init__(self, status, body):
-        self.status_code, self._b = status, body
+        import json
+        self.status_code, self._b, self.text = status, body, json.dumps(body)
 
     def json(self):
         return self._b
@@ -225,3 +226,46 @@ def test_agent_service_error_is_reported(client, two, hosted):
     client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "milk please"})
     run = client.get("/me/requests", headers=ha).json()[0]["run"]
     assert run["status"] == "failed" and "different agent" in run["summary"]
+
+
+def test_run_dispatch_is_recorded_for_developers_not_users(client, db, two, hosted):
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "Chocolates worth $2"})
+    row = db.query(AgentRun).one()
+    assert row.endpoint == "http://agent.test/run" and row.dispatched_at and row.attempts == 1
+    assert row.response_status == 200 and row.response_ms is not None and row.response_excerpt
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert not {"endpoint", "response_excerpt", "response_status", "dispatched_at"} & set(run)
+    assert client.get("/me/runs", headers=ha).status_code == 404
+
+
+def test_missing_config_names_the_variable(client, two, hosted, monkeypatch):
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    monkeypatch.setattr(settings, "AGENT_SERVICE_URL", None)
+    client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "milk please"})
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and "AGENT_SERVICE_URL" in run["summary"]
+
+
+def test_watchdog_resends_unsent_and_fails_lost_runs(client, db, two, hosted):
+    from datetime import datetime, timedelta, timezone
+    calls, _ = hosted
+    (alice, ha), _ = two
+    a = _hosted_agent(client, ha)
+    intent = client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "milk please"}).json()
+    now = datetime.now(timezone.utc)
+    unsent = hosted_agents.start_run(db, intent["id"], alice.id, a["id"])
+    unsent.started_at = now - timedelta(minutes=1)
+    lost = hosted_agents.start_run(db, intent["id"], alice.id, a["id"])
+    lost.dispatched_at = now - timedelta(minutes=10)
+    db.commit()
+    resend, failed = hosted_agents.recover_runs(db, now)
+    assert resend == [unsent.id] and failed == 1
+    assert db.get(AgentRun, lost.id).status == "failed"
+    n = len(calls)
+    hosted_agents.execute_run(unsent.id)
+    assert len(calls) == n + 1 and db.get(AgentRun, unsent.id).status == "failed"
+    hosted_agents.execute_run(unsent.id)
+    assert len(calls) == n + 1

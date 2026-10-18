@@ -57,16 +57,18 @@ VERSION = _git_sha()
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):  # noqa: ARG001
+    from app.hosted_agents import run_loop as agent_run_watchdog
     from app.jobs.expire_approvals import run_loop
-    task = asyncio.create_task(run_loop(interval_s=60))
+    tasks = [asyncio.create_task(run_loop(interval_s=60)), asyncio.create_task(agent_run_watchdog(interval_s=20))]
     try:
         yield
     finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        for task in tasks:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(

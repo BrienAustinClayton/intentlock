@@ -9,6 +9,8 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -16,7 +18,9 @@ import httpx
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from sqlalchemy import select, update
 
+from app import runlog
 from app.config import settings
 from app.crypto.keys import generate_keypair_b64
 from app.db import new_session
@@ -27,6 +31,7 @@ log = logging.getLogger("intentlock.hosted_agents")
 
 RUN_TIMEOUT_S = 300
 STALE_AFTER = timedelta(minutes=10)
+UNSENT_GRACE = timedelta(seconds=15)
 
 
 class HostedAgentError(Exception):
@@ -70,6 +75,13 @@ def new_hosted_agent(user_id: str, name: str) -> Agent:
                  secret_enc=seal(private_b64, agent_id))
 
 
+def _iso(dt: datetime | None) -> str | None:
+    if dt is None:
+        return None
+    dt = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat().replace("+00:00", "Z")
+
+
 def run_to_dict(run: AgentRun | None, order: Order | None = None) -> dict[str, Any] | None:
     if run is None:
         return None
@@ -84,8 +96,8 @@ def run_to_dict(run: AgentRun | None, order: Order | None = None) -> dict[str, A
         "errors": list(run.errors or []),
         "order_id": run.order_id,
         "order_status": order.status if order is not None else None,
-        "started_at": started.isoformat().replace("+00:00", "Z"),
-        "finished_at": run.finished_at.isoformat().replace("+00:00", "Z") if run.finished_at else None,
+        "started_at": _iso(started),
+        "finished_at": _iso(run.finished_at),
     }
 
 
@@ -97,20 +109,37 @@ def _finish(db, run: AgentRun, status: str, summary: str, errors: list[str] | No
     run.order_id = order_id
     run.finished_at = datetime.now(timezone.utc)
     db.commit()
+    runlog.emit("agent_run.finished", run_id=run.id, intent_id=run.intent_id, agent_id=run.agent_id,
+                status=status, order_id=order_id, response_status=run.response_status,
+                response_ms=run.response_ms, summary=summary[:200])
+
+
+def _claim(db, run_id: str, endpoint: str) -> bool:
+    """Mark the run as sent exactly once, so a retry or the watchdog never double-sends it."""
+    now = datetime.now(timezone.utc)
+    got = db.execute(
+        update(AgentRun)
+        .where(AgentRun.id == run_id, AgentRun.status == "running", AgentRun.dispatched_at.is_(None))
+        .values(dispatched_at=now, endpoint=endpoint, attempts=AgentRun.attempts + 1)
+        .returning(AgentRun.id)
+    ).first()
+    db.commit()
+    return got is not None
 
 
 def execute_run(run_id: str, db=None) -> None:
-    """Background task: ask the hosted agent service to shop for one purchase request."""
+    """Ask the hosted agent service to shop for one purchase request and record what came back."""
     own = db is None
     db = db or new_session()
     try:
         run = db.get(AgentRun, run_id)
-        if run is None or run.status != "running":
+        if run is None or run.status != "running" or run.dispatched_at is not None:
             return
         agent = db.get(Agent, run.agent_id)
         url, secret = _cfg("AGENT_SERVICE_URL"), _cfg("AGENT_RUN_SECRET")
         if not url or not secret:
-            return _finish(db, run, "failed", "The hosted shopping agent isn't configured yet.")
+            missing = " and ".join(n for n, v in (("AGENT_SERVICE_URL", url), ("AGENT_RUN_SECRET", secret)) if not v)
+            return _finish(db, run, "failed", f"The hosted shopping agent isn't configured ({missing} not set on the API).")
         if agent is None or not agent.managed or not agent.secret_enc or agent.revoked_at is not None:
             return _finish(db, run, "failed", "This agent can't be run by IntentLock.")
         try:
@@ -118,19 +147,32 @@ def execute_run(run_id: str, db=None) -> None:
         except Exception:
             log.exception("hosted_agents.unseal_failed agent=%s", agent.id)
             return _finish(db, run, "failed", "The agent's key couldn't be read. Create a new hosted agent.")
+        endpoint = f"{url.rstrip('/')}/run"
+        if not _claim(db, run.id, endpoint):
+            return
+        db.refresh(run)
+        runlog.emit("agent_run.dispatch", run_id=run.id, intent_id=run.intent_id, agent_id=agent.id,
+                    endpoint=endpoint, attempt=run.attempts)
+        t0 = time.monotonic()
         try:
-            r = httpx.post(f"{url.rstrip('/')}/run", timeout=RUN_TIMEOUT_S,
-                           headers={"Authorization": f"Bearer {secret}"},
+            r = httpx.post(endpoint, timeout=RUN_TIMEOUT_S,
+                           headers={"Authorization": f"Bearer {secret}", "X-IntentLock-Run": run.id},
                            json={"intent_id": run.intent_id, "agent_id": agent.id, "agent_private_key": key})
         except httpx.HTTPError as e:
-            log.warning("hosted_agents.unreachable run=%s err=%s", run.id, type(e).__name__)
-            return _finish(db, run, "failed", "Couldn't reach the shopping agent. Try again in a minute.")
+            run.response_ms = int((time.monotonic() - t0) * 1000)
+            run.response_excerpt = f"{type(e).__name__}: {str(e)[:300]}"
+            return _finish(db, run, "failed", f"Couldn't reach the shopping agent at {endpoint} ({type(e).__name__}). Try again in a minute.")
+        run.response_ms = int((time.monotonic() - t0) * 1000)
+        run.response_status = r.status_code
+        run.response_excerpt = (r.text or "")[:2000]
         try:
             data = r.json()
         except ValueError:
             data = {}
+        if not isinstance(data, dict):
+            data = {}
         if r.status_code != 200:
-            reason = data.get("reason") if isinstance(data, dict) else None
+            reason = data.get("reason")
             return _finish(db, run, "failed", f"The shopping agent stopped: {reason or f'HTTP {r.status_code}'}.")
         summary = str(data.get("summary") or "").strip()
         errors = data.get("errors") if isinstance(data.get("errors"), list) else []
@@ -138,6 +180,15 @@ def execute_run(run_id: str, db=None) -> None:
         if order_id:
             return _finish(db, run, "ordered", summary or "Order placed.", errors, order_id)
         return _finish(db, run, "failed", summary or "The agent finished without placing an order.", errors)
+    except Exception:
+        log.exception("hosted_agents.run_crashed run=%s", run_id)
+        try:
+            db.rollback()
+            run = db.get(AgentRun, run_id)
+            if run is not None and run.status == "running":
+                _finish(db, run, "failed", "Something went wrong while running the agent. Try again.")
+        except Exception:
+            log.exception("hosted_agents.run_crash_record_failed run=%s", run_id)
     finally:
         if own:
             db.close()
@@ -145,7 +196,48 @@ def execute_run(run_id: str, db=None) -> None:
 
 def start_run(db, intent_id: str, user_id: str, agent_id: str) -> AgentRun:
     run = AgentRun(id=new_id("run"), intent_id=intent_id, user_id=user_id, agent_id=agent_id,
-                   status="running", started_at=datetime.now(timezone.utc))
+                   status="running", started_at=datetime.now(timezone.utc), attempts=0)
     db.add(run)
     db.commit()
+    runlog.emit("agent_run.queued", run_id=run.id, intent_id=intent_id, agent_id=agent_id, user_id=user_id)
     return run
+
+
+def dispatch_async(run_id: str) -> None:
+    threading.Thread(target=execute_run, args=(run_id,), name=f"agent-run-{run_id}", daemon=True).start()
+
+
+def recover_runs(db, now: datetime | None = None) -> tuple[list[str], int]:
+    """Watchdog: resend runs that were saved but never sent (e.g. the API restarted), and fail runs
+    that were sent but never answered."""
+    now = now or datetime.now(timezone.utc)
+    unsent = db.execute(
+        select(AgentRun.id).where(AgentRun.status == "running", AgentRun.dispatched_at.is_(None),
+                                  AgentRun.started_at < now - UNSENT_GRACE)
+    ).scalars().all()
+    lost = db.execute(
+        select(AgentRun).where(AgentRun.status == "running", AgentRun.dispatched_at.is_not(None),
+                               AgentRun.dispatched_at < now - timedelta(seconds=RUN_TIMEOUT_S + 60))
+    ).scalars().all()
+    for run in lost:
+        _finish(db, run, "failed", "The shopping agent never answered (the API may have restarted). Try again.")
+    for rid in unsent:
+        runlog.emit("agent_run.recovered", run_id=rid)
+    return list(unsent), len(lost)
+
+
+async def run_loop(interval_s: int = 20) -> None:
+    import asyncio
+
+    while True:
+        try:
+            db = new_session()
+            try:
+                unsent, failed = recover_runs(db)
+            finally:
+                db.close()
+            for rid in unsent:
+                dispatch_async(rid)
+        except Exception:
+            log.exception("hosted_agents.watchdog_error")
+        await asyncio.sleep(interval_s)

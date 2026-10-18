@@ -163,6 +163,19 @@ Users can create an agent that IntentLock runs for them (Agents → Create agent
 
 Changing `AUTH_SECRET` makes existing hosted agents unusable (their keys can no longer be unsealed); users would create a new agent.
 
+### Tracing a purchase request (developers)
+
+The API and the agent service each print one JSON line per step, tagged with the same `run_id` (sent to the agent in the `X-IntentLock-Run` header). Search both services' logs on Render for the run id:
+
+| Service | Events |
+|---|---|
+| intentlock-api | `agent_run.queued` → `agent_run.dispatch` (endpoint, attempt) → `agent_run.finished` (status, response_status, response_ms, summary); `agent_run.recovered` when the watchdog resends |
+| intentlock-agent | `run.received` → `run.finished` (ms, order_id, decision) or `run.error` / `run.rejected` |
+
+The same data is kept on the `agent_runs` row (`endpoint`, `dispatched_at`, `response_status`, `response_ms`, `response_excerpt`, `attempts`). It is not shown to users.
+
+A watchdog in the API resends runs that were saved but never sent (for example the API restarted right after the request) and fails runs the agent never answered.
+
 ## Step 5 — Verify the deployment
 
 ```bash

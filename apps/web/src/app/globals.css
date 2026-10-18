@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+:root {
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Brand token utility classes */
+.intentlock-topnav {
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+}
+
+.intentlock-brand {
+  color: var(--color-brand);
+}
+
+.intentlock-brand:hover {
+  color: var(--color-brand-hover);
+}
+
+.intentlock-nav-link {
+  color: var(--color-text-muted);
+}
+
+.intentlock-nav-link:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.intentlock-btn-primary {
+  background: var(--color-brand);
+  color: var(--color-surface);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.intentlock-btn-primary:hover {
+  background: var(--color-brand-hover);
+}
+
+.intentlock-btn-outline {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.intentlock-btn-outline:hover {
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+.intentlock-footer {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* Keyboard focus visibility — meets WCAG 2.1 */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Ensure buttons and links always show a ring on keyboard focus */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

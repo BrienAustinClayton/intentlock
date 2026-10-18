@@ -1,0 +1,119 @@
+/*
+ * IntentLock brand tokens
+ * Primary: deep indigo
+ * Captured: teal
+ * Pending: amber
+ * Voided/Rejected: red
+ * Neutrals: slate
+ */
+
+:root {
+  /* Primary – deep indigo */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-primary-950: #1e1b4b;
+
+  /* Captured – teal */
+  --color-captured-50: #f0fdfa;
+  --color-captured-100: #ccfbf1;
+  --color-captured-200: #99f6e4;
+  --color-captured-300: #5eead4;
+  --color-captured-400: #2dd4bf;
+  --color-captured-500: #14b8a6;
+  --color-captured-600: #0d9488;
+  --color-captured-700: #0f766e;
+  --color-captured-800: #115e59;
+  --color-captured-900: #134e4a;
+  --color-captured-950: #042f2e;
+
+  /* Pending / Hold – amber */
+  --color-pending-50: #fffbeb;
+  --color-pending-100: #fef3c7;
+  --color-pending-200: #fde68a;
+  --color-pending-300: #fcd34d;
+  --color-pending-400: #fbbf24;
+  --color-pending-500: #f59e0b;
+  --color-pending-600: #d97706;
+  --color-pending-700: #b45309;
+  --color-pending-800: #92400e;
+  --color-pending-900: #78350f;
+  --color-pending-950: #451a03;
+
+  /* Voided / Rejected – red */
+  --color-danger-50: #fff1f2;
+  --color-danger-100: #ffe4e6;
+  --color-danger-200: #fecdd3;
+  --color-danger-300: #fda4af;
+  --color-danger-400: #fb7185;
+  --color-danger-500: #f43f5e;
+  --color-danger-600: #e11d48;
+  --color-danger-700: #be123c;
+  --color-danger-800: #9f1239;
+  --color-danger-900: #881337;
+  --color-danger-950: #4c0519;
+
+  /* Neutrals – slate */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* Semantic aliases – light mode */
+  --color-bg: var(--color-neutral-50);
+  --color-surface: #ffffff;
+  --color-border: var(--color-neutral-200);
+  --color-text: var(--color-neutral-900);
+  --color-text-muted: var(--color-neutral-500);
+  --color-brand: var(--color-primary-600);
+  --color-brand-hover: var(--color-primary-700);
+
+  /* Status tokens */
+  --color-status-received: var(--color-neutral-500);
+  --color-status-authorized: var(--color-primary-500);
+  --color-status-checking: var(--color-primary-400);
+  --color-status-captured: var(--color-captured-600);
+  --color-status-voided: var(--color-danger-600);
+  --color-status-rejected: var(--color-danger-700);
+  --color-status-pending-approval: var(--color-pending-600);
+  --color-status-failed: var(--color-danger-800);
+  --color-status-hold: var(--color-pending-500);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Semantic aliases – dark mode */
+    --color-bg: var(--color-neutral-950);
+    --color-surface: var(--color-neutral-900);
+    --color-border: var(--color-neutral-700);
+    --color-text: var(--color-neutral-50);
+    --color-text-muted: var(--color-neutral-400);
+    --color-brand: var(--color-primary-400);
+    --color-brand-hover: var(--color-primary-300);
+
+    /* Status tokens – dark */
+    --color-status-received: var(--color-neutral-400);
+    --color-status-authorized: var(--color-primary-400);
+    --color-status-checking: var(--color-primary-300);
+    --color-status-captured: var(--color-captured-400);
+    --color-status-voided: var(--color-danger-400);
+    --color-status-rejected: var(--color-danger-400);
+    --color-status-pending-approval: var(--color-pending-400);
+    --color-status-failed: var(--color-danger-500);
+    --color-status-hold: var(--color-pending-400);
+  }
+}

@@ -100,14 +100,18 @@ export default function RequestsClient() {
         </button>
       );
     }
-    return <Tag tone="neutral">Waiting for your agent</Tag>;
+    return (
+      <span title="This agent runs on your side. IntentLock can't start it; it picks the request up when it checks in.">
+        <Tag tone="neutral">Waiting for your agent</Tag>
+      </span>
+    );
   }
 
   useEffect(() => {
     Promise.all([me.requests(), me.agents()]).then(
       ([r, a]) => {
         setRows(r);
-        const active = a.filter((x) => !x.revoked_at);
+        const active = a.filter((x) => !x.revoked_at).sort((x, y) => Number(y.managed) - Number(x.managed));
         setAgents(active);
         if (active[0]) setAgentId(active[0].id);
       },
@@ -210,10 +214,19 @@ export default function RequestsClient() {
               <select value={agentId || agents?.[0]?.id || ""} onChange={(e) => setAgentId(e.target.value)} className={inputClass}>
                 {(agents ?? []).map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name}
+                    {a.name} {a.managed ? "(hosted by IntentLock)" : "(your own)"}
                   </option>
                 ))}
               </select>
+              {(() => {
+                const picked = agents?.find((a) => a.id === (agentId || agents?.[0]?.id));
+                return picked && !picked.managed ? (
+                  <span className="block text-xs text-amber-400">
+                    IntentLock can&apos;t start this agent: it runs on your side with your own key. The request waits until
+                    your agent picks it up. Use a hosted agent to have IntentLock shop right away.
+                  </span>
+                ) : null;
+              })()}
             </label>
             <FormError message={error} />
             <div className="flex items-center gap-2">

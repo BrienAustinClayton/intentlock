@@ -36,28 +36,23 @@ export default function RootLayout({
         <ApiHealthBanner />
         <main className="flex flex-1 flex-col">{children}</main>
         
-        <footer className="border-t border-slate-200/80 bg-white/50 py-8 text-xs text-slate-500 backdrop-blur-xs dark:border-slate-800/80 dark:bg-slate-950/40 dark:text-slate-400">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-800 dark:text-slate-200">IntentLock</span>
-              <span>—</span>
-              <span>Semantic purchase verification for autonomous AI shopping agents</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <Link href="/lab" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                Attack Lab
+        <footer className="border-t border-gray-200 py-6 dark:border-gray-800">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <span className="text-xs text-gray-400">
+              © 2026 IntentLock
+            </span>
+            <div className="flex items-center gap-5">
+              <Link href="/lab" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                Lab
               </Link>
-              <Link href="/wallet" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                Wallet Console
-              </Link>
-              <Link href="/store/freshmart" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                Demo Stores
+              <Link href="/wallet" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                Wallet
               </Link>
               <a
                 href="https://github.com/BrienAustinClayton/intentlock"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 GitHub
               </a>

@@ -67,23 +67,23 @@ export default async function StoreProductPage({
   const variantGroups = groupVariants(p.variants ?? []);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-        <Link href="/store/freshmart" className="hover:text-slate-900 dark:hover:text-white">
+      <nav className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+        <Link href="/store/freshmart" className="hover:text-gray-900">
           Stores
         </Link>
         <span>/</span>
-        <Link href={`/store/${encodeURIComponent(merchant)}`} className="capitalize hover:text-slate-900 dark:hover:text-white">
+        <Link href={`/store/${encodeURIComponent(merchant)}`} className="capitalize hover:text-gray-900">
           {merchant}
         </Link>
         <span>/</span>
-        <span className="text-slate-800 dark:text-slate-200 truncate">{p.title}</span>
+        <span className="text-gray-800 truncate">{p.title}</span>
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         {/* Product Image */}
-        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-slate-50 dark:bg-slate-950/60">
+        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-gray-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={p.image_url}
@@ -95,17 +95,17 @@ export default async function StoreProductPage({
         {/* Product Details */}
         <div className="space-y-6">
           <div>
-            <span className="saas-badge saas-badge-neutral font-mono text-[11px] uppercase tracking-wider mb-2">
+            <span className="text-[11px] font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
               {p.category}
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 mt-1">
               {p.title}
             </h1>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
+              <span className="text-2xl font-bold font-mono text-gray-900">
                 ${p.price.toFixed(2)}
               </span>
-              <span className="text-xs text-slate-400 font-mono">{p.currency}</span>
+              <span className="text-xs text-gray-400 font-mono">{p.currency}</span>
             </div>
           </div>
 
@@ -114,7 +114,7 @@ export default async function StoreProductPage({
             <div className="space-y-3 pt-2">
               {Object.entries(variantGroups).map(([name, chips]) => (
                 <div key={name}>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
                     {name}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -124,10 +124,10 @@ export default async function StoreProductPage({
                         <Link
                           key={chip.product_id}
                           href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(chip.product_id)}`}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition ${
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium border transition ${
                             isSelected
-                              ? "border-indigo-600 bg-indigo-600 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                              ? "border-gray-900 bg-gray-900 text-white"
+                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                           }`}
                         >
                           {chip.label}
@@ -141,18 +141,18 @@ export default async function StoreProductPage({
           )}
 
           {/* Description */}
-          <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4">
+          <div className="text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-4">
             {p.description}
           </div>
 
           {/* Key Features */}
           {p.key_features && p.key_features.length > 0 && (
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Key Specifications</h2>
-              <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <div className="border-t border-gray-100 pt-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Key Specifications</h2>
+              <ul className="space-y-1.5 text-xs text-gray-600">
                 {p.key_features.map((feat, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-indigo-500">•</span>
+                    <span className="text-gray-400">•</span>
                     <span>{feat}</span>
                   </li>
                 ))}
@@ -164,13 +164,13 @@ export default async function StoreProductPage({
 
       {/* Other Offers Comparison */}
       {p.offers && p.offers.length > 0 && (
-        <div className="saas-card p-6">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Merchant Offer Comparison (Channel3)</h2>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="saas-card p-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Merchant Offer Comparison (Channel3)</h2>
+          <div className="divide-y divide-gray-100">
             {p.offers.map((offer, i) => (
               <div key={i} className="flex items-center justify-between py-2.5 text-xs">
-                <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{offer.merchant}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                <span className="font-medium text-gray-700 capitalize">{offer.merchant}</span>
+                <span className="font-mono font-semibold text-gray-900">
                   ${offer.price.toFixed(2)} {p.currency}
                 </span>
               </div>

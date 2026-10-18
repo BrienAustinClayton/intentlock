@@ -68,51 +68,44 @@ const SCENARIO_LABELS: Record<string, string> = {
   revoked_agent: "Revoked Agent Key",
 };
 
-const SCENARIO_CATEGORIES: Record<string, { label: string; badge: string }> = {
-  normal: { label: "Baseline Order", badge: "saas-badge-neutral" },
-  hidden_gift_card: { label: "Prompt Injection", badge: "saas-badge-danger" },
-  wrong_variant: { label: "Intent Drift", badge: "saas-badge-warning" },
-  overpriced_merchant: { label: "Price Anomaly", badge: "saas-badge-warning" },
-  bot_farm: { label: "Fraud Clustering", badge: "saas-badge-danger" },
-  revoked_agent: { label: "Access Control", badge: "saas-badge-brand" },
-};
-
 function scenarioLabel(s: string): string {
   return SCENARIO_LABELS[s] ?? s;
 }
 
-function DecisionBadge({ decision }: { decision: string }) {
-  const d = decision?.toLowerCase();
-  let badgeClass = "saas-badge-neutral";
-  if (d === "capture") badgeClass = "saas-badge-success";
-  else if (d === "hold") badgeClass = "saas-badge-warning";
-  else if (d === "void" || d === "reject") badgeClass = "saas-badge-danger";
+function decisionColor(d: string): string {
+  const dl = d?.toLowerCase();
+  if (dl === "capture") return "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900";
+  if (dl === "hold") return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900";
+  if (dl === "void" || dl === "reject") return "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900";
+  return "text-gray-500 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
+}
 
+function DecisionBadge({ decision }: { decision: string }) {
   return (
-    <span className={`saas-badge ${badgeClass} uppercase font-mono font-semibold text-[11px]`}>
+    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-semibold uppercase ${decisionColor(decision)}`}>
       {decision}
     </span>
   );
 }
 
-function resultBadgeClass(r: CheckResult): string {
-  if (r === "pass") return "saas-badge-success";
-  if (r === "flag") return "saas-badge-warning";
-  if (r === "fail" || r === "error") return "saas-badge-danger";
-  return "saas-badge-neutral";
+function resultColor(r: CheckResult): string {
+  if (r === "pass") return "text-emerald-600 dark:text-emerald-400";
+  if (r === "flag") return "text-amber-600 dark:text-amber-400";
+  if (r === "fail" || r === "error") return "text-rose-600 dark:text-rose-400";
+  return "text-gray-400";
 }
 
 function stepLabel(s: CheckStep | string): string {
   const LABELS: Partial<Record<CheckStep, string>> = {
-    verify_agent: "1. Verify Agent (RFC 9421)",
+    verify_agent: "1. Verify Agent",
     check_mandate: "2. Check Mandate",
-    authorize_payment: "3. PayPal Authorize",
+    authorize_payment: "3. Authorize",
     scan_injection: "4. Scan Injection",
     intent_diff: "5. Intent Diff",
     graph_risk: "6. Graph Risk",
     decide: "7. Code Policy",
-    capture_or_void: "8. Capture / Void",
-    build_proof: "9. Proof of Intent",
+    capture_or_void: "8. Capture/Void",
+    build_proof: "9. Build Proof",
   };
   return LABELS[s as CheckStep] ?? s;
 }
@@ -171,22 +164,22 @@ function extractHiddenTexts(html: string): string[] {
 function ChecksTimeline({ checks }: { checks: Check[] }) {
   if (checks.length === 0) return null;
   return (
-    <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800/80 dark:bg-slate-950/40">
-      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-        Pipeline Execution Telemetry ({checks.length} Checks)
+    <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">
+        Pipeline Telemetry · {checks.length} checks
       </div>
-      <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
+      <div className="space-y-1">
         {checks.map((c) => (
-          <div key={c.id} className="flex items-center justify-between py-2 text-xs">
+          <div key={c.id} className="flex items-center justify-between py-1 text-[12px]">
             <div className="flex items-center gap-2">
-              <span className={`saas-badge ${resultBadgeClass(c.result)} font-mono text-[10px] uppercase`}>
+              <span className={`font-mono text-[10px] font-semibold uppercase ${resultColor(c.result)}`}>
                 {c.result}
               </span>
-              <span className="font-medium text-slate-900 dark:text-slate-100">
+              <span className="font-medium text-gray-700 dark:text-gray-300">
                 {stepLabel(c.step)}
               </span>
             </div>
-            <div className="flex items-center gap-3 font-mono text-slate-500 text-[11px]">
+            <div className="flex items-center gap-3 font-mono text-gray-400 text-[11px]">
               {c.score !== null && c.score !== undefined && (
                 <span>score: {c.score}</span>
               )}
@@ -202,6 +195,15 @@ function ChecksTimeline({ checks }: { checks: Check[] }) {
 // ---------------------------------------------------------------------------
 // ScenarioCard
 // ---------------------------------------------------------------------------
+
+const SCENARIO_BORDER_COLORS: Record<string, string> = {
+  normal: "border-l-gray-300 dark:border-l-gray-600",
+  hidden_gift_card: "border-l-rose-400 dark:border-l-rose-500",
+  wrong_variant: "border-l-amber-400 dark:border-l-amber-500",
+  overpriced_merchant: "border-l-amber-400 dark:border-l-amber-500",
+  bot_farm: "border-l-rose-400 dark:border-l-rose-500",
+  revoked_agent: "border-l-indigo-400 dark:border-l-indigo-500",
+};
 
 function ScenarioCard({
   info,
@@ -220,52 +222,43 @@ function ScenarioCard({
     isDone &&
     state.result?.actual_decision === state.result?.expected_decision;
 
-  const category = SCENARIO_CATEGORIES[info.scenario] ?? {
-    label: "Security Test",
-    badge: "saas-badge-neutral",
-  };
+  const borderColor = SCENARIO_BORDER_COLORS[info.scenario] ?? "border-l-gray-300";
 
   const attackPages = info.page_urls
     .map(pageUrlInfo)
     .filter((p) => p.isAttack);
 
   return (
-    <div className="saas-card p-6 transition-all duration-200">
+    <div className={`border border-gray-200 rounded-lg border-l-[3px] ${borderColor} p-5 dark:border-gray-800`}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className={`saas-badge ${category.badge}`}>
-            {category.label}
-          </span>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            {scenarioLabel(info.scenario)}
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-500 font-medium">Expected:</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 className="text-[14px] font-semibold text-gray-900 dark:text-white">
+          {scenarioLabel(info.scenario)}
+        </h2>
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className="text-gray-400">Expected:</span>
           <DecisionBadge decision={info.expected_decision} />
         </div>
       </div>
 
       {/* Meta row */}
-      <div className="mt-2 flex items-center gap-3 font-mono text-xs text-slate-500">
-        <span>scenario: <strong className="text-slate-700 dark:text-slate-300">{info.scenario}</strong></span>
-        <span>•</span>
-        <span>agent: <strong className="text-slate-700 dark:text-slate-300">{info.agent_id}</strong></span>
-        <span>•</span>
-        <span>merchant: <strong className="text-slate-700 dark:text-slate-300">{info.merchant}</strong></span>
+      <div className="mt-1.5 flex items-center gap-3 font-mono text-[11px] text-gray-400">
+        <span>{info.scenario}</span>
+        <span>·</span>
+        <span>{info.agent_id}</span>
+        <span>·</span>
+        <span>{info.merchant}</span>
       </div>
 
       {/* Narration */}
-      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+      <p className="mt-2 text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
         {info.narration}
       </p>
 
       {/* Pages & Attack Inspection */}
       {info.page_urls.length > 0 && (
-        <div className="mt-3 flex items-center gap-2 flex-wrap text-xs">
-          <span className="text-slate-500 font-medium">Test Pages:</span>
+        <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px]">
+          <span className="text-gray-400 font-medium">Pages:</span>
           {info.page_urls.map((url) => {
             const { href, label, isAttack } = pageUrlInfo(url);
             return (
@@ -274,18 +267,13 @@ function ScenarioCard({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-[11px] font-medium border transition ${
+                className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
                   isAttack
-                    ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20"
-                    : "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200"
+                    ? "border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400"
+                    : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400"
                 }`}
               >
-                <span>{label}</span>
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
+                {label}
               </a>
             );
           })}
@@ -294,9 +282,9 @@ function ScenarioCard({
           {attackPages.length > 0 && state.revealPhase === "idle" && (
             <button
               onClick={() => onReveal(info.scenario, attackPages[0].href)}
-              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-2 cursor-pointer"
+              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-1 cursor-pointer text-[11px]"
             >
-              Inspect Hidden CSS Injections &rarr;
+              Inspect Injections →
             </button>
           )}
         </div>
@@ -304,21 +292,18 @@ function ScenarioCard({
 
       {/* Hidden injection revelation block */}
       {state.revealPhase === "loading" && (
-        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mt-2 text-[11px] text-gray-400">
           Scanning DOM for hidden injection payload...
         </div>
       )}
       {state.revealPhase === "done" && state.revealTexts.length > 0 && (
-        <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs dark:bg-rose-950/40">
-          <div className="flex items-center gap-1.5 font-semibold text-rose-700 dark:text-rose-300 mb-2">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>Detected Hidden Adversarial Instructions in HTML:</span>
+        <div className="mt-2 rounded border border-rose-200 bg-rose-50 p-3 text-[11px] dark:border-rose-900 dark:bg-rose-950/30">
+          <div className="flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400 mb-1.5">
+            <span>⚠ Hidden Adversarial Instructions Detected:</span>
           </div>
-          <div className="space-y-1 font-mono text-[11px] text-rose-800 dark:text-rose-200">
+          <div className="space-y-1 font-mono text-[10px] text-rose-700 dark:text-rose-300">
             {state.revealTexts.map((t, idx) => (
-              <div key={idx} className="rounded bg-rose-500/10 px-2 py-1 border border-rose-500/20">
+              <div key={idx} className="rounded bg-rose-100/60 px-2 py-1 dark:bg-rose-950/40">
                 {t}
               </div>
             ))}
@@ -326,57 +311,53 @@ function ScenarioCard({
         </div>
       )}
       {state.revealPhase === "done" && state.revealTexts.length === 0 && (
-        <div className="mt-3 text-xs text-slate-500">
-          No hidden CSS injection vectors detected in page DOM.
+        <div className="mt-2 text-[11px] text-gray-400">
+          No hidden CSS injection vectors detected.
         </div>
       )}
       {state.revealPhase === "error" && (
-        <div className="mt-3 text-xs text-rose-600 dark:text-rose-400">
+        <div className="mt-2 text-[11px] text-rose-500">
           {state.revealError ?? "Failed to inspect target page."}
         </div>
       )}
 
       {/* Action and Execution Result */}
-      <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div className="flex items-center gap-3">
+      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => onRun(info.scenario)}
             disabled={isRunning}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition cursor-pointer ${
               isRunning
-                ? "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 cursor-not-allowed"
+                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 cursor-not-allowed"
                 : isDone
-                ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
+                ? "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                : "bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
             }`}
           >
             {isRunning ? (
               <>
-                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
-                <span>Evaluating Pipeline...</span>
+                <span>Running...</span>
               </>
             ) : isDone ? (
-              <span>Re-evaluate Scenario</span>
+              <span>Re-run</span>
             ) : (
-              <span>Execute Verification</span>
+              <span>Execute</span>
             )}
           </button>
 
           {isDone && state.result && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-500">Outcome:</span>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="text-gray-400">Outcome:</span>
               <DecisionBadge decision={state.result.actual_decision} />
               {matched ? (
-                <span className="saas-badge saas-badge-success font-semibold text-[11px]">
-                  ✓ Verified As Expected
-                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ Match</span>
               ) : (
-                <span className="saas-badge saas-badge-danger font-semibold text-[11px]">
-                  ✗ Mismatch
-                </span>
+                <span className="text-rose-600 dark:text-rose-400 font-medium">✗ Mismatch</span>
               )}
             </div>
           )}
@@ -384,18 +365,18 @@ function ScenarioCard({
 
         {/* Links to Order & Proof */}
         {isDone && state.result && (
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 text-[11px]">
             <Link
               href={`/wallet/orders/${state.result.order_id}`}
-              className="text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-medium"
+              className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors"
             >
-              Order Details &rarr;
+              Order →
             </Link>
             <Link
               href={`/proof/${state.result.order_id}`}
-              className="inline-flex items-center gap-1 rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/20"
+              className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
             >
-              <span>Proof Certificate</span>
+              Proof Certificate
             </Link>
           </div>
         )}
@@ -403,8 +384,8 @@ function ScenarioCard({
 
       {/* Error state */}
       {state.phase === "error" && state.error && (
-        <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300">
-          <strong>Error during execution:</strong> {state.error}
+        <div className="mt-2 rounded border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-600 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-400">
+          <strong>Error:</strong> {state.error}
         </div>
       )}
 
@@ -573,78 +554,65 @@ export default function LabClient({
     runAll.phase === "resetting" || runAll.phase === "running";
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Top Banner / Toolbar */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-6 sm:p-8 shadow-xs dark:border-slate-800/80 dark:bg-slate-900/60">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2">
-              <span>Security Evaluation Harness</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Attack Lab Console
-            </h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-              Trigger repeatable adversarial vectors through IntentLock&apos;s real-time checkout pipeline.
-              Verify injection defense, intent drift classification, and graph fraud scores.
-            </p>
-          </div>
-
-          {/* Action Toolbar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <button
-              onClick={handleRunAll}
-              disabled={isRunAllActive}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-700 cursor-pointer disabled:opacity-50"
-            >
-              {runAll.phase === "resetting" ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                  </svg>
-                  <span>Resetting State...</span>
-                </>
-              ) : runAll.phase === "running" ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                  </svg>
-                  <span>Running {runAll.progress}/{runAll.total}...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                  <span>Run All 6 Scenarios</span>
-                </>
-              )}
-            </button>
-          </div>
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            Attack Lab
+          </h1>
+          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400 max-w-xl">
+            Trigger adversarial vectors through IntentLock&apos;s real-time checkout pipeline.
+          </p>
         </div>
 
-        {/* Progress or Completion Banner */}
-        {runAll.phase === "done" && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className={`saas-badge ${runAll.passed === runAll.total ? "saas-badge-success" : "saas-badge-warning"} text-sm font-semibold`}>
-                {runAll.passed === runAll.total ? "✓ All Scenarios Passed" : "⚠ Completed with Discrepancies"}
-              </span>
-              <span className="text-xs text-slate-600 dark:text-slate-400">
-                {runAll.passed} of {runAll.total} scenarios matched their expected security decisions.
-              </span>
-            </div>
-            <span className="font-mono text-xs text-slate-500">
-              User: {DEMO_USER}
-            </span>
-          </div>
-        )}
+        {/* Action Toolbar */}
+        <button
+          onClick={handleRunAll}
+          disabled={isRunAllActive}
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-gray-800 disabled:opacity-50 cursor-pointer dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+        >
+          {runAll.phase === "resetting" ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>Resetting...</span>
+            </>
+          ) : runAll.phase === "running" ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>Running {runAll.progress}/{runAll.total}...</span>
+            </>
+          ) : (
+            <span>Run All 6 Scenarios</span>
+          )}
+        </button>
       </div>
 
-      {/* Scenarios Grid */}
-      <div className="space-y-4">
+      {/* Completion Banner */}
+      {runAll.phase === "done" && (
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+          <div className="flex items-center gap-2 text-[12px]">
+            <span className={`font-medium ${runAll.passed === runAll.total ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+              {runAll.passed === runAll.total ? "✓ All scenarios passed" : "⚠ Completed with discrepancies"}
+            </span>
+            <span className="text-gray-400">
+              {runAll.passed}/{runAll.total} matched expected decisions
+            </span>
+          </div>
+          <span className="font-mono text-[11px] text-gray-400">
+            {DEMO_USER}
+          </span>
+        </div>
+      )}
+
+      {/* Scenarios */}
+      <div className="space-y-3">
         {SCENARIOS_ORDER.map((s) => {
           const info = scenarios.find((i) => i.scenario === s);
           if (!info) return null;

@@ -8,7 +8,6 @@ import {
   CATEGORIES,
   EmptyState,
   ErrorNote,
-  MERCHANTS,
   PageHeader,
   Panel,
   SkeletonRows,
@@ -32,8 +31,21 @@ const PERIODS: [BudgetPeriod, string][] = [
 ];
 const periodLabel = (p: BudgetPeriod) => PERIODS.find(([v]) => v === p)?.[1].toLowerCase() ?? p;
 
-type Form = { agent_id: string; budget: string; period: BudgetPeriod; categories: string[]; merchants: string[]; expires: string };
-const blank = (agentId = ""): Form => ({ agent_id: agentId, budget: "", period: "month", categories: [], merchants: [], expires: "" });
+type Form = {
+  agent_id: string;
+  budget: string;
+  period: BudgetPeriod;
+  categories: string[];
+  stores: "any" | "only";
+  storeText: string;
+  expires: string;
+};
+const blank = (agentId = ""): Form => ({
+  agent_id: agentId, budget: "", period: "month", categories: [], stores: "any", storeText: "", expires: "",
+});
+const DOMAIN = /^[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?\.[a-z]{2,}$/;
+const parseStores = (t: string) =>
+  [...new Set(t.split(/[\s,]+/).map((x) => x.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "")).filter(Boolean))];
 
 function toggle(list: string[], v: string) {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
@@ -83,7 +95,8 @@ export default function RulesPage() {
       budget: m.budget_amount,
       period: m.budget_period,
       categories: [...m.categories],
-      merchants: [...m.merchants],
+      stores: m.merchants.includes("*") ? "any" : "only",
+      storeText: m.merchants.filter((x) => x !== "*").join(", "),
       expires: m.expires_at ? m.expires_at.slice(0, 10) : "",
     });
     setError(null);
@@ -94,13 +107,17 @@ export default function RulesPage() {
     e.preventDefault();
     if (busy) return;
     if (!/^\d{1,9}(\.\d{1,2})?$/.test(form.budget) || Number(form.budget) <= 0) return setError("Enter a budget greater than 0.");
-    if (!form.categories.length || !form.merchants.length) return setError("Pick at least one category and one store.");
+    if (!form.categories.length) return setError("Pick at least one category.");
+    const stores = form.stores === "any" ? ["*"] : parseStores(form.storeText);
+    if (!stores.length) return setError("Add at least one store, e.g. walmart.com, or allow any store.");
+    const badStore = stores.find((x) => x !== "*" && !DOMAIN.test(x));
+    if (badStore) return setError(`"${badStore}" isn't a store website. Use a domain like walmart.com.`);
     setBusy(true);
     setError(null);
     const body: RuleInput = {
       agent_id: form.agent_id || active[0]?.id || "",
       categories: form.categories,
-      merchants: form.merchants,
+      merchants: stores,
       budget_amount: Number(form.budget).toFixed(2),
       budget_period: form.period,
       currency: "USD",
@@ -213,18 +230,32 @@ export default function RulesPage() {
             </div>
             <div className="space-y-2">
               <span className="block text-[13px] font-medium text-fg-2">Allowed stores</span>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(MERCHANTS).map(([v, l]) => (
-                  <Chip key={v} label={l} selected={form.merchants.includes(v)} onClick={() => setForm({ ...form, merchants: toggle(form.merchants, v) })} />
+              <div className="segmented max-w-xs">
+                {(["any", "only"] as const).map((v) => (
+                  <button key={v} type="button" aria-pressed={form.stores === v} data-on={form.stores === v} onClick={() => setForm({ ...form, stores: v })}>
+                    {v === "any" ? "Any store" : "Only these stores"}
+                  </button>
                 ))}
               </div>
+              {form.stores === "only" ? (
+                <input
+                  value={form.storeText}
+                  onChange={(e) => setForm({ ...form, storeText: e.target.value })}
+                  className={inputClass}
+                  placeholder="walmart.com, target.com, bestbuy.com"
+                />
+              ) : (
+                <span className="block text-xs text-fg-dim">
+                  Your agent can buy from any store Channel3 lists. Every order is still checked before payment.
+                </span>
+              )}
             </div>
             <label className="block space-y-1.5 max-w-xs">
               <span className="block text-[13px] font-medium text-fg-2">Ends on</span>
               <input type="date" value={form.expires} onChange={(e) => setForm({ ...form, expires: e.target.value })} className={inputClass} />
               <span className="block text-xs text-fg-dim">Optional. Leave empty to keep the rule until you end it.</span>
             </label>
-            <p className="text-xs text-fg-dim">Stores in the IntentLock catalog charge in US dollars, so budgets are in USD.</p>
+            <p className="text-xs text-fg-dim">Channel3 prices are in US dollars, so budgets are in USD.</p>
             <FormError message={error} />
             <div className="flex items-center gap-2">
               <button type="submit" disabled={busy} className="intentlock-btn-primary">

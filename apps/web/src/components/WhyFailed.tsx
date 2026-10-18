@@ -55,8 +55,8 @@ export default function WhyFailed({
           </p>
         </div>
         <p className="text-xs text-fg-dim">
-          Agents can only buy from the IntentLock store catalog: groceries, electronics accessories and gift cards. Rephrasing the
-          request or widening your spending rules can help.
+          Your agent shops real stores through Channel3. Naming the product more precisely, raising the price limit, or allowing more
+          categories or stores in your spending rules can help.
         </p>
         <div className="flex items-center gap-2">
           {onRetry && (

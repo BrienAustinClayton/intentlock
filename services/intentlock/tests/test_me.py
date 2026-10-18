@@ -269,3 +269,20 @@ def test_watchdog_resends_unsent_and_fails_lost_runs(client, db, two, hosted):
     assert len(calls) == n + 1 and db.get(AgentRun, unsent.id).status == "failed"
     hosted_agents.execute_run(unsent.id)
     assert len(calls) == n + 1
+
+
+def test_rules_accept_store_domains_and_any_store(client, two):
+    from app.mandates import merchant_allowed
+    (_, ha), _ = two
+    agent = _agent(client, ha)
+    base = {"agent_id": agent["id"], "categories": ["electronics", "baby-toddler"],
+            "budget_amount": "50.00", "budget_period": "month", "currency": "USD"}
+    r = client.post("/me/mandates", headers=ha, json={**base, "merchants": ["Walmart.com", "www.target.com"]})
+    assert r.status_code == 201, r.text
+    assert r.json()["merchants"] == ["target.com", "walmart.com"]
+    assert client.post("/me/mandates", headers=ha, json={**base, "merchants": ["*"]}).status_code == 201
+    for bad in (["https://walmart.com"], ["walmart.com/path"], ["-bad.com"], ["*.com"]):
+        assert client.post("/me/mandates", headers=ha, json={**base, "merchants": bad}).status_code == 422, bad
+    assert merchant_allowed("www.Walmart.com", ["walmart.com"])
+    assert merchant_allowed("anything.example", ["*"])
+    assert not merchant_allowed("evil.com", ["walmart.com"])

@@ -2,6 +2,8 @@ import { createShoppingAgent } from "./agent.ts";
 import { agentId } from "./config.ts";
 import { newRunContext, runWith, type CartLine, type CheckoutResult } from "./context.ts";
 import { getIntent } from "./intentlock.ts";
+import { LlmLimitError } from "./llm.ts";
+import { ShopFailure, shop } from "./shop.ts";
 
 export interface RunResult {
   intent_id: string;
@@ -47,23 +49,16 @@ async function doRun(intentId: string): Promise<RunResult> {
   if (intent.agent_id !== agentId()) throw new RunError(403, "intent belongs to a different agent");
 
   const ctx = newRunContext(intentId);
-  const agent = createShoppingAgent();
-  const prompt =
-    `intent_id: ${intent.id}\nThe user's signed request (this is the whole task):\n<user_request>\n${intent.request_text}\n</user_request>\n` +
-    `Find the items, build the cart, and check out once.`;
-  const result = await runWith(ctx, () =>
-    agent.generate(prompt, { maxSteps: 14, modelSettings: { temperature: 0.2 }, tracingOptions: { traceId: ctx.traceId } }),
-  );
-  if (ctx.checkouts.length === 0 && ctx.errors.length === 0) {
-    // The model stopped without checking out: one nudge (a fresh call has no memory, so restate the task).
-    const cartHint = ctx.lastCart
-      ? ` You already built this cart (merchant ${ctx.lastCart.merchant}): ${JSON.stringify(ctx.lastCart.cart.map((l) => ({ product_id: l.product_id, qty: l.qty })))}. Call checkout with it now.`
-      : " Search, build_cart, then call checkout.";
-    await runWith(ctx, () =>
-      agent.generate(`${prompt}\nYou must finish by calling checkout.${cartHint} Do not ask questions.`, {
-        maxSteps: 10, modelSettings: { temperature: 0.2 }, tracingOptions: { traceId: ctx.traceId },
-      }),
-    );
+  let summary: string;
+  try {
+    summary = (await runWith(ctx, () => shop(intent.id, intent.request_text))).summary;
+  } catch (e) {
+    if (e instanceof ShopFailure) summary = e.message;
+    else if (e instanceof LlmLimitError) summary = "The AI model's usage limit is reached for now. Try again later.";
+    else {
+      ctx.errors.push((e as Error).message.slice(0, 300));
+      summary = ctx.checkouts.length ? "Checked out, but the run ended with an error." : `The agent couldn't check out: ${(e as Error).message.slice(0, 200)}`;
+    }
   }
   const co: CheckoutResult | undefined = ctx.checkouts[0];
   return {
@@ -76,7 +71,7 @@ async function doRun(intentId: string): Promise<RunResult> {
     reasons: co?.reasons ?? [],
     cart: ctx.lastCart?.cart ?? [],
     total: ctx.lastCart?.total ?? null,
-    summary: String(result.text ?? "").slice(0, 2000),
+    summary: summary.slice(0, 2000),
     errors: ctx.errors,
   };
 }

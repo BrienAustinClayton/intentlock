@@ -2,19 +2,40 @@ import type { LucideIcon } from "lucide-react";
 import type { OrderStatus } from "@/lib/types";
 
 export const MERCHANTS: Record<string, string> = {
+  "*": "Any store",
   freshmart: "FreshMart",
   gadgethub: "GadgetHub",
   dealsdaily: "DealsDaily",
 };
 
+/** Channel3 top-level product categories (what real products are tagged with). */
 export const CATEGORIES: Record<string, string> = {
+  electronics: "Electronics",
+  "home-garden": "Home and garden",
+  "health-beauty": "Health and beauty",
+  "baby-toddler": "Baby and toddler",
+  "apparel-accessories": "Clothing and accessories",
+  "toys-games": "Toys and games",
+  "animals-pet-supplies": "Pets",
+  "office-supplies": "Office supplies",
+  furniture: "Furniture",
+  "sporting-goods": "Sports and outdoors",
+  "food-beverages-tobacco": "Food and drink",
+  "arts-entertainment": "Arts and hobbies",
+  hardware: "Hardware",
+  "cameras-optics": "Cameras",
+  "luggage-bags": "Bags and luggage",
+  media: "Books and media",
+};
+
+const LEGACY_CATEGORIES: Record<string, string> = {
   groceries: "Groceries",
-  electronics_accessories: "Electronics and accessories",
+  electronics_accessories: "Electronics accessories",
   gift_cards: "Gift cards",
 };
 
 export const merchantName = (m: string) => MERCHANTS[m] ?? m;
-export const categoryName = (c: string) => CATEGORIES[c] ?? c.replace(/_/g, " ");
+export const categoryName = (c: string) => CATEGORIES[c] ?? LEGACY_CATEGORIES[c] ?? c.replace(/[_-]/g, " ");
 
 type Tone = "success" | "warning" | "danger" | "neutral" | "brand";
 

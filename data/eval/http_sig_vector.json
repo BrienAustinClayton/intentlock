@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "description": "IntentLock RFC 9421 agent request signature reference vector (Python reference, P1-T05). TS signer must reproduce expected.* byte for byte.",
+  "key": {
+    "alg": "ed25519",
+    "encoding": "base64url, no padding, raw 32 bytes",
+    "source": "RFC 9421 Appendix B.1.4 test-key-ed25519 (public test key, not a secret)",
+    "private_key": "n4Ni-HpISpVObnQMW0wOhCKROaIKqKtW_2ZYb2p9KcU",
+    "public_key": "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs"
+  },
+  "request": {
+    "method": "POST",
+    "target_uri": "http://localhost:8000/checkout",
+    "body": "{\"cart\":[{\"category\":\"groceries\",\"currency\":\"USD\",\"product_id\":\"fm_oat_milk_1l\",\"qty\":2,\"title\":\"Oat Milk 1L\",\"unit_price\":3.49,\"url\":\"https://freshmart.example/p/oat-milk-1l\",\"variant\":\"1L\"}],\"intent_id\":\"int_01JABCDEFGHJKMNPQRSTVWXYZ0\",\"merchant\":\"freshmart\",\"page_urls\":[\"https://freshmart.example/p/oat-milk-1l\"],\"shipping_address\":{\"city\":\"Austin\",\"country\":\"US\",\"line1\":\"1 Demo St\",\"postal_code\":\"78701\",\"state\":\"TX\"},\"trace_id\":\"trace_test_vector_1\"}",
+    "body_encoding": "utf-8"
+  },
+  "params": {
+    "label": "sig1",
+    "components": [
+      "@method",
+      "@target-uri",
+      "content-digest"
+    ],
+    "created": 1760572800,
+    "expires": 1760573100,
+    "nonce": "6f1c2b9e-3d4a-4b8c-9e2f-1a2b3c4d5e6f",
+    "keyid": "agt_demo_shopper",
+    "alg": "ed25519",
+    "tag": "intentlock-agent"
+  },
+  "expected": {
+    "content_digest": "sha-256=:eQ5dDfitnWJSM5jV/0yWiYS3bWoYFgjDJjwAqoRL+M4=:",
+    "signature_params": "(\"@method\" \"@target-uri\" \"content-digest\");created=1760572800;expires=1760573100;nonce=\"6f1c2b9e-3d4a-4b8c-9e2f-1a2b3c4d5e6f\";keyid=\"agt_demo_shopper\";alg=\"ed25519\";tag=\"intentlock-agent\"",
+    "signature_base": "\"@method\": POST\n\"@target-uri\": http://localhost:8000/checkout\n\"content-digest\": sha-256=:eQ5dDfitnWJSM5jV/0yWiYS3bWoYFgjDJjwAqoRL+M4=:\n\"@signature-params\": (\"@method\" \"@target-uri\" \"content-digest\");created=1760572800;expires=1760573100;nonce=\"6f1c2b9e-3d4a-4b8c-9e2f-1a2b3c4d5e6f\";keyid=\"agt_demo_shopper\";alg=\"ed25519\";tag=\"intentlock-agent\"",
+    "signature_base_sha256": "4f9dc03cae9b1c70d605ff5953f3085d887bd95710d7c8207234cdb8ebb46443",
+    "signature_b64": "u0bikFQBMdu0osIycuc3G1XXSLggBK4Ky8vAg+OTtlDZEaq8aEocrLU5wNQp8nTacPa8u0u1Ecbrk4lsaJp5DA==",
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Digest": "sha-256=:eQ5dDfitnWJSM5jV/0yWiYS3bWoYFgjDJjwAqoRL+M4=:",
+      "Signature-Input": "sig1=(\"@method\" \"@target-uri\" \"content-digest\");created=1760572800;expires=1760573100;nonce=\"6f1c2b9e-3d4a-4b8c-9e2f-1a2b3c4d5e6f\";keyid=\"agt_demo_shopper\";alg=\"ed25519\";tag=\"intentlock-agent\"",
+      "Signature": "sig1=:u0bikFQBMdu0osIycuc3G1XXSLggBK4Ky8vAg+OTtlDZEaq8aEocrLU5wNQp8nTacPa8u0u1Ecbrk4lsaJp5DA==:"
+    }
+  }
+}

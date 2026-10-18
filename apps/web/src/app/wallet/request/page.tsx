@@ -94,12 +94,12 @@ export default function WalletRequestPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-white">
           Create Agent Intent Request
         </h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <p className="mt-1 text-sm text-gray-400">
           Sign a cryptographically verifiable purchase prompt. The agent uses this text to buy items, and IntentLock verifies every cart line against it.
         </p>
       </div>

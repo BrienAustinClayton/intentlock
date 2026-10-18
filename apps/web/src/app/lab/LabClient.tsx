@@ -327,12 +327,12 @@ function ScenarioCard({
           <button
             onClick={() => onRun(info.scenario)}
             disabled={isRunning}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
               isRunning
-                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 cursor-not-allowed"
+                ? "bg-white/10 text-gray-400 cursor-not-allowed"
                 : isDone
-                ? "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                : "bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                ? "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm shadow-indigo-500/20"
             }`}
           >
             {isRunning ? (
@@ -554,15 +554,15 @@ export default function LabClient({
     runAll.phase === "resetting" || runAll.phase === "running";
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
-            Attack Lab
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Attack Evaluation Lab
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400 max-w-xl">
-            Trigger adversarial vectors through IntentLock&apos;s real-time checkout pipeline.
+          <p className="mt-1 text-xs sm:text-sm text-gray-400 max-w-2xl">
+            Trigger real-time adversarial prompt injection, merchant divergence, and pricing exploit vectors against IntentLock&apos;s checkout verification pipeline.
           </p>
         </div>
 
@@ -570,7 +570,7 @@ export default function LabClient({
         <button
           onClick={handleRunAll}
           disabled={isRunAllActive}
-          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-gray-800 disabled:opacity-50 cursor-pointer dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+          className="btn-approve-glow px-4 py-2 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {runAll.phase === "resetting" ? (
             <>

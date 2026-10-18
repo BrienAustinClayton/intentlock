@@ -67,19 +67,19 @@ export default async function StoreMerchantPage({
   const products = await loadCatalog(merchant);
 
   return (
-    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Merchant Switcher Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-gray-200 pb-3 overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b border-[#1c1f28] pb-3 overflow-x-auto">
         {Object.entries(MERCHANTS).map(([key, m]) => {
           const isActive = key === merchant;
           return (
             <Link
               key={key}
               href={`/store/${key}`}
-              className={`rounded-md px-3 py-1.5 text-xs sm:text-sm font-medium transition shrink-0 ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-medium transition shrink-0 ${
                 isActive
-                  ? "bg-gray-100 text-gray-900 font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#212430] text-white font-semibold border border-white/10 shadow-xs"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
             >
               {m.label}
@@ -95,16 +95,16 @@ export default async function StoreMerchantPage({
             <span className="text-xs font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
               {info.tag}
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-2xl font-bold tracking-tight text-white">
               {info.label}
             </h1>
-            <p className="mt-1 text-sm text-gray-600 max-w-2xl">
+            <p className="mt-1 text-sm text-gray-400 max-w-2xl">
               {info.description} Autonomous shopping agents browse this catalog to build checkout carts.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-200">
+            <span className="font-mono text-xs text-gray-300 bg-white/[0.04] px-3 py-1.5 rounded-xl border border-white/10">
               {products.length} Products
             </span>
           </div>
@@ -123,10 +123,10 @@ export default async function StoreMerchantPage({
               <Link
                 key={p.product_id}
                 href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(p.product_id)}`}
-                className="group saas-card overflow-hidden hover:border-gray-400 flex flex-col justify-between"
+                className="group saas-card overflow-hidden hover:border-white/20 flex flex-col justify-between"
               >
                 {/* Product image */}
-                <div className="relative aspect-square bg-gray-50 overflow-hidden flex items-center justify-center p-6 border-b border-gray-100">
+                <div className="relative aspect-square bg-white/[0.02] overflow-hidden flex items-center justify-center p-6 border-b border-white/[0.06]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.image_url}
@@ -141,17 +141,17 @@ export default async function StoreMerchantPage({
                     <span className="text-[11px] font-mono font-medium text-gray-400 uppercase tracking-wider block mb-1">
                       {p.category}
                     </span>
-                    <h2 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">
+                    <h2 className="text-sm font-semibold text-white line-clamp-2 leading-snug">
                       {p.title}
                     </h2>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-sm font-bold font-mono text-gray-900">
+                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                    <span className="text-sm font-bold font-mono text-white">
                       ${p.price.toFixed(2)} <span className="text-xs font-normal text-gray-400">{p.currency}</span>
                     </span>
                     {p.offers.length > 0 && (
-                      <span className="text-[11px] text-gray-500 font-medium">
+                      <span className="text-[11px] text-indigo-400 font-medium">
                         +{p.offers.length} offer{p.offers.length !== 1 ? "s" : ""}
                       </span>
                     )}

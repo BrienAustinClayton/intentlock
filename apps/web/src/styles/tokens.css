@@ -74,46 +74,66 @@
   --color-neutral-950: #020617;
 
   /* Semantic aliases – light mode */
-  --color-bg: var(--color-neutral-50);
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
-  --color-border: var(--color-neutral-200);
-  --color-text: var(--color-neutral-900);
-  --color-text-muted: var(--color-neutral-500);
+  --color-surface-subtle: #f1f5f9;
+  --color-surface-hover: #e2e8f0;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-strong: #cbd5e1;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
   --color-brand: var(--color-primary-600);
   --color-brand-hover: var(--color-primary-700);
+
+  /* Elevation & Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.06);
 
   /* Status tokens */
   --color-status-received: var(--color-neutral-500);
   --color-status-authorized: var(--color-primary-500);
   --color-status-checking: var(--color-primary-400);
-  --color-status-captured: var(--color-captured-600);
-  --color-status-voided: var(--color-danger-600);
-  --color-status-rejected: var(--color-danger-700);
-  --color-status-pending-approval: var(--color-pending-600);
-  --color-status-failed: var(--color-danger-800);
-  --color-status-hold: var(--color-pending-500);
+  --color-status-captured: #059669;
+  --color-status-voided: #e11d48;
+  --color-status-rejected: #be123c;
+  --color-status-pending-approval: #d97706;
+  --color-status-failed: #9f1239;
+  --color-status-hold: #d97706;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     /* Semantic aliases – dark mode */
-    --color-bg: var(--color-neutral-950);
-    --color-surface: var(--color-neutral-900);
-    --color-border: var(--color-neutral-700);
-    --color-text: var(--color-neutral-50);
-    --color-text-muted: var(--color-neutral-400);
-    --color-brand: var(--color-primary-400);
-    --color-brand-hover: var(--color-primary-300);
+    --color-bg: #090d16;
+    --color-surface: #0f172a;
+    --color-surface-subtle: #1e293b;
+    --color-surface-hover: #334155;
+    --color-border: rgba(255, 255, 255, 0.1);
+    --color-border-subtle: rgba(255, 255, 255, 0.05);
+    --color-border-strong: rgba(255, 255, 255, 0.18);
+    --color-text: #f8fafc;
+    --color-text-muted: #94a3b8;
+    --color-brand: #6366f1;
+    --color-brand-hover: #818cf8;
+
+    /* Elevation & Shadows - dark mode */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 4px 8px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 12px 20px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 
     /* Status tokens – dark */
     --color-status-received: var(--color-neutral-400);
     --color-status-authorized: var(--color-primary-400);
     --color-status-checking: var(--color-primary-300);
-    --color-status-captured: var(--color-captured-400);
-    --color-status-voided: var(--color-danger-400);
-    --color-status-rejected: var(--color-danger-400);
-    --color-status-pending-approval: var(--color-pending-400);
-    --color-status-failed: var(--color-danger-500);
-    --color-status-hold: var(--color-pending-400);
+    --color-status-captured: #10b981;
+    --color-status-voided: #fb7185;
+    --color-status-rejected: #fb7185;
+    --color-status-pending-approval: #fbbf24;
+    --color-status-failed: #f43f5e;
+    --color-status-hold: #fbbf24;
   }
 }

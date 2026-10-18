@@ -7,6 +7,7 @@ import { getOrders, ApiError } from "@/lib/api";
 import { getOrderStatusStyle } from "@/lib/status";
 import { SkeletonRow } from "@/components/Skeleton";
 import type { Order, OrderStatus } from "@/lib/types";
+import WalletNav from "@/components/wallet/WalletNav";
 
 const DEMO_USER_ID = "usr_demo_priya";
 
@@ -26,56 +27,39 @@ function isChecking(orders: Order[]): boolean {
   return orders.some((o) => o.status === "checking" || o.status === "authorized" || o.status === "received");
 }
 
-// ---------------------------------------------------------------------------
-// StatusChip
-// ---------------------------------------------------------------------------
-
 function StatusChip({ status }: { status: OrderStatus }) {
   const style = getOrderStatusStyle(status);
   const textColor = style.chipTextHex ?? style.hex;
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-      style={{ background: style.hex + "22", color: textColor }}
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-mono font-semibold uppercase"
+      style={{ background: style.hex + "20", color: textColor, border: `1px solid ${style.hex}40` }}
     >
       {style.label}
     </span>
   );
 }
 
-// ---------------------------------------------------------------------------
-// OrderRow
-// ---------------------------------------------------------------------------
-
 function OrderRow({ order }: { order: Order }) {
   return (
     <li>
       <Link
         href={`/wallet/orders/${order.id}`}
-        className="block rounded-lg border px-5 py-4 transition-colors hover:border-current"
-        style={{
-          borderColor: "var(--color-border)",
-          background: "var(--color-surface)",
-          textDecoration: "none",
-          color: "inherit",
-        }}
+        className="block saas-card p-4 transition-all duration-150 hover:border-indigo-500/40"
       >
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Left: ID, merchant, agent */}
           <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className="font-mono text-sm font-semibold truncate"
-                style={{ color: "var(--color-text)" }}
-              >
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
                 {order.id}
               </span>
               <StatusChip status={order.status} />
             </div>
-            <div className="text-xs space-x-3" style={{ color: "var(--color-text-muted)" }}>
-              <span>Merchant: <strong style={{ color: "var(--color-text)" }}>{order.merchant}</strong></span>
+            <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+              <span>Merchant: <strong className="text-slate-800 dark:text-slate-200">{order.merchant}</strong></span>
               {order.agent_id && (
-                <span>Agent: <span className="font-mono">{order.agent_id}</span></span>
+                <span>Agent: <span className="font-mono text-slate-800 dark:text-slate-200">{order.agent_id}</span></span>
               )}
             </div>
           </div>
@@ -83,11 +67,11 @@ function OrderRow({ order }: { order: Order }) {
           {/* Right: total + time */}
           <div className="text-right shrink-0 space-y-1">
             {order.total && (
-              <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                {order.currency ?? "USD"} {order.total}
+              <div className="text-sm font-bold font-mono text-slate-900 dark:text-white">
+                ${order.total} {order.currency ?? "USD"}
               </div>
             )}
-            <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <div className="text-xs text-slate-400">
               {fmtTime(order.created_at)}
             </div>
           </div>
@@ -96,10 +80,6 @@ function OrderRow({ order }: { order: Order }) {
     </li>
   );
 }
-
-// ---------------------------------------------------------------------------
-// WalletOrdersPage
-// ---------------------------------------------------------------------------
 
 export default function WalletOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -131,33 +111,53 @@ export default function WalletOrdersPage() {
     return () => { active = false; };
   }, [retryKey]);
 
-  // Auto-refresh every 2 s while any order is in a transitional status
   useEffect(() => {
     if (!isChecking(orders)) return;
     const timer = setInterval(() => setRetryKey((k) => k + 1), 2000);
     return () => clearInterval(timer);
   }, [orders]);
 
+  const pendingApprovals = orders.filter((o) => o.status === "pending_approval");
+
   return (
-    <div className="mx-auto max-w-3xl w-full px-6 py-10">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
-            Orders
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Orders & Settlement Ledger
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            All orders for demo user Priya.
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Real-time audit log of autonomous checkout requests and human approval holds.
             {isChecking(orders) && (
-              <span style={{ color: "var(--color-status-checking)" }}>
-                {" "}Auto-refreshing...
+              <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                {" "}• Pipeline in progress, auto-refreshing...
               </span>
             )}
           </p>
         </div>
-        <Link href="/wallet/request" className="intentlock-btn-primary" style={{ textDecoration: "none" }}>
-          + New Request
+        <Link
+          href="/wallet/request"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition"
+        >
+          <span>+ Create Intent Request</span>
         </Link>
       </div>
+
+      <WalletNav />
+
+      {/* Pending Approvals Notice if any exist */}
+      {pendingApprovals.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 dark:bg-amber-950/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="saas-badge saas-badge-warning font-semibold">
+              Action Required
+            </span>
+            <span className="text-xs text-amber-800 dark:text-amber-200">
+              You have <strong>{pendingApprovals.length}</strong> purchase hold(s) awaiting review within the 30-minute approval window.
+            </span>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <ul className="space-y-3" aria-label="Loading orders">
@@ -168,49 +168,35 @@ export default function WalletOrdersPage() {
       )}
 
       {error && (
-        <div
-          className="rounded-lg border px-4 py-3 text-sm"
-          role="alert"
-          style={{
-            borderColor: "var(--color-danger-200)",
-            background: "var(--color-danger-50)",
-            color: "var(--color-status-voided)",
-          }}
-        >
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span>{error}</span>
-            <button
-              className="intentlock-btn-outline"
-              style={{
-                fontSize: "0.75rem",
-                padding: "0.25rem 0.75rem",
-                color: "var(--color-status-voided)",
-                borderColor: "var(--color-status-voided)",
-              }}
-              onClick={retry}
-              aria-label="Retry loading orders"
-            >
-              Retry
-            </button>
-          </div>
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            className="text-xs font-semibold underline"
+            onClick={retry}
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {!loading && !error && orders.length === 0 && (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          No orders yet.{" "}
-          <Link href="/wallet/request" style={{ color: "var(--color-brand)" }}>
-            Create a new request
-          </Link>{" "}
-          or run a{" "}
-          <Link href="/lab" style={{ color: "var(--color-brand)" }}>
-            lab scenario
-          </Link>
-          .
-        </p>
+        <div className="saas-card p-8 text-center">
+          <p className="text-sm text-slate-500">
+            No checkout transactions recorded yet.
+          </p>
+          <div className="mt-3 flex justify-center gap-3 text-xs">
+            <Link href="/wallet/request" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+              Submit Intent Request &rarr;
+            </Link>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <Link href="/lab" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+              Run Attack Lab Scenario &rarr;
+            </Link>
+          </div>
+        </div>
       )}
 
-      {!loading && (
+      {!loading && orders.length > 0 && (
         <ul className="space-y-3">
           {orders.map((order) => (
             <OrderRow key={order.id} order={order} />

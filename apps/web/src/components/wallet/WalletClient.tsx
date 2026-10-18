@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import type { Mandate, BudgetPeriod } from "@/lib/types";
 import { SkeletonBlock } from "@/components/Skeleton";
+import WalletNav from "./WalletNav";
 
 // ---------------------------------------------------------------------------
 // Demo users
@@ -118,30 +119,27 @@ function validateForm(f: MandateFormState): FormErrors {
   if (!parsed || parseFloat(parsed) <= 0)
     errors.budget_amount = "Budget amount must be a positive decimal (e.g. 200.00).";
   if (!f.starts_at) errors.starts_at = "Start date is required.";
+  if (f.starts_at && f.expires_at) {
+    const s = new Date(f.starts_at).getTime();
+    const e = new Date(f.expires_at).getTime();
+    if (isNaN(s) || isNaN(e)) errors.general = "Invalid date format.";
+    else if (e <= s) errors.general = "Expiration must be after start date.";
+  }
   return errors;
 }
 
-// ---------------------------------------------------------------------------
-// Multi-select toggle helper
-// ---------------------------------------------------------------------------
-
-function toggle(arr: string[], value: string): string[] {
-  return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
+function toggle<T>(arr: T[], val: T): T[] {
+  return arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 }
 
 // ---------------------------------------------------------------------------
 // VaultSection
 // ---------------------------------------------------------------------------
 
-interface VaultSectionProps {
-  userId: DemoUserId;
-  vaulted: boolean;
-}
-
-function VaultSection({ userId, vaulted }: VaultSectionProps) {
+function VaultSection({ userId, vaulted }: { userId: DemoUserId; vaulted: boolean }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pending501, setPending501] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleConnect() {
     setLoading(true);
@@ -162,41 +160,59 @@ function VaultSection({ userId, vaulted }: VaultSectionProps) {
   }
 
   return (
-    <section
-      className="rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-    >
-      <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--color-text)" }}>
-        PayPal Vault
-      </h2>
-      {vaulted ? (
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium"
-          style={{ background: "var(--color-captured-100)", color: "var(--color-status-captured)" }}
-        >
-          PayPal saved
-        </span>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <button
-            className="intentlock-btn-primary w-fit"
-            onClick={handleConnect}
-            disabled={loading}
-          >
-            {loading ? "Connecting..." : "Connect PayPal"}
-          </button>
-          {pending501 && (
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              PayPal sandbox setup pending
-            </p>
-          )}
-          {error && (
-            <p className="text-sm" style={{ color: "var(--color-status-voided)" }}>
-              {error}
-            </p>
+    <section className="saas-card p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              PayPal Vault Settlement
+            </h2>
+            {vaulted ? (
+              <span className="saas-badge saas-badge-success text-[11px]">
+                Connected
+              </span>
+            ) : (
+              <span className="saas-badge saas-badge-neutral text-[11px]">
+                Mock Mode Active
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+            Pre-authorized PayPal payment method for autonomous AI agent checkouts using AUTHORIZE-and-capture.
+          </p>
+        </div>
+
+        <div>
+          {vaulted ? (
+            <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Saved in Vault</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-end gap-1.5">
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+                onClick={handleConnect}
+                disabled={loading}
+              >
+                {loading ? "Connecting..." : "Connect Live PayPal"}
+              </button>
+              {pending501 && (
+                <span className="text-[11px] text-slate-400">
+                  Sandbox credentials pending — currently using mock engine.
+                </span>
+              )}
+              {error && (
+                <span className="text-xs text-rose-600 dark:text-rose-400">
+                  {error}
+                </span>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -240,11 +256,10 @@ function AgentSection() {
   }, [agentRetryKey]);
 
   async function handleRevoke(agentId: string) {
-    if (!confirm(`Revoke agent ${agentId}? This cannot be undone.`)) return;
+    if (!confirm(`Revoke agent ${agentId}? This will prevent all future checkout operations.`)) return;
     setRevoking(agentId);
     try {
       await revokeAgent(agentId);
-      // Optimistic refresh
       setAgents((prev) =>
         prev.map((a) => (a.keyid === agentId ? { ...a, revoked: true } : a))
       );
@@ -256,102 +271,78 @@ function AgentSection() {
   }
 
   return (
-    <section
-      className="rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-    >
-      <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--color-text)" }}>
-        Agents
-      </h2>
+    <section className="saas-card p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            Authorized Agent Credentials
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Cryptographic Ed25519 public keys permitted to execute signed checkouts via RFC 9421.
+          </p>
+        </div>
+        <span className="font-mono text-xs text-slate-500">
+          {agents.filter((a) => !a.revoked).length} Active Keys
+        </span>
+      </div>
+
       {loading && (
         <div className="py-2" aria-label="Loading agents">
           <SkeletonBlock lines={2} />
         </div>
       )}
+
       {error && (
-        <div
-          className="rounded-lg border px-4 py-3 text-sm"
-          role="alert"
-          style={{
-            borderColor: "var(--color-danger-200)",
-            background: "var(--color-danger-50)",
-            color: "var(--color-status-voided)",
-          }}
-        >
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span>{error}</span>
-            <button
-              className="intentlock-btn-outline"
-              style={{
-                fontSize: "0.75rem",
-                padding: "0.25rem 0.75rem",
-                color: "var(--color-status-voided)",
-                borderColor: "var(--color-status-voided)",
-              }}
-              onClick={loadAgents}
-              aria-label="Retry loading agents"
-            >
-              Retry
-            </button>
-          </div>
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            className="text-xs font-semibold text-rose-700 dark:text-rose-300 underline"
+            onClick={loadAgents}
+          >
+            Retry
+          </button>
         </div>
       )}
+
       {!loading && agents.length === 0 && !error && (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          No agents registered.
+        <p className="text-xs text-slate-500">
+          No registered agents found.
         </p>
       )}
-      <ul className="space-y-3">
+
+      <ul className="space-y-2.5">
         {agents.map((agent) => (
           <li
             key={agent.keyid}
-            className="flex items-center justify-between rounded-md border px-4 py-3"
-            style={{ borderColor: "var(--color-border)" }}
+            className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800/80 dark:bg-slate-950/40"
           >
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                {agent.keyid}
-              </span>
-              <span
-                className="font-mono text-xs"
-                style={{ color: "var(--color-text-muted)" }}
-                title={agent.public_key}
-              >
-                key: {shortHash(agent.public_key)}...
-              </span>
-              <div className="flex gap-2 mt-0.5">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {agent.keyid}
+                </span>
                 {agent.revoked ? (
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{
-                      background: "var(--color-danger-100)",
-                      color: "var(--color-status-voided)",
-                    }}
-                  >
-                    revoked
+                  <span className="saas-badge saas-badge-danger text-[10px] uppercase font-mono">
+                    Revoked
                   </span>
                 ) : (
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{
-                      background: "var(--color-captured-100)",
-                      color: "var(--color-status-captured)",
-                    }}
-                  >
-                    verified
+                  <span className="saas-badge saas-badge-success text-[10px] uppercase font-mono">
+                    Verified
                   </span>
                 )}
               </div>
+              <span className="font-mono text-xs text-slate-500" title={agent.public_key}>
+                key: <span className="text-slate-700 dark:text-slate-300">{shortHash(agent.public_key)}...</span> (Ed25519)
+              </span>
             </div>
+
             {!agent.revoked && (
               <button
-                className="intentlock-btn-outline text-xs"
-                style={{ color: "var(--color-status-voided)", borderColor: "var(--color-status-voided)" }}
+                className="rounded-md border border-rose-500/30 bg-rose-500/5 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-500/15 dark:text-rose-400 cursor-pointer transition"
                 disabled={revoking === agent.keyid}
                 onClick={() => handleRevoke(agent.keyid)}
-                aria-label={`Revoke agent ${agent.keyid}`}
               >
-                {revoking === agent.keyid ? "Revoking..." : "Revoke"}
+                {revoking === agent.keyid ? "Revoking..." : "Revoke Access"}
               </button>
             )}
           </li>
@@ -365,15 +356,19 @@ function AgentSection() {
 // MandateForm
 // ---------------------------------------------------------------------------
 
-interface MandateFormProps {
+function MandateForm({
+  initial,
+  editingId,
+  agentKeys,
+  onSubmit,
+  onCancel,
+}: {
   initial: MandateFormState;
   editingId: string | null;
   agentKeys: AgentKey[];
-  onSubmit: (form: MandateFormState) => Promise<void>;
+  onSubmit: (f: MandateFormState) => Promise<void>;
   onCancel: () => void;
-}
-
-function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: MandateFormProps) {
+}) {
   const [form, setForm] = useState<MandateFormState>(initial);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -391,11 +386,12 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
       return;
     }
     setSubmitting(true);
-    setErrors({});
     try {
       await onSubmit(form);
     } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : "Request failed." });
+      setErrors({
+        general: err instanceof Error ? err.message : "Failed to save mandate.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -404,16 +400,15 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-lg border p-6 space-y-4"
-      style={{ borderColor: "var(--color-brand)", background: "var(--color-surface)" }}
+      className="rounded-xl border border-indigo-500/30 bg-indigo-50/20 p-5 space-y-4 dark:border-indigo-500/20 dark:bg-slate-950/40"
     >
-      <h3 className="text-base font-semibold" style={{ color: "var(--color-text)" }}>
-        {editingId ? "Edit Mandate" : "Create Mandate"}
+      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        {editingId ? "Edit Spending Mandate" : "Create New Spending Mandate"}
       </h3>
 
       {/* Agent */}
       <div>
-        <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
+        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
           Agent ID
         </label>
         <input
@@ -421,12 +416,7 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
           value={form.agent_id}
           onChange={(e) => setField("agent_id", e.target.value)}
           placeholder="agt_demo_shopper"
-          className="w-full rounded-md border px-3 py-2 text-sm font-mono"
-          style={{
-            borderColor: errors.agent_id ? "var(--color-status-voided)" : "var(--color-border)",
-            background: "var(--color-bg)",
-            color: "var(--color-text)",
-          }}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-mono dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           list="agent-keys-list"
         />
         <datalist id="agent-keys-list">
@@ -435,87 +425,73 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
           ))}
         </datalist>
         {errors.agent_id && (
-          <p className="text-xs mt-1" style={{ color: "var(--color-status-voided)" }}>
-            {errors.agent_id}
-          </p>
+          <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.agent_id}</p>
         )}
       </div>
 
       {/* Categories */}
       <div>
-        <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-          Categories
+        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+          Authorized Categories
         </label>
         <div className="flex flex-wrap gap-2">
-          {ALL_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setField("categories", toggle(form.categories, cat))}
-              className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
-              style={{
-                background: form.categories.includes(cat)
-                  ? "var(--color-brand)"
-                  : "var(--color-bg)",
-                color: form.categories.includes(cat)
-                  ? "var(--color-surface)"
-                  : "var(--color-text)",
-                borderColor: form.categories.includes(cat)
-                  ? "var(--color-brand)"
-                  : "var(--color-border)",
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+          {ALL_CATEGORIES.map((cat) => {
+            const isSelected = form.categories.includes(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setField("categories", toggle(form.categories, cat))}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium border transition cursor-pointer ${
+                  isSelected
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
         {errors.categories && (
-          <p className="text-xs mt-1" style={{ color: "var(--color-status-voided)" }}>
-            {errors.categories}
-          </p>
+          <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.categories}</p>
         )}
       </div>
 
       {/* Merchants */}
       <div>
-        <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-          Merchants
+        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+          Authorized Merchants
         </label>
         <div className="flex flex-wrap gap-2">
-          {ALL_MERCHANTS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setField("merchants", toggle(form.merchants, m))}
-              className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
-              style={{
-                background: form.merchants.includes(m)
-                  ? "var(--color-brand)"
-                  : "var(--color-bg)",
-                color: form.merchants.includes(m)
-                  ? "var(--color-surface)"
-                  : "var(--color-text)",
-                borderColor: form.merchants.includes(m)
-                  ? "var(--color-brand)"
-                  : "var(--color-border)",
-              }}
-            >
-              {m}
-            </button>
-          ))}
+          {ALL_MERCHANTS.map((m) => {
+            const isSelected = form.merchants.includes(m);
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setField("merchants", toggle(form.merchants, m))}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium border transition cursor-pointer ${
+                  isSelected
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                {m}
+              </button>
+            );
+          })}
         </div>
         {errors.merchants && (
-          <p className="text-xs mt-1" style={{ color: "var(--color-status-voided)" }}>
-            {errors.merchants}
-          </p>
+          <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.merchants}</p>
         )}
       </div>
 
       {/* Budget */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-            Budget Amount (USD)
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Budget Cap (USD)
           </label>
           <input
             type="text"
@@ -523,39 +499,25 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
             value={form.budget_amount}
             onChange={(e) => setField("budget_amount", e.target.value)}
             placeholder="200.00"
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{
-              borderColor: errors.budget_amount
-                ? "var(--color-status-voided)"
-                : "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
           {errors.budget_amount && (
-            <p className="text-xs mt-1" style={{ color: "var(--color-status-voided)" }}>
-              {errors.budget_amount}
-            </p>
+            <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.budget_amount}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-            Period
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Reset Frequency
           </label>
           <select
             value={form.budget_period}
             onChange={(e) => setField("budget_period", e.target.value as BudgetPeriod)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           >
             {BUDGET_PERIODS.map((p) => (
               <option key={p} value={p}>
-                {p}
+                Per {p}
               </option>
             ))}
           </select>
@@ -565,63 +527,47 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
       {/* Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-            Starts At
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Effective From
           </label>
           <input
             type="datetime-local"
             value={form.starts_at}
             onChange={(e) => setField("starts_at", e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{
-              borderColor: errors.starts_at
-                ? "var(--color-status-voided)"
-                : "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
           {errors.starts_at && (
-            <p className="text-xs mt-1" style={{ color: "var(--color-status-voided)" }}>
-              {errors.starts_at}
-            </p>
+            <p className="text-xs mt-1 text-rose-600 dark:text-rose-400">{errors.starts_at}</p>
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>
-            Expires At (optional)
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Expires At (Optional)
           </label>
           <input
             type="datetime-local"
             value={form.expires_at}
             onChange={(e) => setField("expires_at", e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         </div>
       </div>
 
       {errors.general && (
-        <p className="text-sm" style={{ color: "var(--color-status-voided)" }}>
-          {errors.general}
-        </p>
+        <p className="text-xs text-rose-600 dark:text-rose-400">{errors.general}</p>
       )}
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-2.5 pt-2">
         <button
           type="submit"
-          className="intentlock-btn-primary"
+          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
           disabled={submitting}
         >
-          {submitting ? "Saving..." : editingId ? "Save Changes" : "Create Mandate"}
+          {submitting ? "Saving..." : editingId ? "Save Changes" : "Sign & Create Mandate"}
         </button>
         <button
           type="button"
-          className="intentlock-btn-outline"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           onClick={onCancel}
           disabled={submitting}
         >
@@ -629,6 +575,92 @@ function MandateForm({ initial, editingId, agentKeys, onSubmit, onCancel }: Mand
         </button>
       </div>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MandateCard
+// ---------------------------------------------------------------------------
+
+interface MandateCardProps {
+  mandate: Mandate;
+  revoking: string | null;
+  onEdit: (m: Mandate) => void;
+  onRevoke: (id: string) => void;
+}
+
+function MandateCard({ mandate, revoking, onEdit, onRevoke }: MandateCardProps) {
+  const isRevoked = !!mandate.revoked_at;
+
+  return (
+    <li
+      className={`rounded-xl border p-4 transition ${
+        isRevoked
+          ? "border-slate-200/60 bg-slate-100/50 opacity-60 dark:border-slate-800/60 dark:bg-slate-950/40"
+          : "border-slate-200/80 bg-white shadow-xs dark:border-slate-800/80 dark:bg-slate-900/60"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+              {mandate.id}
+            </span>
+            {isRevoked ? (
+              <span className="saas-badge saas-badge-danger text-[10px] uppercase font-mono">
+                Revoked
+              </span>
+            ) : (
+              <span className="saas-badge saas-badge-success text-[10px] uppercase font-mono">
+                Active Mandate
+              </span>
+            )}
+            <span className="saas-badge saas-badge-brand text-[10px] font-mono" title={`signature: ${mandate.signature}`}>
+              sig:{shortHash(mandate.signature)}
+            </span>
+          </div>
+        </div>
+
+        {!isRevoked && (
+          <div className="flex gap-2 shrink-0">
+            <button
+              className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+              onClick={() => onEdit(mandate)}
+            >
+              Edit
+            </button>
+            <button
+              className="rounded-md border border-rose-500/30 bg-rose-500/5 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-500/15 dark:text-rose-400 cursor-pointer"
+              disabled={revoking === mandate.id}
+              onClick={() => onRevoke(mandate.id)}
+            >
+              {revoking === mandate.id ? "Revoking..." : "Revoke"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div>
+          <dt className="text-slate-400 font-medium">Agent Scope</dt>
+          <dd className="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{mandate.agent_id}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-400 font-medium">Budget Limit</dt>
+          <dd className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+            ${formatDecimal(mandate.budget_amount)} {mandate.currency} / {mandate.budget_period}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-slate-400 font-medium">Merchants</dt>
+          <dd className="font-medium text-slate-800 dark:text-slate-200 mt-0.5">{mandate.merchants.join(", ") || "All"}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-400 font-medium">Categories</dt>
+          <dd className="font-medium text-slate-800 dark:text-slate-200 mt-0.5">{mandate.categories.join(", ") || "All"}</dd>
+        </div>
+      </dl>
+    </li>
   );
 }
 
@@ -717,7 +749,6 @@ function MandateSection({ userId, agentKeys }: MandateSectionProps) {
     setRevoking(mandateId);
     try {
       const updated = await revokeMandate(mandateId);
-      // Optimistic refresh
       setMandates((prev) =>
         prev.map((m) => (m.id === updated.id ? updated : m))
       );
@@ -729,17 +760,22 @@ function MandateSection({ userId, agentKeys }: MandateSectionProps) {
   }
 
   return (
-    <section
-      className="rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-    >
+    <section className="saas-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-          Mandates
-        </h2>
+        <div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            Spending Mandates & Policies
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Active constraints defining budget caps, allowable categories, and trusted merchants.
+          </p>
+        </div>
         {!showForm && (
-          <button className="intentlock-btn-primary" onClick={openCreate}>
-            + New Mandate
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-indigo-700 cursor-pointer"
+            onClick={openCreate}
+          >
+            <span>+ New Mandate</span>
           </button>
         )}
       </div>
@@ -761,41 +797,26 @@ function MandateSection({ userId, agentKeys }: MandateSectionProps) {
           <SkeletonBlock lines={3} />
         </div>
       )}
+
       {error && (
-        <div
-          className="rounded-lg border px-4 py-3 text-sm"
-          role="alert"
-          style={{
-            borderColor: "var(--color-danger-200)",
-            background: "var(--color-danger-50)",
-            color: "var(--color-status-voided)",
-          }}
-        >
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span>{error}</span>
-            <button
-              className="intentlock-btn-outline"
-              style={{
-                fontSize: "0.75rem",
-                padding: "0.25rem 0.75rem",
-                color: "var(--color-status-voided)",
-                borderColor: "var(--color-status-voided)",
-              }}
-              onClick={loadMandates}
-              aria-label="Retry loading mandates"
-            >
-              Retry
-            </button>
-          </div>
+        <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            className="text-xs font-semibold underline"
+            onClick={loadMandates}
+          >
+            Retry
+          </button>
         </div>
       )}
+
       {!loading && mandates.length === 0 && !error && !showForm && (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          No mandates. Click &quot;+ New Mandate&quot; to create one.
+        <p className="text-xs text-slate-500">
+          No active mandates configured. Create one to enable agent checkouts.
         </p>
       )}
 
-      <ul className="space-y-4">
+      <ul className="space-y-3">
         {mandates.map((mandate) => (
           <MandateCard
             key={mandate.id}
@@ -811,152 +832,6 @@ function MandateSection({ userId, agentKeys }: MandateSectionProps) {
 }
 
 // ---------------------------------------------------------------------------
-// MandateCard
-// ---------------------------------------------------------------------------
-
-interface MandateCardProps {
-  mandate: Mandate;
-  revoking: string | null;
-  onEdit: (m: Mandate) => void;
-  onRevoke: (id: string) => void;
-}
-
-function MandateCard({ mandate, revoking, onEdit, onRevoke }: MandateCardProps) {
-  const isRevoked = !!mandate.revoked_at;
-
-  return (
-    <li
-      className="rounded-lg border p-4"
-      style={{
-        borderColor: "var(--color-border)",
-        opacity: isRevoked ? 0.65 : 1,
-      }}
-    >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <span className="font-mono text-sm font-medium" style={{ color: "var(--color-text)" }}>
-            {mandate.id}
-          </span>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {/* Signed chip */}
-            <span
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-mono font-medium"
-              style={{
-                background: "var(--color-primary-100)",
-                color: "var(--color-brand)",
-              }}
-              title={`signature: ${mandate.signature}`}
-            >
-              signed:{shortHash(mandate.signature)}
-            </span>
-            {/* Status chip */}
-            {isRevoked ? (
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                style={{
-                  background: "var(--color-danger-100)",
-                  color: "var(--color-status-voided)",
-                }}
-              >
-                revoked
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                style={{
-                  background: "var(--color-captured-100)",
-                  color: "var(--color-status-captured)",
-                }}
-              >
-                active
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        {!isRevoked && (
-          <div className="flex gap-2 shrink-0">
-            <button
-              className="intentlock-btn-outline text-xs"
-              onClick={() => onEdit(mandate)}
-              aria-label={`Edit mandate ${mandate.id}`}
-            >
-              Edit
-            </button>
-            <button
-              className="intentlock-btn-outline text-xs"
-              style={{
-                color: "var(--color-status-voided)",
-                borderColor: "var(--color-status-voided)",
-              }}
-              disabled={revoking === mandate.id}
-              onClick={() => onRevoke(mandate.id)}
-              aria-label={`Revoke mandate ${mandate.id}`}
-            >
-              {revoking === mandate.id ? "Revoking..." : "Revoke"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Details grid */}
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Agent
-          </dt>
-          <dd className="font-mono text-xs" style={{ color: "var(--color-text)" }}>
-            {mandate.agent_id}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Budget
-          </dt>
-          <dd style={{ color: "var(--color-text)" }}>
-            {formatDecimal(mandate.budget_amount)} {mandate.currency} / {mandate.budget_period}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Categories
-          </dt>
-          <dd className="text-xs" style={{ color: "var(--color-text)" }}>
-            {mandate.categories.join(", ") || "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Merchants
-          </dt>
-          <dd className="text-xs" style={{ color: "var(--color-text)" }}>
-            {mandate.merchants.join(", ") || "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Starts
-          </dt>
-          <dd className="text-xs" style={{ color: "var(--color-text)" }}>
-            {mandate.starts_at ? new Date(mandate.starts_at).toLocaleDateString() : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Expires
-          </dt>
-          <dd className="text-xs" style={{ color: "var(--color-text)" }}>
-            {mandate.expires_at ? new Date(mandate.expires_at).toLocaleDateString() : "none"}
-          </dd>
-        </div>
-      </dl>
-    </li>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // WalletClient (root)
 // ---------------------------------------------------------------------------
 
@@ -967,7 +842,6 @@ export default function WalletClient() {
   const [userId, setUserId] = useState<DemoUserId>("usr_demo_priya");
   const [agentKeys, setAgentKeys] = useState<AgentKey[]>([]);
 
-  // Pre-load agent keys so MandateSection can use them for the datalist
   useEffect(() => {
     getAgentKeys()
       .then(({ keys }) => setAgentKeys(keys))
@@ -975,35 +849,29 @@ export default function WalletClient() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl w-full px-6 py-10 space-y-8">
-      {/* Page header + user switcher */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-5xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
-            Wallet
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Wallet & Spend Governance
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Manage your PayPal vault, agents and spending mandates.
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Manage authorized shopping agents, PayPal Vault access, and cryptographically signed mandates.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <label
             htmlFor="user-select"
-            className="text-sm font-medium"
-            style={{ color: "var(--color-text-muted)" }}
+            className="text-xs font-semibold text-slate-500 uppercase tracking-wider"
           >
-            User:
+            Persona:
           </label>
           <select
             id="user-select"
             value={userId}
             onChange={(e) => setUserId(e.target.value as DemoUserId)}
-            className="rounded-md border px-3 py-1.5 text-sm"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-surface)",
-              color: "var(--color-text)",
-            }}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-900 dark:text-white shadow-xs"
           >
             {DEMO_USERS.map((u) => (
               <option key={u.id} value={u.id}>
@@ -1013,6 +881,9 @@ export default function WalletClient() {
           </select>
         </div>
       </div>
+
+      {/* Sub-Navigation Tabs */}
+      <WalletNav />
 
       {/* Vault */}
       <VaultSection userId={userId} vaulted={vaulted} />

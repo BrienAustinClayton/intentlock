@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createIntent, ApiError } from "@/lib/api";
+import WalletNav from "@/components/wallet/WalletNav";
 
 // ---------------------------------------------------------------------------
 // Demo data from CONTRACTS
@@ -14,17 +15,9 @@ const DEMO_AGENTS = [
 
 const DEMO_USER_ID = "usr_demo_priya";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function shortSig(sig: string): string {
-  return sig.slice(0, 12) + "...";
+  return sig.slice(0, 16) + "...";
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export default function WalletRequestPage() {
   const [requestText, setRequestText] = useState("");
@@ -41,14 +34,10 @@ export default function WalletRequestPage() {
   const [agentMessage, setAgentMessage] = useState<string | null>(null);
   const [agentIsError, setAgentIsError] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // POST /intents
-  // ---------------------------------------------------------------------------
-
   async function handleCreateIntent(e: React.FormEvent) {
     e.preventDefault();
     if (!requestText.trim()) {
-      setIntentError("Request text is required.");
+      setIntentError("Request prompt is required.");
       return;
     }
     setIntentLoading(true);
@@ -76,10 +65,6 @@ export default function WalletRequestPage() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // POST /api/run-agent
-  // ---------------------------------------------------------------------------
-
   async function handleRunAgent() {
     if (!intentId) return;
     setAgentLoading(true);
@@ -96,211 +81,148 @@ export default function WalletRequestPage() {
 
       if (!res.ok) {
         setAgentIsError(true);
-        setAgentMessage(data.reason ?? "Agent returned an error.");
+        setAgentMessage(data.reason ?? "Agent execution failed.");
       } else {
-        setAgentMessage("Agent started successfully.");
+        setAgentMessage("Agent dispatched successfully. Watch orders ledger for verification results.");
       }
     } catch {
       setAgentIsError(true);
-      setAgentMessage("Failed to reach agent service.");
+      setAgentMessage("Failed to connect to agent service.");
     } finally {
       setAgentLoading(false);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
   return (
-    <div className="mx-auto max-w-2xl w-full px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
-          New Request
+    <div className="mx-auto max-w-4xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Create Agent Intent Request
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Describe what you want the agent to buy; an intent is signed on your
-          behalf.
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Sign a cryptographically verifiable purchase prompt. The agent uses this text to buy items, and IntentLock verifies every cart line against it.
         </p>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Request form                                                          */}
-      {/* ------------------------------------------------------------------ */}
-      <form onSubmit={handleCreateIntent} className="space-y-5">
-        {/* Agent picker */}
-        <div>
-          <label
-            htmlFor="agent-select"
-            className="block text-sm font-medium mb-1"
-            style={{ color: "var(--color-text)" }}
-          >
-            Agent
-          </label>
-          <select
-            id="agent-select"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm font-mono"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-            }}
-          >
-            {DEMO_AGENTS.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <WalletNav />
 
-        {/* Request text */}
-        <div>
-          <label
-            htmlFor="request-text"
-            className="block text-sm font-medium mb-1"
-            style={{ color: "var(--color-text)" }}
-          >
-            What would you like to buy?
-          </label>
-          <textarea
-            id="request-text"
-            value={requestText}
-            onChange={(e) => setRequestText(e.target.value)}
-            rows={4}
-            placeholder="Groceries for the week, under $80, from FreshMart"
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{
-              borderColor: intentError
-                ? "var(--color-status-voided)"
-                : "var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
-              resize: "vertical",
-            }}
-          />
-          {intentError && (
-            <p
-              className="text-xs mt-1"
-              style={{ color: "var(--color-status-voided)" }}
+      {/* Request Form */}
+      <div className="saas-card p-6">
+        <form onSubmit={handleCreateIntent} className="space-y-4">
+          <div>
+            <label
+              htmlFor="agent-select"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
             >
-              {intentError}
-            </p>
-          )}
-        </div>
+              Assigned Shopping Agent
+            </label>
+            <select
+              id="agent-select"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            >
+              {DEMO_AGENTS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <button
-          type="submit"
-          className="intentlock-btn-primary"
-          disabled={intentLoading}
-        >
-          {intentLoading ? "Creating Intent..." : "Create Intent"}
-        </button>
-      </form>
+          <div>
+            <label
+              htmlFor="request-text"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+            >
+              Natural Language Intent Prompt
+            </label>
+            <textarea
+              id="request-text"
+              value={requestText}
+              onChange={(e) => setRequestText(e.target.value)}
+              rows={4}
+              placeholder="e.g. 2 organic whole milks and fresh sourdough bread under $25 from FreshMart"
+              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white leading-relaxed"
+            />
+            {intentError && (
+              <p className="text-xs mt-1.5 text-rose-600 dark:text-rose-400 font-medium">
+                {intentError}
+              </p>
+            )}
+          </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Intent result                                                         */}
-      {/* ------------------------------------------------------------------ */}
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition disabled:opacity-50 cursor-pointer"
+            disabled={intentLoading}
+          >
+            {intentLoading ? "Signing Intent with Ed25519..." : "Sign & Create Intent"}
+          </button>
+        </form>
+      </div>
+
+      {/* Intent Created Success Box */}
       {intentId && intentSig && (
-        <div
-          className="mt-8 rounded-lg border p-5 space-y-4"
-          style={{
-            borderColor: "var(--color-border)",
-            background: "var(--color-surface)",
-          }}
-        >
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-              Intent created
-            </span>
-            {/* "Signed" chip */}
-            <span
-              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-              style={{
-                background: "var(--color-captured-100)",
-                color: "var(--color-status-captured)",
-              }}
-            >
-              signed
+        <div className="saas-card p-6 border-indigo-500/30 bg-indigo-50/15 dark:bg-indigo-950/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="saas-badge saas-badge-success text-xs font-semibold">
+                ✓ Cryptographically Signed
+              </span>
+              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                Intent Stored in Gateway
+              </span>
+            </div>
+            <span className="font-mono text-xs text-slate-500">
+              User: {DEMO_USER_ID}
             </span>
           </div>
 
-          <dl className="space-y-1.5 text-sm">
-            <div className="flex gap-2 flex-wrap">
-              <dt
-                className="shrink-0 font-medium"
-                style={{ color: "var(--color-text-muted)", minWidth: "72px" }}
-              >
-                Intent ID
-              </dt>
-              <dd
-                className="font-mono break-all"
-                style={{ color: "var(--color-text)" }}
-              >
-                {intentId}
-              </dd>
+          <div className="rounded-lg border border-slate-200/80 bg-white/80 p-3.5 dark:border-slate-800 dark:bg-slate-900/60 font-mono text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Intent ID:</span>
+              <span className="font-bold text-slate-900 dark:text-white">{intentId}</span>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <dt
-                className="shrink-0 font-medium"
-                style={{ color: "var(--color-text-muted)", minWidth: "72px" }}
-              >
-                Signature
-              </dt>
-              <dd
-                className="font-mono text-xs break-all"
-                style={{ color: "var(--color-text-muted)" }}
-                title={intentSig}
-              >
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Signature:</span>
+              <span className="text-indigo-600 dark:text-indigo-400" title={intentSig}>
                 {shortSig(intentSig)}
-              </dd>
+              </span>
             </div>
-          </dl>
+          </div>
 
-          {/* Send to agent */}
-          <div className="pt-2">
+          <div className="flex items-center gap-3 pt-1">
             <button
-              className="intentlock-btn-primary"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
               onClick={handleRunAgent}
               disabled={agentLoading}
             >
-              {agentLoading ? "Contacting agent..." : "Send to agent"}
+              {agentLoading ? "Executing Shopping Agent..." : "Dispatch to Agent Runtime"}
             </button>
+            <Link
+              href="/wallet/orders"
+              className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white underline font-medium"
+            >
+              View Orders Ledger &rarr;
+            </Link>
           </div>
 
-          {/* Agent response message */}
           {agentMessage && (
             <div
-              className="rounded-md px-4 py-3 text-sm"
-              style={{
-                background: agentIsError
-                  ? "var(--color-danger-100)"
-                  : "var(--color-captured-100)",
-                color: agentIsError
-                  ? "var(--color-status-voided)"
-                  : "var(--color-status-captured)",
-                border: `1px solid ${
-                  agentIsError
-                    ? "var(--color-danger-200)"
-                    : "var(--color-captured-200)"
-                }`,
-              }}
+              className={`rounded-lg p-3 text-xs border ${
+                agentIsError
+                  ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                  : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              }`}
             >
-              {agentMessage}
+              <div className="font-medium">{agentMessage}</div>
               {agentIsError && (
-                <span className="block mt-1">
-                  <Link
-                    href="/lab"
-                    style={{
-                      color: "var(--color-brand)",
-                      textDecoration: "underline",
-                    }}
-                  >
-                    Try the Attack Lab instead
+                <div className="mt-1">
+                  <Link href="/lab" className="underline font-semibold">
+                    Test this scenario in the Attack Lab instead &rarr;
                   </Link>
-                </span>
+                </div>
               )}
             </div>
           )}

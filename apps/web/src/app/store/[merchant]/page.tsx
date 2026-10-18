@@ -7,30 +7,27 @@ import { notFound } from "next/navigation";
 import type { CatalogProduct } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Merchant theme config
+// Merchant config
 // ---------------------------------------------------------------------------
 
-const MERCHANT_THEMES: Record<
+const MERCHANTS: Record<
   string,
-  { label: string; color: string; headerBg: string; headerText: string }
+  { label: string; tag: string; description: string }
 > = {
   freshmart: {
     label: "FreshMart",
-    color: "green",
-    headerBg: "bg-green-600",
-    headerText: "text-white",
+    tag: "Groceries & Nutrition",
+    description: "Everyday essentials, fresh produce, and toddler nutrition products.",
   },
   gadgethub: {
     label: "GadgetHub",
-    color: "blue",
-    headerBg: "bg-blue-600",
-    headerText: "text-white",
+    tag: "Consumer Electronics",
+    description: "Premium computer accessories, audio gear, and office tech.",
   },
   dealsdaily: {
     label: "DealsDaily",
-    color: "orange",
-    headerBg: "bg-orange-500",
-    headerText: "text-white",
+    tag: "Discounts & Bundles",
+    description: "High-volume consumer goods, clearance items, and gift merchandise.",
   },
 };
 
@@ -44,7 +41,6 @@ async function loadCatalog(merchant: string): Promise<CatalogProduct[]> {
     const data = await getCatalog({ merchant });
     return data ?? [];
   } catch {
-    // API unreachable — read from the local seed file at build/server time
     const seedPath = path.join(
       process.cwd(),
       "../../data/seed/catalog.json"
@@ -65,66 +61,101 @@ export default async function StoreMerchantPage({
   params: Promise<{ merchant: string }>;
 }) {
   const { merchant } = await params;
-  if (!MERCHANT_THEMES[merchant]) notFound();
-  const theme = MERCHANT_THEMES[merchant];
+  if (!MERCHANTS[merchant]) notFound();
+  const info = MERCHANTS[merchant];
 
   const products = await loadCatalog(merchant);
 
   return (
-    <div className="min-h-screen">
-      {/* Store header */}
-      <header className={`${theme.headerBg} ${theme.headerText} py-10 px-6`}>
-        <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-widest opacity-80 mb-1">
-            Demo Store
-          </p>
-          <h1 className="text-4xl font-bold">{theme.label}</h1>
-          <p className="mt-1 text-sm opacity-75">
-            {products.length} product{products.length !== 1 ? "s" : ""} available
-          </p>
-        </div>
-      </header>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Merchant Switcher Tabs */}
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
+        {Object.entries(MERCHANTS).map(([key, m]) => {
+          const isActive = key === merchant;
+          return (
+            <Link
+              key={key}
+              href={`/store/${key}`}
+              className={`rounded-lg px-3.5 py-1.5 text-xs sm:text-sm font-medium transition shrink-0 ${
+                isActive
+                  ? "bg-slate-200/80 text-slate-900 font-semibold dark:bg-slate-800 dark:text-white"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
+              }`}
+            >
+              {m.label}
+            </Link>
+          );
+        })}
+      </div>
 
-      {/* Product grid */}
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      {/* Store Header */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-6 sm:p-8 shadow-xs dark:border-slate-800/80 dark:bg-slate-900/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2">
+              <span>{info.tag}</span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              {info.label}
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+              {info.description} Autonomous shopping agents browse this catalog to build checkout carts.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              {products.length} Products in Catalog
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Grid */}
+      <div>
         {products.length === 0 ? (
-          <p className="text-center text-gray-500 py-20">
-            No products found for this store.
-          </p>
+          <div className="saas-card p-12 text-center text-slate-500">
+            No products loaded for this merchant store.
+          </div>
         ) : (
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {products.map((p) => (
               <Link
                 key={p.product_id}
                 href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(p.product_id)}`}
-                className="group rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                className="group saas-card overflow-hidden transition-all duration-200 hover:border-indigo-500/40 flex flex-col justify-between"
               >
                 {/* Product image */}
-                <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                <div className="relative aspect-square bg-slate-50 dark:bg-slate-950/60 overflow-hidden flex items-center justify-center p-6 border-b border-slate-100 dark:border-slate-800/80">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.image_url}
                     alt={p.title}
-                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-200"
+                    className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-105"
                   />
                 </div>
 
                 {/* Product info */}
-                <div className="p-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                    {p.category}
-                  </p>
-                  <h2 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug mb-2">
-                    {p.title}
-                  </h2>
-                  <p className="text-lg font-bold text-gray-900">
-                    {p.currency} {p.price.toFixed(2)}
-                  </p>
-                  {p.offers.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      +{p.offers.length} other offer{p.offers.length !== 1 ? "s" : ""}
-                    </p>
-                  )}
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                      {p.category}
+                    </span>
+                    <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug">
+                      {p.title}
+                    </h2>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-base font-bold font-mono text-slate-900 dark:text-white">
+                      ${p.price.toFixed(2)} <span className="text-xs font-normal text-slate-400">{p.currency}</span>
+                    </span>
+                    {p.offers.length > 0 && (
+                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                        +{p.offers.length} offer{p.offers.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}

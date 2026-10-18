@@ -67,19 +67,23 @@ export default async function StoreProductPage({
   const variantGroups = groupVariants(p.variants ?? []);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-gray-400">
-        <Link href={`/store/${encodeURIComponent(merchant)}`} className="hover:text-gray-700">
+      <nav className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+        <Link href="/store/freshmart" className="hover:text-slate-900 dark:hover:text-white">
+          Stores
+        </Link>
+        <span>/</span>
+        <Link href={`/store/${encodeURIComponent(merchant)}`} className="capitalize hover:text-slate-900 dark:hover:text-white">
           {merchant}
         </Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-600 truncate">{p.title}</span>
+        <span>/</span>
+        <span className="text-slate-800 dark:text-slate-200 truncate">{p.title}</span>
       </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Image */}
-        <div className="rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center p-8 aspect-square overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        {/* Product Image */}
+        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-slate-50 dark:bg-slate-950/60">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={p.image_url}
@@ -88,40 +92,48 @@ export default async function StoreProductPage({
           />
         </div>
 
-        {/* Details */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            {p.category}
-          </p>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">{p.title}</h1>
-
-          {/* Price */}
-          <p className="text-3xl font-bold text-gray-900 mb-5">
-            {p.currency} {p.price.toFixed(2)}
-          </p>
+        {/* Product Details */}
+        <div className="space-y-6">
+          <div>
+            <span className="saas-badge saas-badge-neutral font-mono text-[11px] uppercase tracking-wider mb-2">
+              {p.category}
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
+              {p.title}
+            </h1>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
+                ${p.price.toFixed(2)}
+              </span>
+              <span className="text-xs text-slate-400 font-mono">{p.currency}</span>
+            </div>
+          </div>
 
           {/* Variants */}
           {Object.keys(variantGroups).length > 0 && (
-            <div className="mb-6 space-y-4">
+            <div className="space-y-3 pt-2">
               {Object.entries(variantGroups).map(([name, chips]) => (
                 <div key={name}>
-                  <p className="text-sm font-semibold text-gray-700 mb-2 capitalize">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                     {name}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {chips.map((chip) => (
-                      <Link
-                        key={chip.product_id}
-                        href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(chip.product_id)}`}
-                        className={`inline-block rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          chip.product_id === productId
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : "border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-600"
-                        }`}
-                      >
-                        {chip.label}
-                      </Link>
-                    ))}
+                    {chips.map((chip) => {
+                      const isSelected = chip.product_id === productId;
+                      return (
+                        <Link
+                          key={chip.product_id}
+                          href={`/store/${encodeURIComponent(merchant)}/${encodeURIComponent(chip.product_id)}`}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition ${
+                            isSelected
+                              ? "border-indigo-600 bg-indigo-600 text-white"
+                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                          }`}
+                        >
+                          {chip.label}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -129,19 +141,19 @@ export default async function StoreProductPage({
           )}
 
           {/* Description */}
-          <p className="text-sm text-gray-600 leading-relaxed mb-6">
+          <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4">
             {p.description}
-          </p>
+          </div>
 
-          {/* Key features */}
+          {/* Key Features */}
           {p.key_features && p.key_features.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-800 mb-2">Key Features</h2>
-              <ul className="space-y-1">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Key Specifications</h2>
+              <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                 {p.key_features.map((feat, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-gray-600">
-                    <span className="mt-1 shrink-0 text-gray-400">&#8226;</span>
-                    {feat}
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-indigo-500">•</span>
+                    <span>{feat}</span>
                   </li>
                 ))}
               </ul>
@@ -150,29 +162,19 @@ export default async function StoreProductPage({
         </div>
       </div>
 
-      {/* Other offers */}
+      {/* Other Offers Comparison */}
       {p.offers && p.offers.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Other Offers</h2>
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Merchant</th>
-                  <th className="px-4 py-3 font-medium text-right">Price</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {p.offers.map((offer, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700">{offer.merchant}</td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900">
-                      {p.currency} {offer.price.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="saas-card p-6">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Merchant Offer Comparison (Channel3)</h2>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {p.offers.map((offer, i) => (
+              <div key={i} className="flex items-center justify-between py-2.5 text-xs">
+                <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{offer.merchant}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  ${offer.price.toFixed(2)} {p.currency}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

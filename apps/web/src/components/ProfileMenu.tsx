@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { signOut, useMe } from "@/lib/useMe";
 
 type Theme = "light" | "dark";
 
@@ -31,6 +32,9 @@ export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as Theme);
+  const me = useMe();
+  const name = me?.name ?? "";
+  const initial = (name || me?.email || "?").trim().charAt(0).toUpperCase();
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +121,20 @@ export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
               {it.label}
             </Link>
           ))}
+          <div className="h-px bg-line mx-1 my-1" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={signOut}
+            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-[13px] text-fg-2 hover:text-fg hover:bg-fg/[0.06] transition"
+          >
+            <span className="text-fg-dim">
+              <svg className={icon} viewBox="0 0 24 24" {...stroke}>
+                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
+              </svg>
+            </span>
+            Sign out
+          </button>
         </div>
       )}
 
@@ -127,12 +145,17 @@ export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
         aria-expanded={open}
         className={`w-full flex items-center gap-3 p-2 rounded-xl transition hover:bg-fg/[0.05] ${open ? "bg-fg/[0.05]" : ""} ${collapsed ? "justify-center" : ""}`}
       >
-        <span className="icon-tile icon-tile-brand !w-9 !h-9 !rounded-full text-sm font-semibold">P</span>
+        {me?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={me.avatar_url} alt="" referrerPolicy="no-referrer" className="w-9 h-9 rounded-full object-cover shrink-0" />
+        ) : (
+          <span className="icon-tile icon-tile-brand !w-9 !h-9 !rounded-full text-sm font-semibold">{initial}</span>
+        )}
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 text-left">
-              <span className="block text-[13px] font-semibold text-fg truncate">Priya</span>
-              <span className="block text-xs text-fg-dim truncate">Account owner</span>
+              <span className="block text-[13px] font-semibold text-fg truncate">{name || "\u00a0"}</span>
+              <span className="block text-xs text-fg-dim truncate">{me?.email ?? "\u00a0"}</span>
             </span>
             <svg className="w-4 h-4 text-fg-dim" viewBox="0 0 24 24" {...stroke}>
               <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />

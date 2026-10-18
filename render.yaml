@@ -117,7 +117,7 @@ services:
     # standalone server.js lives at .next/standalone/server.js relative to apps/web.
     # If your pnpm+Next.js version writes it to .next/standalone/apps/web/server.js,
     # update this path (see docs/DEPLOY.md troubleshooting).
-    startCommand: node .next/standalone/apps/web/server.js
+    startCommand: HOSTNAME=0.0.0.0 node .next/standalone/apps/web/server.js
     healthCheckPath: /
     envVars:
       # Next.js standalone server binds to HOSTNAME (default: localhost → needs 0.0.0.0 on Render)

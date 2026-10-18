@@ -28,6 +28,7 @@ from app.api import (
     lab,
     llm,
     mandates,
+    me,
     orders,
     proofs,
     schedule,
@@ -99,9 +100,14 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    # str(exc) includes source file paths and echoes input; send field + message only.
+    parts = []
+    for err in exc.errors()[:3]:
+        field = ".".join(str(x) for x in err.get("loc", ()) if x not in ("body", "query", "path"))
+        parts.append(f"{field}: {err.get('msg', 'invalid')}" if field else str(err.get("msg", "invalid")))
     return JSONResponse(
         status_code=422,
-        content={"error": "unprocessable", "reason": str(exc)},
+        content={"error": "unprocessable", "reason": "; ".join(parts) or "Invalid request."},
     )
 
 
@@ -117,6 +123,7 @@ async def health() -> dict[str, Any]:
 # Routers
 # ------------------------------------------------------------------ #
 app.include_router(auth.router)
+app.include_router(me.router)
 app.include_router(users.router)
 app.include_router(vault.router)
 app.include_router(agents.router)

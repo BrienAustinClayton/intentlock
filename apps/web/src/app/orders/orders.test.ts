@@ -1,6 +1,6 @@
 /**
  * Unit tests for wallet orders decimal math helpers.
- * Run with: node --experimental-strip-types --test src/app/wallet/orders/orders.test.ts
+ * Run with: node --experimental-strip-types --test src/app/orders/orders.test.ts
  */
 import { strict as assert } from "node:assert";
 import { test } from "node:test";

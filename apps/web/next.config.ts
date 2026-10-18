@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  async redirects() {
+    return [
+      { source: "/wallet", destination: "/payment", permanent: false },
+      { source: "/wallet/orders", destination: "/orders", permanent: false },
+      { source: "/wallet/orders/:id", destination: "/orders/:id", permanent: false },
+      { source: "/wallet/request", destination: "/requests", permanent: false },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

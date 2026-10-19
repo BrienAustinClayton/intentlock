@@ -56,6 +56,7 @@ from app.signing import (  # noqa: E402
     verify_payload,
     wallet_public_key,
 )
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 NOW = datetime(2026, 10, 14, 12, 0, 0, tzinfo=timezone.utc)  # Wednesday; ISO week starts 2026-10-12
 UTC = timezone.utc
@@ -140,7 +141,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        with TestClient(fastapi_app) as c:
+        with TestClient(fastapi_app, headers=ADMIN) as c:
             yield c
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)

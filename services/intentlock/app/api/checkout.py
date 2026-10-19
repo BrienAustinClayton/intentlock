@@ -1,4 +1,5 @@
 """Checkout router: POST /checkout (signed agent request -> pipeline)."""
+import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -7,8 +8,10 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.crypto.vector import VECTOR_PUBLIC_KEY
 from app.db import get_db
 from app.deps import require_agent
 from app.ids import new_id
@@ -16,6 +19,7 @@ from app.mandates import CENT, format_amount
 from app.models import Agent, Intent, Order
 from app.pipeline.runner import run_checkout
 from app.pipeline.steps import record_check
+from app.product_truth import CartNotVerified, domain_of, verify_cart
 
 MONEY_RE = r"^\d{1,9}(\.\d{1,2})?$"
 MAX_TOTAL = Decimal("9999999999.99")
@@ -74,6 +78,9 @@ class VerifiedAgent:
 async def verified_agent(request: Request, db: Session = Depends(get_db)) -> VerifiedAgent:
     t0 = time.perf_counter()
     agent = await require_agent(request, db)  # raises 401 HTTPException
+    if agent.public_key == VECTOR_PUBLIC_KEY:
+        # Lab agents sign with the published RFC 9421 test key: only the lab may use them.
+        raise HTTPException(status_code=403, detail={"error": "lab_agent", "reason": "lab agents can't check out"})
     return VerifiedAgent(agent, max(0, int((time.perf_counter() - t0) * 1000)))
 
 
@@ -102,6 +109,27 @@ def build_order(body: CheckoutBody, intent: Intent, agent: Agent) -> Order:
 
 router = APIRouter(tags=["checkout"])
 
+RETRY_AFTER = ("failed",)  # only a technical failure frees the request for another checkout
+
+
+def approved_cart_problem(approved: list[dict], store: str, lines: list[dict]) -> str | None:
+    """Why this checkout isn't exactly the cart the user approved (None when it is).
+    Same store, same products, same quantities; a price may only have gone down."""
+    want = {a["product_id"]: a for a in approved if isinstance(a, dict) and a.get("product_id")}
+    if {domain_of(a.get("merchant")) for a in want.values()} != {store}:
+        return f"You approved a cart from a different store, not {store}."
+    got = {l["product_id"]: l for l in lines}
+    if set(got) != set(want):
+        return "The agent's cart has different products from the cart you approved."
+    for pid, a in want.items():
+        line = got[pid]
+        if int(line["qty"]) != int(a["qty"]):
+            return f"You approved {a['qty']} × {str(line.get('title'))[:60]}, not {line['qty']}."
+        if Decimal(line["unit_price"]) > Decimal(str(a["unit_price"])):
+            return (f"{str(line.get('title'))[:60]} now costs ${line['unit_price']}, more than the "
+                    f"${a['unit_price']} you approved.")
+    return None
+
 
 @router.post("/checkout")
 async def checkout(request: Request, verified: VerifiedAgent = Depends(verified_agent),
@@ -112,11 +140,29 @@ async def checkout(request: Request, verified: VerifiedAgent = Depends(verified_
         body = CheckoutBody.model_validate(json.loads(raw))
     except (ValueError, ValidationError):
         raise _err(422, "unprocessable", "invalid checkout body")
-    intent = db.get(Intent, body.intent_id)
+    # Lock the intent row: one live order per purchase request, even with concurrent checkouts.
+    intent = db.execute(select(Intent).where(Intent.id == body.intent_id).with_for_update()).scalar_one_or_none()
     if intent is None:
         raise _err(404, "not_found", "intent not found")
     if intent.agent_id != agent.id or intent.user_id != agent.user_id:
         raise _err(403, "intent_mismatch", "intent does not belong to this agent")
+    used = db.execute(select(Order.id).where(Order.intent_id == intent.id,
+                                             Order.status.notin_(RETRY_AFTER)).limit(1)).first()
+    if used is not None:
+        raise _err(409, "intent_used", "this purchase request already has an order")
+    # Server-side truth: price, store, category and pages come from Channel3, not from the agent.
+    try:
+        store, lines, pages = await asyncio.to_thread(verify_cart, body.merchant,
+                                                      [it.model_dump() for it in body.cart])
+    except CartNotVerified as e:
+        raise _err(409, "cart_not_verified", " ".join(e.reasons)[:500])
+    if intent.approved_cart:
+        problem = approved_cart_problem(intent.approved_cart, store, lines)
+        if problem:
+            raise _err(409, "not_what_you_approved", problem)
+    body = body.model_copy(update={"merchant": store, "cart": [CartItemIn(**l) for l in lines],
+                                   # scan Channel3's pages plus any the agent saw (scanning more is safer)
+                                   "page_urls": list(dict.fromkeys(pages + list(body.page_urls)))[:10]})
     order = build_order(body, intent, agent)
     db.add(order)
     db.flush()

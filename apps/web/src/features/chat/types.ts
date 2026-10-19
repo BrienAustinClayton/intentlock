@@ -1,4 +1,4 @@
-import { AgentRunStatusEnum, ChatRoleEnum } from "./enums";
+import { AgentRunStatusEnum, ChatRoleEnum, CartCheckStatusEnum, CartReviewDecisionEnum } from "./enums";
 
 export interface ChatProductItem {
   product_id: string;
@@ -36,6 +36,19 @@ export interface ChatMessageItem {
 
 export interface CartItemLine extends ChatProductItem {
   qty: number;
+}
+
+export interface CartCheckItem {
+  key: string;
+  label: string;
+  status: CartCheckStatusEnum;
+  detail: string;
+}
+
+/** Sepilo's cart check: code checks plus Jev's second opinion. */
+export interface CartReview {
+  decision: CartReviewDecisionEnum;
+  checks: CartCheckItem[];
 }
 
 export interface ChatCartState {

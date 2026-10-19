@@ -435,7 +435,7 @@ def test_cart_add_update_and_rule_checks(client, db, two, chat_agent):
     cart = add("c3_chair").json()
     assert any("Office Chair" in i for i in cart["issues"])
     r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha)
-    assert r.status_code == 409 and r.json()["error"] == "cart_not_allowed"
+    assert r.status_code == 409 and r.json()["error"] == "cart_blocked" and r.json()["review"]["checks"][0]["status"] == "block"
     cart = client.patch(f"/me/chats/{chat['id']}/cart/c3_chair", headers=ha, json={"qty": 0}).json()
     assert [i["product_id"] for i in cart["items"]] == ["c3_cable"]
     cart = add("c3_hub").json()
@@ -476,3 +476,87 @@ def test_delete_chat(client, db, two, chat_agent):
     assert client.delete(f"/me/chats/{chat['id']}", headers=hb).status_code == 404
     assert client.delete(f"/me/chats/{chat['id']}", headers=ha).status_code == 200
     assert db.get(Chat, chat["id"]) is None
+
+
+def test_proof_is_private_to_the_owner_and_checks_hide_internals(client, db, two):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.pipeline.steps import record_check
+    from app.proof import issue_proof
+
+    (alice, ha), (bob, hb) = two
+    agent = _agent(client, ha)
+    intent = client.post("/me/requests", headers=ha, json={"agent_id": agent["id"], "request_text": "kids shoes size 3"}).json()
+    o = _order(db, alice, intent["id"], agent["id"], "captured")
+    record_check(db, o.id, "intent_diff", "pass", {"items": [{"product_id": "p", "title": "Shoe", "explained": "yes",
+                 "issue": "none", "reason": "ok", "p_explained": 0.93, "source": "llm"}], "price_anomaly": False,
+                 "threshold": 0.7}, 5, score=0.93)
+    record_check(db, o.id, "scan_injection", "pass", {"score": 0.02, "jev": 0.01, "threshold": 0.5}, 5, score=0.02)
+    db.commit()
+    issue_proof(db, o.id)
+    db.commit()
+
+    anon = TestClient(app)  # no session, no operator key
+    assert anon.get(f"/orders/{o.id}/proof").status_code == 404
+    assert anon.get(f"/orders/{o.id}/proof", headers=hb).status_code == 404
+    mine = anon.get(f"/orders/{o.id}/proof", headers=ha)
+    assert mine.status_code == 200 and mine.json()["valid"] is True
+
+    checks = {c["step"]: c for c in client.get(f"/me/orders/{o.id}", headers=ha).json()["checks"]}
+    assert checks["intent_diff"]["score"] is None
+    assert checks["intent_diff"]["details"] == {"items": [{"product_id": "p", "title": "Shoe", "explained": "yes",
+                                                           "issue": "none", "reason": "ok"}], "price_anomaly": False}
+    assert checks["scan_injection"]["details"] is None and checks["scan_injection"]["score"] is None
+
+
+def test_agent_cannot_claim_someone_elses_order(client, db, two, hosted):
+    _, reply = hosted
+    (alice, ha), (bob, hb) = two
+    a = _hosted_agent(client, ha)
+    b = _hosted_agent(client, hb)
+    bob_req = client.post("/me/requests", headers=hb, json={"agent_id": b["id"], "request_text": "Bob's socks"}).json()
+    bobs_order = _order(db, bob, bob_req["id"], b["id"], "captured")
+    reply["value"] = _Resp(200, {"order_id": bobs_order.id, "summary": "Bought it.", "errors": []})
+    client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "Alice's socks"})
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and run["order_id"] is None
+    assert "isn't this purchase" in run["summary"]
+
+
+
+@pytest.mark.real_cart_review
+def test_checkout_runs_cart_check_and_needs_confirmation_for_warnings(client, db, two, chat_agent, monkeypatch):
+    from app import cart_review
+    from app.jev import Answer
+
+    calls, suggest, reply = chat_agent
+    (alice, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"], budget_amount="100.00")
+    monkeypatch.setattr(cart_review, "verify_cart", lambda m, lines, db=None: (m, lines, []))
+    p = {"match": 0.1, "steer": 0.0}
+    monkeypatch.setattr(cart_review.jev, "decide", lambda s, qs, step, **k: {
+        q: Answer(type="noul", engine="jev",
+                  noul=p["match"] if q.startswith("match_") else p["steer"] if q.startswith("steer_") else 0.9)
+        for q in qs})
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a cable"}).json()["messages"][1]
+    client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "c3_cable"})
+
+    r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha)
+    assert r.status_code == 409 and r.json()["error"] == "needs_confirmation"
+    assert r.json()["review"]["decision"] == "confirm"
+    assert not [u for u, _ in calls if u.endswith("/run")]  # nothing bought yet
+
+    p["steer"] = 0.95  # Jev says the listing talks to an AI: blocked, even with confirm
+    r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha, json={"confirm": True})
+    assert r.status_code == 409 and r.json()["error"] == "cart_blocked"
+
+    p["steer"] = 0.0
+    reply["value"] = _Resp(200, {"order_id": None, "summary": "Out of stock now.", "errors": []})
+    out = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha, json={"confirm": True}).json()
+    assert out["review"]["decision"] == "confirm" and len(out["messages"]) == 1
+    run = next(kw["json"] for u, kw in calls if u.endswith("/run"))
+    intent = db.get(Intent, run["intent_id"])
+    assert intent.approved_cart == [{"product_id": "c3_cable", "qty": 1, "unit_price": "9.99", "merchant": "baseus.com"}]

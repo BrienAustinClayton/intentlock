@@ -3,7 +3,6 @@ import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
 import { RevealPhaseEnum, ScenarioIdEnum, ScenarioPhaseEnum } from "../enums";
 import {
-  ScenarioCheckStep,
   ScenarioDefinition,
   ScenarioRunResult,
   ScenarioState,
@@ -48,34 +47,18 @@ export function useAttackLab() {
       error: null,
     }));
 
+    // Signed-in lab route (the web proxy adds the session); the run returns the order with its checks.
     makeApiCall<ScenarioRunResult>({
-      endpoint: `/lab/${encodeURIComponent(scenarioId)}`,
+      endpoint: `/api/me/lab/${encodeURIComponent(scenarioId)}`,
       method: HttpMethodEnum.Post,
     })
       .then((runResult: ScenarioRunResult) => {
-        setSingleState(scenarioId, (s) => ({
-          ...s,
-          phase: ScenarioPhaseEnum.Fetching,
-          result: runResult,
-        }));
-
-        const hasOrderId = Boolean(runResult.order_id);
-        if (hasOrderId) {
-          return makeApiCall<{ checks: ScenarioCheckStep[] }>({
-            endpoint: `/orders/${encodeURIComponent(runResult.order_id)}`,
-            method: HttpMethodEnum.Get,
-          }).then((orderDetail) => {
-            setSingleState(scenarioId, (s) => ({
-              ...s,
-              phase: ScenarioPhaseEnum.Done,
-              checks: orderDetail.checks || [],
-            }));
-          });
-        }
-
+        const checks = Array.isArray(runResult.order?.checks) ? runResult.order.checks : [];
         setSingleState(scenarioId, (s) => ({
           ...s,
           phase: ScenarioPhaseEnum.Done,
+          result: runResult,
+          checks,
         }));
       })
       .catch((error: Error) => {
@@ -90,7 +73,7 @@ export function useAttackLab() {
   const resetLab = () => {
     setIsResetting(true);
     makeApiCall<{ ok: boolean }>({
-      endpoint: "/lab/reset",
+      endpoint: "/api/me/lab/reset",
       method: HttpMethodEnum.Post,
     })
       .then(() => {

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
 import { OrderFilterTabEnum } from "../enums";
+import { ApiOrderDetail, toOrderDetail } from "../mappers";
 import { OrderDetailResponse, OrderSummary } from "../types";
 
 export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilterTabEnum.All, activeOrderId: string | null = null) {
@@ -20,10 +21,10 @@ export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilte
   const orderDetailQuery = useQuery<OrderDetailResponse>({
     queryKey: ["orderDetail", activeOrderId],
     queryFn: () =>
-      makeApiCall<OrderDetailResponse>({
+      makeApiCall<ApiOrderDetail>({
         endpoint: `/api/me/orders/${encodeURIComponent(activeOrderId || "")}`,
         method: HttpMethodEnum.Get,
-      }),
+      }).then(toOrderDetail),
     enabled: shouldFetchDetail,
   });
 

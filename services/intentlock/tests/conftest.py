@@ -121,6 +121,48 @@ def client(db, wallet_key_b64, monkeypatch):
         yield db
 
     fastapi_app.dependency_overrides[get_db] = _override
-    with TestClient(fastapi_app, raise_server_exceptions=True) as c:
+    with TestClient(fastapi_app, raise_server_exceptions=True, headers=ADMIN) as c:
         yield c
     fastapi_app.dependency_overrides.pop(get_db, None)
+
+ADMIN_KEY = "test-operator-key-0123456789"
+ADMIN = {"X-Admin-Key": ADMIN_KEY}
+
+
+@pytest.fixture(autouse=True)
+def _operator_key(monkeypatch):
+    """Operator-only routes are closed unless ADMIN_API_KEY is set; tests use this key."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "ADMIN_API_KEY", ADMIN_KEY)
+
+
+
+@pytest.fixture(autouse=True)
+def _catalog_truth_passthrough(monkeypatch, request):
+    """Checkout re-reads every line from Channel3 (app.product_truth). Tests use fixture products, so the
+    lookup passes lines through unless a test marks itself @pytest.mark.real_catalog_check."""
+    if request.node.get_closest_marker("real_catalog_check"):
+        return
+    from app.api import checkout
+
+    def passthrough(merchant, lines, db=None):
+        return merchant, [dict(l) for l in lines], []
+
+    monkeypatch.setattr(checkout, "verify_cart", passthrough)
+
+
+@pytest.fixture(autouse=True)
+def _cart_review_passthrough(monkeypatch, request):
+    """Chat checkout runs app.cart_review (Channel3 + Jev). Other tests get an "ok" review unless they mark
+    themselves @pytest.mark.real_cart_review and fake Channel3/Jev themselves."""
+    if request.node.get_closest_marker("real_cart_review"):
+        return
+    from app.api import chats
+
+    def ok(request_text, lines, rule_issues):
+        status = "block" if rule_issues else "pass"
+        return {"decision": "block" if rule_issues else "ok",
+                "checks": [{"key": "rules", "label": "Within your spending rules", "status": status,
+                            "detail": " ".join(rule_issues)}]}
+
+    monkeypatch.setattr(chats, "review_cart", ok)

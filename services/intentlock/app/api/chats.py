@@ -11,7 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app import hosted_agents
+from app import hosted_agents, runlog
+from app.cart_review import review_cart
+from app.untrusted import clean, guard_reply, had_hidden_chars, talks_to_agent
 from app.auth import current_user
 from app.db import get_db
 from app.ids import new_id
@@ -81,10 +83,13 @@ def _clean_products(raw: Any) -> list[dict[str, Any]]:
         price = str(p.get("price", ""))
         if not PRICE_RE.match(price):
             continue
+        if any(talks_to_agent(p.get(k)) or had_hidden_chars(p.get(k)) for k in ("title", "brand")):
+            runlog.emit("chat.listing_dropped", product_id=str(p["product_id"])[:64], reason="agent_directed_text")
+            continue
         out.append({
             "product_id": p["product_id"][:128],
-            "title": str(p.get("title") or "")[:200],
-            "brand": str(p["brand"])[:80] if p.get("brand") else None,
+            "title": clean(p.get("title"), 200),
+            "brand": clean(p["brand"], 80) if p.get("brand") else None,
             "price": price,
             "currency": str(p.get("currency") or "USD")[:3],
             "merchant": str(p.get("merchant") or "")[:64],
@@ -264,7 +269,7 @@ def send_message(chat_id: str, body: MessageIn, user: User = Depends(current_use
         try:
             data = hosted_agents.suggest(agent.id, body.content, history, rules)
             products = _clean_products(data.get("products"))
-            text = str(data.get("reply") or "").strip()[:2000] or (
+            text = guard_reply(data.get("reply")) or (
                 "Here's what I found." if products else "I couldn't find anything that fits.")
             reply = _add(db, chat, "assistant", text, products=products or None)
         except hosted_agents.HostedAgentError as e:
@@ -342,10 +347,16 @@ def update_cart(chat_id: str, product_id: str, body: CartQty, user: User = Depen
     return _cart_view(chat, chat_rules(db, chat))
 
 
+class CheckoutIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    confirm: bool = False  # the user saw the cart check's warnings and still wants to buy
+
+
 @router.post("/{chat_id}/checkout")
-def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depends(current_user),
-                  db: Session = Depends(get_db)):
-    """The user's approval: one signed purchase request per store, listing exactly the approved items."""
+def checkout_cart(chat_id: str, background: BackgroundTasks, body: Optional[CheckoutIn] = None,
+                  user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The user's approval: one signed purchase request per store, listing exactly the approved items.
+    The cart is checked first (rules, Channel3, listing text, Jev); nothing is bought if it's blocked."""
     chat = _own_chat(db, user, chat_id)
     lines = list(chat.cart or [])
     if not lines:
@@ -354,13 +365,22 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
     if agent is None or not agent.managed or agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_unavailable", "reason": "This chat's agent is disconnected."})
     view = _cart_view(chat, chat_rules(db, chat))
-    if view["issues"]:
-        raise HTTPException(409, detail={"error": "cart_not_allowed", "reason": " ".join(view["issues"])})
 
-    asked = db.execute(
+    recent = db.execute(
         select(ChatMessage).where(ChatMessage.chat_id == chat.id, ChatMessage.role == "user")
-        .order_by(ChatMessage.created_at.desc()).limit(1)
-    ).scalars().first()
+        .order_by(ChatMessage.created_at.desc()).limit(3)
+    ).scalars().all()
+    asked = recent[0] if recent else None
+    review = review_cart("\n".join(m.content for m in reversed(recent)), lines, view["issues"])
+    runlog.emit("chat.cart_review", chat_id=chat.id, decision=review["decision"],
+                checks={c["key"]: c["status"] for c in review["checks"]})
+    if review["decision"] == "block":
+        reason = " ".join(c["detail"] for c in review["checks"] if c["status"] == "block" and c["detail"])
+        raise HTTPException(409, detail={"error": "cart_blocked", "reason": reason or "This cart can't be bought.",
+                                         "review": review})
+    if review["decision"] == "confirm" and not (body and body.confirm):
+        raise HTTPException(409, detail={"error": "needs_confirmation", "reason": "Check the warnings before buying.",
+                                         "review": review})
     stores: dict[str, list[dict]] = {}
     for l in lines:
         stores.setdefault(l["merchant"], []).append(l)
@@ -369,7 +389,9 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
         listing = "; ".join(f"{l['qty']} × {l['title']} at ${l['price']}" for l in group)
         request_text = (f"{asked.content if asked else ''}\n\nI approved this cart from {merchant}: {listing}.").strip()[:2000]
         try:
-            intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text)
+            intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text,
+                                   approved_cart=[{"product_id": l["product_id"], "qty": l["qty"],
+                                                   "unit_price": l["price"], "merchant": merchant} for l in group])
         except ServiceError as e:
             raise HTTPException(e.status_code, detail={"error": e.error, "reason": e.reason})
         run = hosted_agents.start_run(db, intent.id, user.id, agent.id,
@@ -387,4 +409,4 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
     for rid in run_ids:
         background.add_task(hosted_agents.execute_run, rid)
     return {"messages": [_message_view(m, {r.id: hosted_agents.run_to_dict(r)}) for m, r in messages],
-            "cart": _cart_view(chat, chat_rules(db, chat))}
+            "cart": _cart_view(chat, chat_rules(db, chat)), "review": review}

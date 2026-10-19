@@ -105,6 +105,9 @@ class Settings(BaseSettings):
     AGENT_SERVICE_URL: Optional[str] = None
     AGENT_RUN_SECRET: Optional[str] = None
 
+    # Operator key for the older open routes (/mandates, /orders, /lab …). Unset = those routes are closed.
+    ADMIN_API_KEY: Optional[str] = None
+
     # ------------------------------------------------------------------ #
     # Runtime (not in MANIFEST)
     # ------------------------------------------------------------------ #

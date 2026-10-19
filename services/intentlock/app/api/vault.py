@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings, web_origins
+from app.access import require_admin
 from app.db import get_db
 from app.models import User
 from app.paypal import service as paypal
@@ -61,7 +62,7 @@ def reset_pending() -> None:  # tests
         _LATEST.clear()
 
 
-@router.get("/vault/setup")
+@router.get("/vault/setup", dependencies=[Depends(require_admin)])
 def vault_setup(user_id: str | None = None, db: Session = Depends(get_db)):
     if not user_id or not _USER_RE.fullmatch(user_id):
         _bad("invalid_user_id")

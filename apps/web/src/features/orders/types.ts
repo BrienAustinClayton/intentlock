@@ -38,6 +38,8 @@ export interface OrderSummary {
   cart: CartItemDetails[] | null;
   approval_timeout_at: string | null;
   decision_reasons: string[] | null;
+  /** PayPal page where the buyer approves the payment (only while awaiting_payment). */
+  pay_url?: string | null;
 }
 
 export interface OrderDetailResponse {

@@ -1,8 +1,4 @@
-import {
-  ChatCartState,
-  ChatMessageItem,
-  ChatProductItem,
-} from "./types";
+import { ChatCartState, ChatMessageItem, ChatProductItem, CartReview } from "./types";
 
 export interface ChatSummaryItem {
   id: string;
@@ -38,5 +34,11 @@ export interface CartDrawerProps {
   isBusy: boolean;
   onClose: () => void;
   onUpdateQty: (productId: string, qty: number) => void;
-  onCheckout: () => void;
+  /** confirm: the user saw the cart check's warnings and still wants to buy. */
+  onCheckout: (confirm: boolean) => void;
+  review: CartReview | null;
+}
+
+export interface CartCheckListProps {
+  review: CartReview;
 }

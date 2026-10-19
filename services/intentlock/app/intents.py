@@ -1,10 +1,12 @@
-"""Signed intents. The payload is exactly {id,user_id,agent_id,request_text,signed_at}.
+"""Signed intents. The payload is {id,user_id,agent_id,request_text,signed_at}, plus cart_sha256 when the
+user approved an exact cart (chat checkout): then checkout must match that cart.
 
 Nothing but the signature is stored beyond the row columns, because the payload
 is rebuilt from the row. No code path modifies an intent after creation.
 """
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -16,21 +18,29 @@ from sqlalchemy.orm import Session
 from app.ids import new_id
 from app.models import Agent, Intent, User
 from app.service_errors import ServiceError
-from app.signing import iso_z, sign_payload, utc_seconds, utcnow, verify_payload
+from app.signing import canonical_json, iso_z, sign_payload, utc_seconds, utcnow, verify_payload
 
 INTENT_TEXT_MAX = 2000
 
 
+def cart_sha256(approved_cart: list[dict] | None) -> str | None:
+    return hashlib.sha256(canonical_json(approved_cart)).hexdigest() if approved_cart else None
+
+
 def build_intent_payload(
-    *, intent_id: str, user_id: str, agent_id: str, request_text: str, signed_at: str
+    *, intent_id: str, user_id: str, agent_id: str, request_text: str, signed_at: str,
+    approved_cart: list[dict] | None = None,
 ) -> dict:
-    return {
+    payload = {
         "id": intent_id,
         "user_id": user_id,
         "agent_id": agent_id,
         "request_text": request_text,
         "signed_at": signed_at,
     }
+    if approved_cart:
+        payload["cart_sha256"] = cart_sha256(approved_cart)
+    return payload
 
 
 def intent_payload_from_row(intent: Intent) -> dict:
@@ -40,6 +50,7 @@ def intent_payload_from_row(intent: Intent) -> dict:
         agent_id=intent.agent_id,
         request_text=intent.request_text,
         signed_at=iso_z(intent.signed_at),
+        approved_cart=intent.approved_cart,
     )
 
 
@@ -59,6 +70,7 @@ def new_signed_intent(
     request_text: str,
     now: datetime | None = None,
     private_key: Ed25519PrivateKey | None = None,
+    approved_cart: list[dict] | None = None,
 ) -> Intent:
     """Build a signed Intent that is NOT added to any session."""
     signed_at = utc_seconds(now or utcnow())
@@ -69,6 +81,7 @@ def new_signed_intent(
         agent_id=agent_id,
         request_text=request_text,
         signed_at=iso_z(signed_at),
+        approved_cart=approved_cart,
     )
     return Intent(
         id=intent_id,
@@ -77,11 +90,13 @@ def new_signed_intent(
         request_text=request_text,
         signed_at=signed_at,
         signature=sign_payload(payload, private_key),
+        approved_cart=approved_cart or None,
     )
 
 
 def create_intent(
-    db: Session, *, user_id: str, agent_id: str, request_text: str, now: datetime | None = None
+    db: Session, *, user_id: str, agent_id: str, request_text: str, now: datetime | None = None,
+    approved_cart: list[dict] | None = None,
 ) -> Intent:
     user = db.get(User, user_id)
     if user is None:
@@ -94,7 +109,8 @@ def create_intent(
     if agent.revoked_at is not None:
         raise ServiceError(409, "agent_revoked", "agent is revoked")
     text = _validate_text(request_text)
-    intent = new_signed_intent(user_id=user_id, agent_id=agent_id, request_text=text, now=now)
+    intent = new_signed_intent(user_id=user_id, agent_id=agent_id, request_text=text, now=now,
+                               approved_cart=approved_cart)
     db.add(intent)
     db.commit()
     db.refresh(intent)
@@ -116,4 +132,5 @@ def intent_to_dict(intent: Intent) -> dict:
         "request_text": intent.request_text,
         "signed_at": iso_z(intent.signed_at),
         "signature": intent.signature,
+        "approved_cart": intent.approved_cart,
     }

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.access import agent_or_admin, require_admin
 from app.db import get_db
 from app.ids import new_id
 from app.mandates import update_mandate
@@ -87,7 +88,7 @@ def _schedule_event(e: ScheduleEvent) -> dict[str, Any]:
 # GET /schedule/load
 # ---------------------------------------------------------------------------
 
-@router.get("/schedule/load")
+@router.get("/schedule/load", dependencies=[Depends(require_admin)])
 def schedule_load(
     user_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
@@ -162,7 +163,7 @@ class _SyncBody(BaseModel):
     resources: Optional[dict[str, Any]] = None
 
 
-@router.post("/schedule/sync")
+@router.post("/schedule/sync", dependencies=[Depends(require_admin)])
 def schedule_sync(
     body: _SyncBody,
     db: Session = Depends(get_db),
@@ -289,11 +290,12 @@ class _ProposeBody(BaseModel):
 @router.post("/schedule/propose", status_code=201)
 def schedule_propose(
     body: _ProposeBody,
+    signer: Optional[Agent] = Depends(agent_or_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Create a tentative planned_purchase event."""
+    """Create a tentative planned_purchase event (the signing agent, for itself only)."""
     agent = db.get(Agent, body.agent_id)
-    if agent is None:
+    if agent is None or (signer is not None and signer.id != agent.id):
         raise HTTPException(
             status_code=404,
             detail={"error": "not_found", "reason": "agent not found"},

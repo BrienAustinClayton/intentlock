@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -135,17 +136,20 @@ def search(
             db.close()
 
 
-def get_product(product_id: str, db: Session | None = None) -> dict[str, Any]:
+def get_product(product_id: str, db: Session | None = None, fresh: bool = False) -> dict[str, Any]:
     """Fetch a single product by Channel3 ID.
 
-    Returns the raw product dict.  Result is cached for 24 h.
+    Returns the raw product dict.  Result is cached for 24 h; ``fresh`` skips the cache read (checkout
+    needs the current price and stock) and still refreshes the cache.
     """
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", product_id or ""):
+        raise ValueError("invalid product id")
     key = _cache_key("get_product", product_id)
     _own_db = db is None
     if _own_db:
         db = _make_db()
     try:
-        cached = _get_cached(db, key)
+        cached = None if fresh else _get_cached(db, key)
         if cached is not None:
             return cached
 

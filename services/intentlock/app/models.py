@@ -105,6 +105,8 @@ class Intent(Base):
     request_text = Column(Text, nullable=False)
     signed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     signature = Column(String, nullable=False)
+    # Exact cart the user approved [{product_id, qty, unit_price, merchant}]; its hash is in the signed payload
+    approved_cart = Column(JSONB, nullable=True)
 
     user = relationship("User", back_populates="intents")
     agent = relationship("Agent", back_populates="intents")

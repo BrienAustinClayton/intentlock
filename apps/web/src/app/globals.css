@@ -320,14 +320,12 @@ input[type="text"], input[type="search"], input[type="number"], textarea, select
   box-shadow: inset 0 1px 2px var(--well);
 }
 
-/* Sidebar nav: selected item is a lifted segment, like a segmented control */
+/* Sidebar nav: selected item is a light fill with a blue bar on the left */
 .nav-item-active {
   color: var(--fg);
-  background: var(--nav-active);
-  box-shadow:
-    inset 0 1px 0 var(--hl),
-    0 0 0 1px var(--card-edge),
-    0 1px 2px var(--drop);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  border-radius: 0 10px 10px 0;
+  box-shadow: inset 3px 0 0 #3b82f6;
 }
 
 /* Popover menus */

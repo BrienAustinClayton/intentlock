@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -260,6 +261,14 @@ class CatalogCache(Base):
     key = Column(String, primary_key=True)
     payload = Column(JSONB, nullable=False)
     fetched_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Channel3Usage(Base):
+    """Live Channel3 calls per UTC day, for the daily credit budget (app/channel3.py)."""
+    __tablename__ = "channel3_usage"
+
+    day = Column(Date, primary_key=True)
+    calls = Column(Integer, nullable=False, default=0, server_default="0")
 
 
 class LLMUsage(Base):

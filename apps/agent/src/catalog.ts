@@ -1,4 +1,5 @@
 import { env } from "./config.ts";
+import { PRODUCT_ID, cleanPrice, cleanQuery, guardedJson } from "./channel3Guard.ts";
 import { publicGet } from "./intentlock.ts";
 
 export interface Product {
@@ -165,32 +166,34 @@ export interface Channel3Filters {
   minPrice?: number;
 }
 
-/** Live Channel3 search, in-stock offers only. Empty when no key is configured. */
+const SEARCH_TTL_MS = 10 * 60_000;
+const PRODUCT_TTL_MS = 2 * 60_000; // buying re-reads prices: keep this short
+
+/** Live Channel3 search, in-stock offers only, through the guard rails in channel3Guard.ts. */
 export async function channel3Search(query: string, limit: number, merchant?: string, f: Channel3Filters = {}): Promise<Product[]> {
   const key = env("CHANNEL3_API_KEY");
   if (!key) return [];
+  const q = cleanQuery(query);
+  const n = Math.min(Math.max(Math.round(Number(limit) || 1), 1), 20);
+  const maxPrice = cleanPrice(f.maxPrice);
+  const minPrice = cleanPrice(f.minPrice);
   const filters: Record<string, unknown> = { availability: ["InStock"] };
-  if (f.maxPrice !== undefined || f.minPrice !== undefined) {
-    filters.price = { ...(f.minPrice !== undefined ? { min_price: f.minPrice } : {}), ...(f.maxPrice !== undefined ? { max_price: f.maxPrice } : {}) };
+  if (maxPrice !== undefined || minPrice !== undefined) {
+    filters.price = { ...(minPrice !== undefined ? { min_price: minPrice } : {}), ...(maxPrice !== undefined ? { max_price: maxPrice } : {}) };
   }
-  const res = await fetch(`${C3}/v1/search`, {
-    method: "POST",
-    headers: { "x-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ query, limit, filters }),
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`Channel3 search failed (HTTP ${res.status})`);
-  const j: any = await res.json();
-  const rows: any[] = Array.isArray(j) ? j : (j.products ?? []);
-  return rows.map((r) => fromChannel3(r, merchant)).filter((p): p is Product => p !== null && p.currency === "USD");
+  const body = JSON.stringify({ query: q, limit: n, filters });
+  const j = await guardedJson("search", `search:${body.toLowerCase()}`, SEARCH_TTL_MS, (signal) =>
+    fetch(`${C3}/v1/search`, { method: "POST", headers: { "x-api-key": key, "Content-Type": "application/json" }, body, signal }));
+  const rows: unknown = j && (Array.isArray(j) ? j : (j as { products?: unknown }).products);
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, n).map((r) => fromChannel3(r, merchant)).filter((p): p is Product => p !== null && p.currency === "USD");
 }
 
 export async function channel3Get(productId: string, merchant?: string): Promise<Product | null> {
   const key = env("CHANNEL3_API_KEY");
-  if (!key) return null;
-  const res = await fetch(`${C3}/v1/products/${encodeURIComponent(productId)}`, {
-    headers: { "x-api-key": key },
-    signal: AbortSignal.timeout(30_000),
-  });
-  return res.ok ? fromChannel3(await res.json(), merchant) : null;
+  if (!key || !PRODUCT_ID.test(productId)) return null;
+  const j = await guardedJson("product", `product:${productId}`, PRODUCT_TTL_MS, (signal) =>
+    fetch(`${C3}/v1/products/${encodeURIComponent(productId)}`, { headers: { "x-api-key": key }, signal }));
+  if (!j || String((j as { id?: unknown }).id ?? "") !== productId) return null; // only the product we asked for
+  return fromChannel3(j, merchant);
 }

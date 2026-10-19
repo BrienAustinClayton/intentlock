@@ -71,7 +71,7 @@ from app.signing import (
 
 MANDATE_TYPE = "intentlock.mandate.v1"
 BUDGET_PERIODS = ("week", "month", "once")
-SPEND_STATUSES = ("authorized", "checking", "pending_approval", "captured")
+SPEND_STATUSES = ("awaiting_payment", "authorized", "checking", "pending_approval", "captured")
 SLUG_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
 # Stores are Channel3 merchant domains (walmart.com), legacy demo slugs (freshmart), or "*" for any store.
 MERCHANT_RE = re.compile(r"^(\*|[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?)$")

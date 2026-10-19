@@ -69,7 +69,7 @@ export default function PaymentClient() {
               <p className="text-xs text-fg-muted">
                 {connected
                   ? "Saved securely with PayPal. Sepilo never sees your card details."
-                  : "You'll approve once on PayPal. Sepilo stores only a token, never card details."}
+                  : "Connect now, or approve your first purchase in PayPal and Sepilo saves it then. Sepilo stores only a token, never card details."}
               </p>
             </div>
           </div>

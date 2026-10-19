@@ -31,6 +31,7 @@ from app.api import (
     mandates,
     me,
     orders,
+    paypal_return,
     proofs,
     schedule,
     users,
@@ -130,6 +131,7 @@ app.include_router(me.router)
 app.include_router(chats.router)
 app.include_router(users.router)
 app.include_router(vault.router)
+app.include_router(paypal_return.router)
 app.include_router(agents.router)
 app.include_router(mandates.router)
 app.include_router(intents.router)

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ApiError } from "@/lib/api";
 import { me } from "@/lib/me";
-import { ArrowLeft, Check as CheckIcon, Flag, Minus, X } from "lucide-react";
+import { ArrowLeft, Check as CheckIcon, Flag, Minus, Wallet, X } from "lucide-react";
 import { OrderStatusTag, merchantName, money } from "@/components/ui";
 import { SkeletonBlock } from "@/components/Skeleton";
 import type {
@@ -613,6 +613,22 @@ export default function OrderDetailClient({ orderId }: Props) {
           <span className="text-lg font-semibold tabular-nums">{money(order.total, order.currency)}</span>
         </div>
       </div>
+
+      {order.status === "awaiting_payment" && order.pay_url && (
+        <div className="saas-card px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Approve the payment in PayPal</div>
+            <p className="mt-0.5 text-xs text-fg-muted">
+              PayPal holds the money while Sepilo checks the order, then charges or releases it. After this
+              first approval your agent pays on its own.
+            </p>
+          </div>
+          <a href={order.pay_url} className="intentlock-btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0">
+            <Wallet className="w-4 h-4" strokeWidth={1.8} />
+            Pay with PayPal
+          </a>
+        </div>
+      )}
 
       {/* Approval panel (shown first if pending) */}
       {order.status === "pending_approval" && (

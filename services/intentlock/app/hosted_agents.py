@@ -96,6 +96,7 @@ def run_to_dict(run: AgentRun | None, order: Order | None = None) -> dict[str, A
         "errors": list(run.errors or []),
         "order_id": run.order_id,
         "order_status": order.status if order is not None else None,
+        "pay_url": order.payer_action_url if order is not None and order.status == "awaiting_payment" else None,
         "started_at": _iso(started),
         "finished_at": _iso(run.finished_at),
     }
@@ -180,6 +181,8 @@ def execute_run(run_id: str, db=None) -> None:
         errors = data.get("errors") if isinstance(data.get("errors"), list) else []
         order_id = data.get("order_id") if isinstance(data.get("order_id"), str) else None
         if order_id:
+            if data.get("status") == "awaiting_payment":
+                summary = f"{summary or 'Order placed.'} Approve the payment in PayPal to finish."
             return _finish(db, run, "ordered", summary or "Order placed.", errors, order_id)
         return _finish(db, run, "failed", summary or "The agent finished without placing an order.", errors)
     except Exception:

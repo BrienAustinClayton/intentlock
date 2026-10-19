@@ -16,8 +16,8 @@ Time required: ~30 minutes on first deploy.
   - Generated Ed25519 keys: run `python .claude/skills/setup-credentials/scripts/creds.py genkeys`
     and copy the values for `INTENTLOCK_PROOF_PRIVATE_KEY`, `INTENTLOCK_PROOF_PUBLIC_KEY`,
     `INTENTLOCK_WALLET_PRIVATE_KEY`, and `AGENT_PRIVATE_KEY`.
-  - PayPal sandbox credentials (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`) — skip for hackathon demo
-    (default `PAYPAL_MODE=mock` does not call PayPal).
+  - PayPal sandbox credentials (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`): `PAYPAL_MODE=sandbox` makes real
+    PayPal Sandbox payments (see "PayPal payments" below). Set `PAYPAL_MODE=mock` to skip PayPal entirely.
 
 ---
 
@@ -44,7 +44,7 @@ Paste the values below (names only; never paste values anywhere else).
 | `PUBLIC_BASE_URL` | Leave **blank for now** — you'll set it after the first deploy (Step 4). |
 | `WEB_ORIGIN` | Leave **blank for now** — you'll set it after the first deploy (Step 4). |
 | `PAYPAL_CLIENT_ID` | PayPal developer dashboard › Apps & Credentials › your sandbox app › Client ID. |
-| `PAYPAL_CLIENT_SECRET` | Same page › Secret key 1 › Show. (Optional: mock mode is on.) |
+| `PAYPAL_CLIENT_SECRET` | Same page › Secret key 1 › Show. Required when `PAYPAL_MODE=sandbox`. |
 | `PAYPAL_WEBHOOK_ID` | Same app › Webhooks › Add webhook to `<API URL>/webhooks/paypal` → copy Webhook ID. (Optional.) |
 | `LLM_FAST_API_KEY` | [console.groq.com/keys](https://console.groq.com/keys) (free). |
 | `LLM_SMART_API_KEY` | [console.typesafe.ai](https://console.typesafe.ai) › API Keys ($5 credit). |
@@ -277,3 +277,21 @@ Render's free plan spins services down after 15 minutes of inactivity.
 The first request after a cold start takes ~30 seconds.  
 For the demo, open the health URL a minute before the presentation.  
 Upgrading to the Starter plan ($7/month) disables spin-down.
+
+
+## PayPal payments (sandbox)
+
+With `PAYPAL_MODE=sandbox` every order is a real PayPal Sandbox payment, visible in the sandbox
+Business account (developer.paypal.com › Sandbox accounts › the Business account › log in at
+sandbox.paypal.com › Activity).
+
+1. **First purchase.** The user has no saved PayPal yet, so the order waits as "Pay in PayPal". The
+   user clicks **Pay with PayPal**, logs in with the sandbox **Personal** account and approves. PayPal sends
+   them to `<PUBLIC_BASE_URL>/paypal/return`, the API authorizes the payment (money on hold), runs the
+   checks, then captures it or releases it. PayPal also saves the account for later.
+2. **Later purchases.** The agent pays with the saved PayPal account on its own: authorize, check,
+   capture, with no PayPal page. If PayPal refuses the saved account, the order falls back to step 1.
+3. Unapproved payments are dropped after 3 hours and stop counting against the spending rule.
+
+Needs: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` from a sandbox app linked to a **US Business** account
+with Vault enabled, a **US Personal** sandbox account to pay with, and `PUBLIC_BASE_URL` set to the API URL.

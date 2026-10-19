@@ -56,6 +56,34 @@ def _expire_batch(db) -> int:
     return voided
 
 
+UNPAID_AFTER_HOURS = 3  # PayPal drops an unapproved checkout after about 3 hours
+
+
+def _expire_unpaid(db) -> int:
+    """Fail orders whose PayPal payment the buyer never approved, so they stop holding budget."""
+    from datetime import timedelta
+
+    from app.models import Order
+    from app.pipeline.steps import build_proof_step, set_status
+
+    cutoff = _utcnow() - timedelta(hours=UNPAID_AFTER_HOURS)
+    rows = db.execute(
+        select(Order).where(Order.status == "awaiting_payment", Order.created_at <= cutoff)
+    ).scalars().all()
+    for order in rows:
+        try:
+            order.reasons = ["The PayPal payment wasn't approved in time"]
+            order.payer_action_url = None
+            set_status(order, "failed", [])
+            db.commit()
+            build_proof_step(db, order.id)
+            log.info("expire_approvals.unpaid order_id=%s", order.id)
+        except Exception:
+            log.exception("expire_approvals.unpaid_error order_id=%s", order.id)
+            db.rollback()
+    return len(rows)
+
+
 def run_once(_db=None) -> int:
     """Void all expired pending_approval orders. Returns the number voided.
 
@@ -67,7 +95,9 @@ def run_once(_db=None) -> int:
         from app.db import new_session
         _db = new_session()
     try:
-        return _expire_batch(_db)
+        n = _expire_batch(_db)
+        _expire_unpaid(_db)
+        return n
     finally:
         if own_session:
             _db.close()

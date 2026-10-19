@@ -30,6 +30,7 @@ export interface AgentRunView {
   errors: string[];
   order_id: string | null;
   order_status: Order["status"] | null;
+  pay_url: string | null;
   started_at: string;
   finished_at: string | null;
 }

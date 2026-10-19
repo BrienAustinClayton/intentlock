@@ -130,6 +130,53 @@ def void(authorization_id: str, request_id: str | None = None) -> None:
     return impl.void(authorization_id, request_id=request_id)
 
 
+def _mock_create_checkout(order, return_url: str) -> tuple[str, str]:
+    _record({"op": "create_checkout", "order_id": order.id})
+    err = _take_failure("create_checkout")
+    if err is not None:
+        raise err
+    oid = "MOCK-O-" + _h(order.id)
+    sep = "&" if "?" in return_url else "?"
+    return oid, f"{return_url}{sep}token={oid}"
+
+
+def _mock_authorize_approved(paypal_order_id: str) -> tuple[str, str | None]:
+    _record({"op": "authorize_approved", "paypal_order_id": paypal_order_id})
+    err = _take_failure("authorize_approved")
+    if err is not None:
+        raise err
+    aid = "MOCK-A-" + _h(paypal_order_id)
+    with _LOCK:
+        _AUTH.setdefault(aid, "authorized")
+    return aid, "MOCK-PT-" + _h(paypal_order_id)
+
+
+def create_checkout(order, return_url: str, cancel_url: str) -> tuple[str, str]:
+    """A PayPal order the buyer approves in PayPal (used when no PayPal account is saved yet)."""
+    impl = _impl()
+    if impl is None:
+        return _mock_create_checkout(order, return_url)
+    return impl.create_checkout(order, return_url, cancel_url)
+
+
+def authorize_approved(paypal_order_id: str, request_id: str) -> tuple[str, str | None]:
+    """Authorize a buyer-approved PayPal order. Returns (authorization_id, saved PayPal id or None)."""
+    impl = _impl()
+    if impl is None:
+        return _mock_authorize_approved(paypal_order_id)
+    return impl.authorize_approved(paypal_order_id, request_id)
+
+
+def has_saved_payment(token: str | None) -> bool:
+    """Whether agent purchases can be paid without the buyer (a saved PayPal account usable in this mode)."""
+    if not token:
+        return False
+    if paypal_mode() != "sandbox":
+        return True
+    from app.paypal.sandbox import parse_vault_ref
+    return parse_vault_ref(token) is not None
+
+
 def _mock_setup_token(return_url: str, request_id: str) -> tuple[str, str]:
     _record({"op": "setup_token", "request_id": request_id})
     err = _take_failure("setup_token")

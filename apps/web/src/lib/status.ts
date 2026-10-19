@@ -27,6 +27,12 @@ export const ORDER_STATUS_STYLES: Record<OrderStatus, StatusStyle> = {
     hex: "#64748b",
     label: "Received",
   },
+  awaiting_payment: {
+    cssVar: "var(--color-status-pending-approval)",
+    hex: "#d97706",
+    chipTextHex: "#92400e",
+    label: "Waiting for PayPal",
+  },
   authorized: {
     cssVar: "var(--color-status-authorized)",
     hex: "#6366f1",

@@ -287,7 +287,7 @@ def build_order_request(order, vault: VaultRef):
                 ),
                 items=items,
                 custom_id=str(order.id)[:127],
-                description=f"IntentLock order {order.id}"[:127],
+                description=f"Sepilo order {order.id}"[:127],
             )
         ],
         payment_source=ps,
@@ -448,13 +448,13 @@ def create_setup_token(return_url: str, cancel_url: str, request_id: str) -> tup
     body = SetupTokenRequest(
         payment_source=SetupTokenRequestPaymentSource(
             paypal=VaultPaypalWalletRequest(
-                description="IntentLock agent purchases within your signed mandates",
+                description="Sepilo agent purchases within your spending rules",
                 usage_pattern=UsagePattern.IMMEDIATE,
                 permit_multiple_payment_tokens=False,
                 usage_type=PaypalPaymentTokenUsageType.MERCHANT,
                 customer_type=PaypalPaymentTokenCustomerType.CONSUMER,
                 experience_context=VaultExperienceContext(
-                    brand_name="IntentLock",
+                    brand_name="Sepilo",
                     locale="en-US",
                     shipping_preference=ExperienceContextShippingPreference.NO_SHIPPING,
                     return_url=return_url,
@@ -493,3 +493,102 @@ def exchange_payment_token(setup_token_id: str) -> str:
     if not getattr(r, "id", None):
         raise PayPalError("payment_token_missing")
     return r.id
+
+
+# ---------------------------------------------------------------- buyer approval (no saved PayPal yet)
+
+def _payer_wallet(return_url: str, cancel_url: str, save: bool):
+    from paypalserversdk.models.paypal_experience_user_action import PaypalExperienceUserAction
+    from paypalserversdk.models.paypal_wallet_attributes import PaypalWalletAttributes
+    from paypalserversdk.models.paypal_wallet_experience_context import PaypalWalletExperienceContext
+    from paypalserversdk.models.paypal_wallet_vault_instruction import PaypalWalletVaultInstruction
+    from paypalserversdk.models.store_in_vault_instruction import StoreInVaultInstruction
+
+    kw = {}
+    if save:
+        kw["attributes"] = PaypalWalletAttributes(vault=PaypalWalletVaultInstruction(
+            store_in_vault=StoreInVaultInstruction.ON_SUCCESS,
+            usage_type=PaypalPaymentTokenUsageType.MERCHANT,
+            customer_type=PaypalPaymentTokenCustomerType.CONSUMER,
+        ))
+    return PaypalWallet(
+        experience_context=PaypalWalletExperienceContext(
+            brand_name="Sepilo",
+            locale="en-US",
+            shipping_preference=ExperienceContextShippingPreference.NO_SHIPPING,
+            user_action=PaypalExperienceUserAction.PAY_NOW,
+            return_url=return_url,
+            cancel_url=cancel_url,
+        ),
+        **kw,
+    )
+
+
+def create_checkout(order, return_url: str, cancel_url: str) -> tuple[str, str]:
+    """PayPal order the buyer approves once in PayPal. On approval PayPal also saves the account, so
+    later agent purchases are paid without the buyer. Returns (paypal_order_id, approve_url)."""
+    if not isinstance(getattr(order, "id", None), str) or not _ID_RE.fullmatch(order.id):
+        raise PayPalError("INVALID_CART")
+    body = build_order_request(order, VaultRef("paypal", "buyer-approval"))
+    created = None
+    for save, rid in ((True, f"{order.id}-pp"), (False, f"{order.id}-pp-nosave")):
+        body.payment_source = PaymentSource(paypal=_payer_wallet(return_url, cancel_url, save))
+        try:
+            created = _call(
+                "create_order_buyer",
+                lambda c: c.orders.create_order(
+                    {"body": body, "paypal_request_id": rid, "prefer": "return=representation"}
+                ),
+            ).body
+            break
+        except PayPalError as e:
+            if not save or e.retryable:
+                raise
+            log.warning("paypal.save_on_purchase_refused code=%s; continuing without saving", e.code)
+    href = next(
+        (lk.href for lk in (getattr(created, "links", None) or [])
+         if lk.rel in ("payer-action", "approve") and lk.href),
+        None,
+    )
+    if not getattr(created, "id", None) or not href:
+        raise PayPalError("approve_link_missing")
+    return created.id, href
+
+
+def _saved_wallet_id(o):
+    try:
+        v = o.payment_source.paypal.attributes.vault
+    except AttributeError:
+        return None
+    vid = getattr(v, "id", None)
+    st = str(getattr(v, "status", "") or "").upper()
+    return vid if vid and st == "VAULTED" and _ID_RE.fullmatch(vid) else None
+
+
+def authorize_approved(paypal_order_id: str, request_id: str) -> tuple[str, str | None]:
+    """Authorize a PayPal order the buyer approved. Returns (authorization_id, saved_paypal_id or None)."""
+    if not isinstance(paypal_order_id, str) or not _ID_RE.fullmatch(paypal_order_id):
+        raise PayPalError("invalid_paypal_order_id")
+    try:
+        src = _call(
+            "authorize_order",
+            lambda c: c.orders.authorize_order(
+                {"id": paypal_order_id, "paypal_request_id": request_id, "prefer": "return=representation"}
+            ),
+        ).body
+    except PayPalError as e:
+        if e.code != "ORDER_ALREADY_AUTHORIZED":
+            raise
+        src = _call("get_order", lambda c: c.orders.get_order({"id": paypal_order_id})).body
+    auth = _first_auth(src)
+    if auth is None:
+        raise PayPalError("AUTHORIZATION_MISSING")
+    ast = str(getattr(auth, "status", "") or "").upper()
+    if ast != "CREATED":
+        if ast == "PENDING":
+            try:
+                void(auth.id, request_id=f"{request_id}-void-pending")
+            except PayPalError:
+                pass
+        raise PayPalError(_code(f"AUTHORIZATION_{ast or 'UNKNOWN'}"))
+    return auth.id, _saved_wallet_id(src)

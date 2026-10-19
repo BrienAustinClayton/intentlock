@@ -35,8 +35,9 @@ services:
           property: connectionString
 
       # Runtime mode
+      # sandbox = real PayPal Sandbox payments (needs PAYPAL_CLIENT_ID/SECRET); mock = no PayPal calls
       - key: PAYPAL_MODE
-        value: mock
+        value: sandbox
       - key: PIPELINE_MODE
         value: local
 

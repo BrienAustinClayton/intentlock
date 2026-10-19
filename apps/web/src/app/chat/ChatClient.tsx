@@ -20,6 +20,7 @@ import {
   SquarePen,
   Trash2,
   TriangleAlert,
+  Wallet,
   X,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
@@ -263,6 +264,17 @@ function PurchaseStatus({ m }: { m: ChatMessage }) {
         )}
       </div>
       <p className="text-sm text-fg-2">{run.status === "running" ? m.content : run.summary ?? m.content}</p>
+      {run.order_status === "awaiting_payment" && run.pay_url && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+          <a href={run.pay_url} className="intentlock-btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0">
+            <Wallet className="w-4 h-4" strokeWidth={1.8} />
+            Pay with PayPal
+          </a>
+          <span className="text-xs text-fg-muted">
+            Approve once in PayPal. Sepilo saves it so your agent can pay on its own next time.
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -564,10 +576,18 @@ function CartSheet({
   );
 }
 
+const CHECKING = new Set(["received", "authorized", "checking"]);
+const PAYPAL_NOTICE: Record<string, string> = {
+  cancelled: "The payment wasn't approved in PayPal. Use Pay with PayPal to finish when you're ready.",
+  failed: "PayPal couldn't take the payment, so nothing was charged.",
+  error: "That PayPal link didn't match this order.",
+};
+
 export default function ChatClient() {
   const router = useRouter();
   const params = useSearchParams();
   const activeId = params.get("c");
+  const paypalNotice = PAYPAL_NOTICE[params.get("paypal") ?? ""] ?? null;
 
   const [chats, setChats] = useState<ChatSummary[] | null>(null);
   const [thread, setThread] = useState<ChatThread | null>(null);
@@ -634,7 +654,10 @@ export default function ChatClient() {
   const rules = view?.rules ?? (picked.length ? picked : myRules);
   const cart = view?.cart ?? EMPTY_CART;
 
-  const running = view?.messages.some((m) => m.run?.status === "running") ?? false;
+  const running =
+    view?.messages.some(
+      (m) => m.run?.status === "running" || (m.run?.order_status != null && CHECKING.has(m.run.order_status)),
+    ) ?? false;
   useEffect(() => {
     if (!running || !view) return;
     const t = setInterval(() => me.chat(view.id).then(setThread, () => {}), 3000);
@@ -863,6 +886,7 @@ export default function ChatClient() {
             }}
           >
             {error && <p role="alert" className="mb-2 text-sm text-rose-400">{error}</p>}
+            {!error && paypalNotice && <p role="status" className="mb-2 text-sm text-amber-400">{paypalNotice}</p>}
             {cart.count > 0 && (
               <button
                 type="button"

@@ -42,6 +42,7 @@ type Tone = "success" | "warning" | "danger" | "neutral" | "brand";
 
 const ORDER_TAG: Record<OrderStatus, [string, Tone]> = {
   received: ["Checking", "brand"],
+  awaiting_payment: ["Pay in PayPal", "warning"],
   authorized: ["Checking", "brand"],
   checking: ["Checking", "brand"],
   pending_approval: ["Needs approval", "warning"],

@@ -113,12 +113,17 @@ export async function shop(intentId: string, request: string): Promise<ShopOutco
   return { checkout: result, summary };
 }
 
-/** Chat purchase: buy exactly the product the user picked, re-read from Channel3 for the current price. */
-export async function shopExact(intentId: string, productId: string, qty: number): Promise<ShopOutcome> {
-  const product = await channel3Get(productId);
-  if (!product) throw new ShopFailure("That product is no longer available on Channel3.");
-  remember([product]);
-  const result = await submitCheckout(intentId, [{ product_id: product.product_id, qty }]);
-  const total = currentRun().lastCart?.total ?? product.price;
-  return { checkout: result, summary: `Bought ${qty} × ${product.title.slice(0, 120)} from ${product.merchant} for ${usd(total)}.` };
+/** Approved cart from one store: buy exactly these products, re-read from Channel3 for the current price. */
+export async function shopExact(intentId: string, picks: { productId: string; qty: number }[]): Promise<ShopOutcome> {
+  const products = await Promise.all(picks.map((p) => channel3Get(p.productId)));
+  const missing = products.findIndex((p) => !p);
+  if (missing >= 0) throw new ShopFailure("An item in your cart is no longer available on Channel3. Remove it and try again.");
+  const stores = new Set(products.map((p) => p!.merchant));
+  if (stores.size > 1) throw new ShopFailure("These items come from different stores; each store is checked out separately.");
+  remember(products as Product[]);
+  const result = await submitCheckout(intentId, picks.map((p) => ({ product_id: p.productId, qty: p.qty })));
+  const total = currentRun().lastCart?.total ?? "0.00";
+  const count = picks.reduce((n, p) => n + p.qty, 0);
+  const what = picks.length === 1 ? `${picks[0].qty} × ${products[0]!.title.slice(0, 120)}` : `${count} items`;
+  return { checkout: result, summary: `Bought ${what} from ${products[0]!.merchant} for ${usd(total)}.` };
 }

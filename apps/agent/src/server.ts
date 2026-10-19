@@ -79,7 +79,9 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
       if (req.method === "POST" && path === "/run") {
         const parsed = await readJson(req, 10_000);
         if (parsed === undefined) return send(400, { reason: "invalid JSON" });
-        const body = parsed as { intent_id?: unknown; agent_id?: unknown; agent_private_key?: unknown; product_id?: unknown; qty?: unknown };
+        const body = parsed as {
+          intent_id?: unknown; agent_id?: unknown; agent_private_key?: unknown; product_id?: unknown; qty?: unknown; items?: unknown;
+        };
         intentId = body.intent_id;
         const hosted = body.agent_id !== undefined || body.agent_private_key !== undefined;
         emit("run.received", { run_id: runId, intent_id: intentId, agent_id: body.agent_id, hosted });
@@ -105,13 +107,20 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
         if (typeof body.agent_private_key !== "string" || body.agent_private_key.length > 64) {
           return send(400, { reason: "invalid agent_private_key" });
         }
+        const rawItems: unknown[] | undefined = Array.isArray(body.items)
+          ? body.items
+          : body.product_id !== undefined ? [{ product_id: body.product_id, qty: body.qty ?? 1 }] : undefined;
         let exact: ExactPick | undefined;
-        if (body.product_id !== undefined) {
-          const qty = Number(body.qty ?? 1);
-          if (typeof body.product_id !== "string" || body.product_id.length > 128 || !Number.isInteger(qty) || qty < 1 || qty > 20) {
-            return send(400, { reason: "invalid product_id or qty" });
+        if (rawItems) {
+          if (rawItems.length < 1 || rawItems.length > 10) return send(400, { reason: "invalid items" });
+          exact = [];
+          for (const it of rawItems as { product_id?: unknown; qty?: unknown }[]) {
+            const qty = Number(it?.qty ?? 1);
+            if (typeof it?.product_id !== "string" || it.product_id.length > 128 || !Number.isInteger(qty) || qty < 1 || qty > 20) {
+              return send(400, { reason: "invalid product_id or qty" });
+            }
+            exact.push({ productId: it.product_id, qty });
           }
-          exact = { productId: body.product_id, qty };
         }
         const creds = { AGENT_ID: body.agent_id, AGENT_PRIVATE_KEY: body.agent_private_key };
         return finish(await withEnv(creds, () => runShopping(id, exact)));

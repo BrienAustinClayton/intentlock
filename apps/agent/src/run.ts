@@ -22,10 +22,7 @@ export interface RunResult {
 const inflight = new Map<string, Promise<RunResult>>();
 
 /** One shopping run for a signed intent. Concurrent calls for the same intent share one run (no double checkout). */
-export interface ExactPick {
-  productId: string;
-  qty: number;
-}
+export type ExactPick = { productId: string; qty: number }[];
 
 export function runShopping(intentId: string, exact?: ExactPick): Promise<RunResult> {
   if (!/^int_[A-Za-z0-9_]{1,60}$/.test(intentId)) return Promise.reject(new RunError(400, "invalid intent_id"));
@@ -56,7 +53,7 @@ async function doRun(intentId: string, exact?: ExactPick): Promise<RunResult> {
   const ctx = newRunContext(intentId);
   let summary: string;
   try {
-    const go = exact ? () => shopExact(intent.id, exact.productId, exact.qty) : () => shop(intent.id, intent.request_text);
+    const go = exact?.length ? () => shopExact(intent.id, exact) : () => shop(intent.id, intent.request_text);
     summary = (await runWith(ctx, go)).summary;
   } catch (e) {
     if (e instanceof ShopFailure) summary = e.message;

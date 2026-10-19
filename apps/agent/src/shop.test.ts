@@ -94,3 +94,34 @@ test("rate limit on the main model falls back, then reports the limit", async ()
   fakeFetch({ plan: {}, products: [], limited: ["main-model", "backup-model"] });
   await assert.rejects(run(), (e: unknown) => e instanceof LlmLimitError);
 });
+
+test("approved cart: one store, exact items, current Channel3 prices", async () => {
+  const items: Record<string, unknown> = {
+    a: product("a", "USB-C Cable", 9.99, "baseus.com"),
+    b: product("b", "USB-C Hub", 24.5, "baseus.com"),
+    c: product("c", "Mouse", 15, "target.com"),
+  };
+  let checkout: any;
+  globalThis.fetch = (async (input: any, init?: any) => {
+    const url = String(input);
+    if (url.startsWith("https://api.trychannel3.com/v1/products/")) {
+      const id = decodeURIComponent(url.split("/").pop()!);
+      return new Response(JSON.stringify(items[id]), { status: items[id] ? 200 : 404 });
+    }
+    if (url === "https://api.test/checkout") {
+      checkout = JSON.parse(init.body);
+      return new Response(JSON.stringify({ order_id: "ord_2", status: "captured", decision: "capture", reasons: [] }), { status: 200 });
+    }
+    return new Response("<html></html>", { status: 200 });
+  }) as typeof fetch;
+  const { shopExact } = await import("./shop.ts");
+  const buy = (picks: { productId: string; qty: number }[]) =>
+    withEnv(ENV, () => runWith(newRunContext("int_1"), () => shopExact("int_1", picks)));
+  const out = await buy([{ productId: "a", qty: 2 }, { productId: "b", qty: 1 }]);
+  assert.equal(out.checkout?.order_id, "ord_2");
+  assert.equal(checkout.merchant, "baseus.com");
+  assert.deepEqual(checkout.cart.map((l: any) => [l.product_id, l.qty, l.unit_price]), [["a", 2, "9.99"], ["b", 1, "24.50"]]);
+  assert.match(out.summary, /Bought 3 items from baseus.com for \$44\.48/);
+  await assert.rejects(buy([{ productId: "a", qty: 1 }, { productId: "c", qty: 1 }]), /different stores/);
+  await assert.rejects(buy([{ productId: "gone", qty: 1 }]), /no longer available/);
+});

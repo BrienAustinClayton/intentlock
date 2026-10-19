@@ -6,6 +6,7 @@ import { ArrowRight, Circle, CircleCheck, MessageSquarePlus, Receipt, TriangleAl
 import {
   EmptyState,
   ErrorNote,
+  OrderCards,
   OrderStatusTag,
   Panel,
   SkeletonRows,
@@ -140,7 +141,13 @@ export default function HomePage() {
             />
           </div>
         ) : (
-          <table className={tableClass}>
+          <>
+          {s && (
+            <div className="border-t border-line">
+              <OrderCards orders={s.recent_orders} />
+            </div>
+          )}
+          <table className={`${tableClass} ${s ? "hidden sm:table" : ""}`}>
             <thead className={`${theadClass} border-t`}>
               <tr>
                 <th className={th}>Order</th>
@@ -172,6 +179,7 @@ export default function HomePage() {
               )}
             </tbody>
           </table>
+          </>
         )}
       </Panel>
     </div>

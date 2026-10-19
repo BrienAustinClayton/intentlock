@@ -7,12 +7,14 @@ import { Receipt } from "lucide-react";
 import {
   EmptyState,
   ErrorNote,
+  OrderCards,
   OrderStatusTag,
   PageHeader,
   Panel,
   SkeletonRows,
   merchantName,
   money,
+  orderItems,
   rowClass,
   tableClass,
   td,
@@ -31,12 +33,6 @@ const VIEWS: { id: OrderView; label: string; empty: string }[] = [
   { id: "in_progress", label: "Checking", empty: "No orders are being checked right now." },
 ];
 
-function items(o: Order) {
-  const cart = o.cart ?? [];
-  if (!cart.length) return "No items";
-  const first = cart[0].title || cart[0].product_id;
-  return cart.length > 1 ? `${first} and ${cart.length - 1} more` : first;
-}
 
 export default function OrdersClient() {
   const router = useRouter();
@@ -66,7 +62,7 @@ export default function OrdersClient() {
         description="Every checkout your agents attempted. Secay holds the payment, runs its checks, then pays, blocks or asks you."
       />
 
-      <div role="tablist" className="flex items-center gap-1 mb-4 border-b border-line">
+      <div role="tablist" className="flex items-center gap-1 mb-4 border-b border-line overflow-x-auto whitespace-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">
         {VIEWS.map((v) => (
           <button
             key={v.id}
@@ -89,7 +85,9 @@ export default function OrdersClient() {
         {rows && rows.length === 0 ? (
           <EmptyState icon={Receipt} title="No orders here" body={current.empty} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {rows && <OrderCards orders={rows} />}
+          <div className={`${rows ? "hidden sm:block" : ""} overflow-x-auto`}>
             <table className={tableClass}>
               <thead className={theadClass}>
                 <tr>
@@ -112,7 +110,7 @@ export default function OrdersClient() {
                           {o.id.slice(-6).toUpperCase()}
                         </Link>
                       </td>
-                      <td className={`${td} max-w-[280px] truncate`}>{items(o)}</td>
+                      <td className={`${td} max-w-[280px] truncate`}>{orderItems(o)}</td>
                       <td className={td}>{merchantName(o.merchant)}</td>
                       <td className={`${td} text-right tabular-nums text-fg`}>{money(o.total, o.currency)}</td>
                       <td className={td}>
@@ -125,6 +123,7 @@ export default function OrdersClient() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Panel>
     </div>

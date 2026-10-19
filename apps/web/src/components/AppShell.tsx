@@ -1,29 +1,29 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import { useState } from "react";
+import Sidebar, { NavDrawer } from "@/components/Sidebar";
 import TopHeader from "@/components/TopHeader";
 import ApiHealthBanner from "@/components/ApiHealthBanner";
 
 const BARE = ["/login", "/signup", "/onboarding"];
+// Full-screen surfaces bring their own navigation (the chat opens the app menu from its own panel).
 const FULL = ["/chat"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  if (BARE.includes(pathname ?? "")) {
-    return <div className="flex-1 min-h-screen flex flex-col">{children}</div>;
+  const pathname = usePathname() ?? "/";
+  const [menu, setMenu] = useState(false);
+  if (BARE.includes(pathname) || FULL.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return <div className="flex-1 min-h-[100dvh] flex flex-col min-w-0">{children}</div>;
   }
   return (
     <>
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 pl-64 min-h-screen">
-        <TopHeader />
+      <NavDrawer open={menu} onClose={() => setMenu(false)} />
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 min-h-[100dvh]">
+        <TopHeader onMenu={() => setMenu(true)} />
         <ApiHealthBanner />
-        {FULL.some((p) => pathname === p || pathname?.startsWith(`${p}/`)) ? (
-          <main className="flex-1 min-h-0 w-full">{children}</main>
-        ) : (
-          <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto">{children}</main>
-        )}
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </>
   );

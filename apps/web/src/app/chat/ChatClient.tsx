@@ -6,15 +6,33 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
   Bot,
+  Check,
   ExternalLink,
-  Loader2,
-  ShieldCheck,
+  History,
   ImageOff,
+  LayoutGrid,
+  Loader2,
+  Minus,
+  Plus,
+  ShieldCheck,
+  ShoppingCart,
   SquarePen,
   Trash2,
+  TriangleAlert,
+  X,
 } from "lucide-react";
+import ProfileMenu from "@/components/ProfileMenu";
+import { NavDrawer } from "@/components/Sidebar";
 import { OrderStatusTag, Tag, categoryName, money, when } from "@/components/ui";
-import { me, type ChatMessage, type ChatProduct, type ChatRule, type ChatSummary, type ChatThread } from "@/lib/me";
+import {
+  me,
+  type Cart,
+  type ChatMessage,
+  type ChatProduct,
+  type ChatRule,
+  type ChatSummary,
+  type ChatThread,
+} from "@/lib/me";
 
 const PROMPTS: Record<string, string[]> = {
   electronics: ["A USB-C to USB-C cable, about 1 m, under $20", "Wireless earbuds under $50"],
@@ -27,6 +45,7 @@ const PROMPTS: Record<string, string[]> = {
   "apparel-accessories": ["Running socks, 3 pairs", "A plain black cap"],
 };
 const DEFAULT_PROMPTS = ["A USB-C to USB-C cable under $20", "Wireless earbuds under $50", "A stainless steel water bottle"];
+const EMPTY_CART: Cart = { items: [], total: "0.00", count: 0, currency: "USD", stores: 0, issues: [] };
 
 function promptsFor(rules: ChatRule[]): string[] {
   const out: string[] = [];
@@ -43,47 +62,73 @@ function rulesLine(rules: ChatRule[]): string | null {
   return `${catText} · ${anyStore ? "Any store" : "Selected stores"} · ${money(left, rules[0].currency)} left`;
 }
 
+function Thumb({ src, className }: { src: string | null; className: string }) {
+  return (
+    <div className={`bg-white flex items-center justify-center overflow-hidden ${className}`}>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className="max-h-full max-w-full object-contain" />
+      ) : (
+        <ImageOff className="w-5 h-5 text-gray-300" strokeWidth={1.5} />
+      )}
+    </div>
+  );
+}
+
 function ProductCard({
   p,
-  onBuy,
-  busy,
-  disabled,
+  inCart,
+  adding,
+  onAdd,
 }: {
   p: ChatProduct;
-  onBuy: () => void;
-  busy: boolean;
-  disabled: boolean;
+  inCart: number;
+  adding: boolean;
+  onAdd: () => void;
 }) {
   return (
-    <div className="saas-card flex flex-col overflow-hidden">
-      <div className="h-36 bg-white flex items-center justify-center p-3">
-        {p.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.image} alt="" loading="lazy" referrerPolicy="no-referrer" className="max-h-full max-w-full object-contain" />
-        ) : (
-          <ImageOff className="w-6 h-6 text-gray-300" strokeWidth={1.5} />
-        )}
-      </div>
-      <div className="flex-1 flex flex-col gap-2 p-3">
+    <div className="saas-card flex sm:flex-col overflow-hidden">
+      <Thumb src={p.image} className="w-28 shrink-0 sm:w-auto sm:h-36 p-2 sm:p-3" />
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2 p-3">
         <div className="text-sm font-medium text-fg line-clamp-2 leading-snug">{p.title}</div>
         <div className="text-xs text-fg-dim truncate">
           {p.brand ? `${p.brand} · ` : ""}
           {p.merchant}
         </div>
-        <div>
+        <div className="hidden sm:block">
           <Tag>{p.category_title ?? categoryName(p.category)}</Tag>
         </div>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <span className="text-base font-semibold tabular-nums">{money(p.price, p.currency)}</span>
           <div className="flex items-center gap-1.5">
             {p.url && (
-              <a href={p.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm" aria-label="View in store">
+              <a href={p.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm !px-2" aria-label="View in store">
                 <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.8} />
               </a>
             )}
-            <button type="button" onClick={onBuy} disabled={disabled} className="intentlock-btn-primary btn-sm">
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-              Buy
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={adding}
+              className={`btn-sm whitespace-nowrap ${inCart ? "intentlock-btn-outline" : "intentlock-btn-primary"}`}
+            >
+              {adding ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : inCart ? (
+                <Check className="w-3.5 h-3.5" strokeWidth={2} />
+              ) : (
+                <ShoppingCart className="w-3.5 h-3.5" strokeWidth={1.8} />
+              )}
+              {inCart ? (
+                <span>
+                  <span className="hidden sm:inline">In cart · </span>
+                  {inCart}
+                </span>
+              ) : (
+                <span>
+                  Add<span className="hidden sm:inline"> to cart</span>
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -118,19 +163,27 @@ function PurchaseStatus({ m }: { m: ChatMessage }) {
   );
 }
 
+const Avatar = () => (
+  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
+    S
+  </span>
+);
+
 function Message({
   m,
-  onBuy,
-  buying,
+  cart,
+  adding,
+  onAdd,
 }: {
   m: ChatMessage;
-  onBuy: (m: ChatMessage, p: ChatProduct) => void;
-  buying: string | null;
+  cart: Cart;
+  adding: string | null;
+  onAdd: (m: ChatMessage, p: ChatProduct) => void;
 }) {
   if (m.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[75%] rounded-2xl rounded-br-md bg-blue-600 px-4 py-2.5 text-sm text-white whitespace-pre-wrap">
+        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-br-md bg-blue-600 px-4 py-2.5 text-sm text-white whitespace-pre-wrap">
           {m.content}
         </div>
       </div>
@@ -138,24 +191,18 @@ function Message({
   }
   return (
     <div className="flex gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
-        S
-      </span>
+      <Avatar />
       <div className="min-w-0 flex-1 space-y-3 pt-1">
-        {m.run ? (
-          <PurchaseStatus m={m} />
-        ) : (
-          <p className="text-sm text-fg-2 leading-relaxed whitespace-pre-wrap">{m.content}</p>
-        )}
+        {m.run ? <PurchaseStatus m={m} /> : <p className="text-sm text-fg-2 leading-relaxed whitespace-pre-wrap">{m.content}</p>}
         {m.products.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {m.products.map((p) => (
               <ProductCard
                 key={p.product_id}
                 p={p}
-                busy={buying === `${m.id}:${p.product_id}`}
-                disabled={buying !== null}
-                onBuy={() => onBuy(m, p)}
+                inCart={cart.items.find((l) => l.product_id === p.product_id)?.qty ?? 0}
+                adding={adding === `${m.id}:${p.product_id}`}
+                onAdd={() => onAdd(m, p)}
               />
             ))}
           </div>
@@ -168,15 +215,217 @@ function Message({
 function Typing() {
   return (
     <div className="flex gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
-        S
-      </span>
+      <Avatar />
       <div className="flex items-center gap-1 pt-3" aria-label="Secay is searching">
         {[0, 150, 300].map((d) => (
           <span key={d} className="h-1.5 w-1.5 rounded-full bg-fg-dim animate-bounce" style={{ animationDelay: `${d}ms` }} />
         ))}
         <span className="ml-2 text-xs text-fg-dim">Searching stores…</span>
       </div>
+    </div>
+  );
+}
+
+function HistoryPanel({
+  chats,
+  activeId,
+  onOpen,
+  onNew,
+  onDelete,
+  onMenu,
+}: {
+  chats: ChatSummary[] | null;
+  activeId: string | null;
+  onOpen: (id: string) => void;
+  onNew: () => void;
+  onDelete: (id: string) => void;
+  onMenu: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between h-14 px-4">
+        <Link href="/" className="pl-1 text-[15px] font-semibold tracking-tight text-fg">
+          Secay
+        </Link>
+      </div>
+      <div className="px-3 pb-3">
+        <button type="button" onClick={onNew} className="intentlock-btn-outline w-full">
+          <SquarePen className="w-4 h-4" strokeWidth={1.8} />
+          New chat
+        </button>
+      </div>
+      <div className="px-4 pb-1 text-[11px] font-medium text-fg-dim">History</div>
+      <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+        {chats?.length === 0 && <p className="px-2 py-3 text-xs text-fg-dim">Your conversations will appear here.</p>}
+        {(chats ?? []).map((c) => (
+          <div
+            key={c.id}
+            className={`group flex items-start gap-2 rounded-lg px-2.5 py-2 cursor-pointer transition ${
+              c.id === activeId ? "nav-item-active" : "hover:bg-fg/[0.04]"
+            }`}
+            onClick={() => onOpen(c.id)}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-medium text-fg truncate">{c.title}</div>
+              <div className="text-xs text-fg-dim truncate">{c.preview || when(c.updated_at)}</div>
+            </div>
+            <button
+              type="button"
+              aria-label="Delete chat"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(c.id);
+              }}
+              className="lg:opacity-0 lg:group-hover:opacity-100 p-1 rounded-md text-fg-dim hover:text-rose-400 transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
+            </button>
+          </div>
+        ))}
+      </nav>
+      <div className="p-3 space-y-1 sidebar-edge-top">
+        <button
+          type="button"
+          onClick={onMenu}
+          className="w-full flex items-center gap-3 h-10 px-3 rounded-[10px] text-[13px] font-medium text-fg-muted hover:text-fg hover:bg-fg/[0.04] transition"
+        >
+          <LayoutGrid className="w-4 h-4 text-fg-dim" strokeWidth={1.8} />
+          App menu
+        </button>
+        <ProfileMenu collapsed={false} />
+      </div>
+    </>
+  );
+}
+
+function CartSheet({
+  open,
+  cart,
+  busy,
+  error,
+  onClose,
+  onQty,
+  onApprove,
+}: {
+  open: boolean;
+  cart: Cart;
+  busy: boolean;
+  error: string | null;
+  onClose: () => void;
+  onQty: (productId: string, qty: number) => void;
+  onApprove: () => void;
+}) {
+  const stores = [...new Set(cart.items.map((l) => l.merchant))];
+  return (
+    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
+      <button
+        type="button"
+        aria-label="Close cart"
+        tabIndex={open ? 0 : -1}
+        onClick={onClose}
+        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`}
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cart"
+        className={`popover !rounded-b-none sm:!rounded-none absolute inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] flex flex-col transition-transform duration-200 ${
+          open ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-5 h-14 border-b border-line shrink-0">
+          <div className="text-sm font-semibold">
+            Cart <span className="text-fg-dim font-normal">· {cart.count} item{cart.count === 1 ? "" : "s"}</span>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-fg-dim hover:text-fg hover:bg-fg/5" aria-label="Close cart">
+            <X className="w-4 h-4" strokeWidth={1.8} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {cart.items.length === 0 && (
+            <div className="py-10 text-center text-sm text-fg-muted">
+              <ShoppingCart className="w-6 h-6 mx-auto mb-3 text-fg-dim" strokeWidth={1.8} />
+              Your cart is empty. Add products from the chat.
+            </div>
+          )}
+          {stores.map((store) => (
+            <div key={store} className="space-y-3">
+              <div className="text-xs font-medium text-fg-dim">{store}</div>
+              {cart.items
+                .filter((l) => l.merchant === store)
+                .map((l) => (
+                  <div key={l.product_id} className="flex gap-3">
+                    <Thumb src={l.image} className="h-16 w-16 shrink-0 rounded-lg p-1.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-fg line-clamp-2 leading-snug">{l.title}</div>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <div className="inline-flex items-center rounded-lg border border-line">
+                          <button
+                            type="button"
+                            onClick={() => onQty(l.product_id, l.qty - 1)}
+                            disabled={busy}
+                            className="p-1.5 text-fg-muted hover:text-fg disabled:opacity-50"
+                            aria-label={l.qty === 1 ? "Remove" : "Decrease quantity"}
+                          >
+                            {l.qty === 1 ? <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} /> : <Minus className="w-3.5 h-3.5" strokeWidth={2} />}
+                          </button>
+                          <span className="min-w-6 text-center text-sm tabular-nums">{l.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => onQty(l.product_id, l.qty + 1)}
+                            disabled={busy || l.qty >= 20}
+                            className="p-1.5 text-fg-muted hover:text-fg disabled:opacity-50"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+                          </button>
+                        </div>
+                        <span className="text-sm font-medium tabular-nums">{money(Number(l.price) * l.qty, l.currency)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ))}
+          {cart.issues.length > 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+              {cart.issues.map((i) => (
+                <p key={i} className="flex gap-2 text-xs text-amber-400">
+                  <TriangleAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={1.8} />
+                  {i}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-line px-5 py-4 space-y-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-fg-muted">Total</span>
+            <span className="text-lg font-semibold tabular-nums">{money(cart.total, cart.currency)}</span>
+          </div>
+          <p className="text-xs text-fg-dim">
+            {cart.stores > 1 ? `Secay places one order per store (${cart.stores} stores). ` : ""}
+            Each order is checked against what you asked for and your spending rules before PayPal pays.
+          </p>
+          {error && <p role="alert" className="text-xs text-rose-400">{error}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1">
+              Keep shopping
+            </button>
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={busy || cart.items.length === 0 || cart.issues.length > 0}
+              className="intentlock-btn-primary flex-[1.4]"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Approve and buy
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -188,18 +437,28 @@ export default function ChatClient() {
 
   const [chats, setChats] = useState<ChatSummary[] | null>(null);
   const [thread, setThread] = useState<ChatThread | null>(null);
+  const [myRules, setMyRules] = useState<ChatRule[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [buying, setBuying] = useState<string | null>(null);
+  const [adding, setAdding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [history, setHistory] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const tmpSeq = useRef(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const tmpSeq = useRef(0);
 
-  const open = useCallback((id: string | null) => router.replace(id ? `/chat?c=${id}` : "/chat"), [router]);
-
-  const [myRules, setMyRules] = useState<ChatRule[]>([]);
+  const open = useCallback(
+    (id: string | null) => {
+      setHistory(false);
+      router.replace(id ? `/chat?c=${id}` : "/chat");
+    },
+    [router],
+  );
 
   useEffect(() => {
     me.chats().then(setChats, (e: Error) => setError(e.message));
@@ -209,8 +468,10 @@ export default function ChatClient() {
         setMyRules(
           rs
             .filter((r) => !r.revoked_at && hosted.has(r.agent_id))
-            .map((r) => ({ id: r.id, categories: r.categories, merchants: r.merchants, budget: r.budget_amount,
-                           remaining: r.budget_amount, period: r.budget_period, currency: r.currency })),
+            .map((r) => ({
+              id: r.id, categories: r.categories, merchants: r.merchants, budget: r.budget_amount,
+              remaining: r.budget_amount, period: r.budget_period, currency: r.currency,
+            })),
         );
       },
       () => {},
@@ -229,16 +490,22 @@ export default function ChatClient() {
     };
   }, [activeId, open]);
 
-  const running = thread?.messages.some((m) => m.run?.status === "running") ?? false;
+  const view = activeId && thread?.id === activeId ? thread : null;
+  const messages = view?.messages ?? [];
+  const rules = view?.rules ?? myRules;
+  const cart = view?.cart ?? EMPTY_CART;
+  const line = rulesLine(rules);
+
+  const running = view?.messages.some((m) => m.run?.status === "running") ?? false;
   useEffect(() => {
-    if (!running || !thread) return;
-    const t = setInterval(() => me.chat(thread.id).then(setThread, () => {}), 3000);
+    if (!running || !view) return;
+    const t = setInterval(() => me.chat(view.id).then(setThread, () => {}), 3000);
     return () => clearInterval(t);
-  }, [running, thread]);
+  }, [running, view]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [thread?.messages.length, sending]);
+  }, [messages.length, sending]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -248,24 +515,29 @@ export default function ChatClient() {
     setDraft("");
     try {
       let chatId = activeId;
-      let current = thread;
-      if (!chatId) {
-        const created = await me.createChat();
-        chatId = created.id;
-        setChats((cs) => [created, ...(cs ?? [])]);
+      let current = view;
+      if (!chatId || !current) {
+        if (!chatId) {
+          const created = await me.createChat();
+          chatId = created.id;
+          setChats((cs) => [created, ...(cs ?? [])]);
+        }
         current = await me.chat(chatId);
         open(chatId);
       }
       const optimistic: ChatMessage = {
         id: `tmp-${++tmpSeq.current}`, role: "user", content, products: [], created_at: "", run: null,
       };
-      setThread({ ...(current as ChatThread), messages: [...(current?.messages ?? []), optimistic] });
+      setThread({ ...current, messages: [...current.messages, optimistic] });
       const out = await me.send(chatId, content);
       setThread((t) => (t ? { ...t, title: out.title, messages: [...t.messages.filter((m) => m.id !== optimistic.id), ...out.messages] } : t));
       setChats((cs) => {
-        const rest = (cs ?? []).filter((c) => c.id !== chatId);
         const prev = (cs ?? []).find((c) => c.id === chatId);
-        return [{ id: chatId!, title: out.title, agent_id: current?.agent?.id ?? "", updated_at: out.messages[1]?.created_at ?? prev?.updated_at ?? "", preview: out.messages[1]?.content ?? "" }, ...rest];
+        const rest = (cs ?? []).filter((c) => c.id !== chatId);
+        return [
+          { id: chatId!, title: out.title, agent_id: current?.agent?.id ?? "", updated_at: out.messages[1]?.created_at ?? prev?.updated_at ?? "", preview: out.messages[1]?.content ?? "" },
+          ...rest,
+        ];
       });
     } catch (e) {
       const err = e as Error & { code?: string };
@@ -279,17 +551,46 @@ export default function ChatClient() {
     }
   }
 
-  async function buy(m: ChatMessage, p: ChatProduct) {
-    if (!thread || buying) return;
-    setBuying(`${m.id}:${p.product_id}`);
+  async function addToCart(m: ChatMessage, p: ChatProduct) {
+    if (!view || adding) return;
+    setAdding(`${m.id}:${p.product_id}`);
     setError(null);
     try {
-      const msg = await me.buy(thread.id, { message_id: m.id, product_id: p.product_id });
-      setThread((t) => (t ? { ...t, messages: [...t.messages, msg] } : t));
+      const c = await me.addToCart(view.id, { message_id: m.id, product_id: p.product_id });
+      setThread((t) => (t ? { ...t, cart: c } : t));
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBuying(null);
+      setAdding(null);
+    }
+  }
+
+  async function setQty(productId: string, qty: number) {
+    if (!view) return;
+    setCartBusy(true);
+    setCartError(null);
+    try {
+      const c = await me.setCartQty(view.id, productId, Math.max(0, qty));
+      setThread((t) => (t ? { ...t, cart: c } : t));
+    } catch (e) {
+      setCartError((e as Error).message);
+    } finally {
+      setCartBusy(false);
+    }
+  }
+
+  async function approve() {
+    if (!view) return;
+    setCartBusy(true);
+    setCartError(null);
+    try {
+      const out = await me.checkout(view.id);
+      setThread((t) => (t ? { ...t, cart: out.cart, messages: [...t.messages, ...out.messages] } : t));
+      setCartOpen(false);
+    } catch (e) {
+      setCartError((e as Error).message);
+    } finally {
+      setCartBusy(false);
     }
   }
 
@@ -300,72 +601,80 @@ export default function ChatClient() {
     if (id === activeId) open(null);
   }
 
-  const view = activeId && thread?.id === activeId ? thread : null;
-  const messages = view?.messages ?? [];
-  const rules = view?.rules ?? myRules;
-  const line = rulesLine(rules);
+  const historyProps = {
+    chats,
+    activeId,
+    onOpen: open,
+    onNew: () => open(null),
+    onDelete: remove,
+    onMenu: () => {
+      setHistory(false);
+      setMenu(true);
+    },
+  };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] min-h-0">
-      <aside className="hidden lg:flex w-72 shrink-0 flex-col border-r border-line">
-        <div className="p-3">
-          <button type="button" onClick={() => open(null)} className="intentlock-btn-outline w-full">
-            <SquarePen className="w-4 h-4" strokeWidth={1.8} />
-            New chat
-          </button>
-        </div>
-        <div className="px-3 pb-1 text-[11px] font-medium text-fg-dim">History</div>
-        <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
-          {chats?.length === 0 && <p className="px-2 py-3 text-xs text-fg-dim">Your conversations will appear here.</p>}
-          {(chats ?? []).map((c) => (
-            <div
-              key={c.id}
-              className={`group flex items-start gap-2 rounded-lg px-2.5 py-2 cursor-pointer transition ${
-                c.id === activeId ? "nav-item-active" : "hover:bg-fg/[0.04]"
-              }`}
-              onClick={() => open(c.id)}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium text-fg truncate">{c.title}</div>
-                <div className="text-xs text-fg-dim truncate">{c.preview || when(c.updated_at)}</div>
-              </div>
-              <button
-                type="button"
-                aria-label="Delete chat"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  remove(c.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-fg-dim hover:text-rose-400 transition"
-              >
-                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
-              </button>
-            </div>
-          ))}
-        </nav>
+    <div className="flex h-[100dvh] min-h-0">
+      <NavDrawer open={menu} onClose={() => setMenu(false)} />
+
+      <aside className="sidebar-edge hidden lg:flex w-72 shrink-0 flex-col bg-sidebar">
+        <HistoryPanel {...historyProps} />
       </aside>
 
+      <div className={`lg:hidden fixed inset-0 z-40 ${history ? "" : "pointer-events-none"}`} aria-hidden={!history}>
+        <button
+          type="button"
+          aria-label="Close history"
+          tabIndex={history ? 0 : -1}
+          onClick={() => setHistory(false)}
+          className={`absolute inset-0 bg-black/50 transition-opacity ${history ? "opacity-100" : "opacity-0"}`}
+        />
+        <aside
+          className={`sidebar-edge absolute inset-y-0 left-0 w-80 max-w-[85vw] flex flex-col bg-sidebar transition-transform duration-200 ${
+            history ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <HistoryPanel {...historyProps} />
+        </aside>
+      </div>
+
       <section className="flex-1 min-w-0 flex flex-col">
-        {view && (
-          <div className="flex items-center justify-between gap-3 border-b border-line px-6 h-14 shrink-0">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold truncate">{view.title}</div>
-              <div className="text-xs text-fg-dim truncate flex items-center gap-1.5">
-                <Bot className="w-3.5 h-3.5" strokeWidth={1.8} />
-                {view.agent?.name ?? "Agent"}
-              </div>
+        <header className="header-edge flex items-center gap-2 px-3 sm:px-6 h-14 shrink-0">
+          <button type="button" onClick={() => setHistory(true)} className="lg:hidden p-2 -ml-1 rounded-lg text-fg-muted hover:text-fg hover:bg-fg/5" aria-label="Chats">
+            <History className="w-5 h-5" strokeWidth={1.8} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold truncate">{view?.title ?? "New chat"}</div>
+            <div className="text-xs text-fg-dim truncate flex items-center gap-1.5">
+              <Bot className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
+              <span className="truncate">{view?.agent?.name ?? "Your shopping agent"}</span>
             </div>
-            <Link href="/rules" className="hidden sm:inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition" title="Spending rules">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.8} />
-              {line ?? "No spending rule yet"}
-            </Link>
           </div>
-        )}
+          <Link href="/rules" className="hidden md:inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition truncate" title="Spending rules">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
+            <span className="truncate">{line ?? "No spending rule yet"}</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            disabled={!view}
+            className="intentlock-btn-outline btn-sm relative ml-1"
+            aria-label={`Cart, ${cart.count} items`}
+          >
+            <ShoppingCart className="w-4 h-4" strokeWidth={1.8} />
+            <span className="hidden sm:inline">Cart</span>
+            {cart.count > 0 && (
+              <span className="min-w-5 h-5 px-1 rounded-full bg-blue-600 text-[11px] font-semibold text-white flex items-center justify-center">
+                {cart.count}
+              </span>
+            )}
+          </button>
+        </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-6">
+          <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
             {blocked ? (
-              <div className="saas-card p-8 text-center space-y-3">
+              <div className="saas-card p-6 sm:p-8 text-center space-y-3">
                 <Bot className="w-6 h-6 mx-auto text-fg-muted" strokeWidth={1.8} />
                 <h2 className="text-base font-semibold">Create your shopping agent first</h2>
                 <p className="text-sm text-fg-muted">{blocked}</p>
@@ -374,15 +683,15 @@ export default function ChatClient() {
                 </Link>
               </div>
             ) : messages.length === 0 && !sending ? (
-              <div className="pt-10 text-center space-y-6">
+              <div className="pt-6 sm:pt-12 text-center space-y-6">
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-semibold tracking-tight">What should Secay buy for you?</h1>
+                  <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">What should Secay buy for you?</h1>
                   <p className="text-sm text-fg-muted max-w-lg mx-auto">
-                    I search real stores through Channel3 and only suggest what your spending rules allow. Every purchase is
-                    checked before PayPal pays.
+                    I search real stores through Channel3 and only suggest what your spending rules allow. Add what you like to
+                    your cart; nothing is bought until you approve it.
                   </p>
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-2 max-w-2xl mx-auto">
                   {promptsFor(rules).map((p) => (
                     <button key={p} type="button" onClick={() => send(p)} className="intentlock-btn-outline btn-sm">
                       {p}
@@ -391,14 +700,14 @@ export default function ChatClient() {
                 </div>
               </div>
             ) : (
-              messages.map((m) => <Message key={m.id} m={m} onBuy={buy} buying={buying} />)
+              messages.map((m) => <Message key={m.id} m={m} cart={cart} adding={adding} onAdd={addToCart} />)
             )}
             {sending && <Typing />}
             <div ref={endRef} />
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-line px-6 py-4">
+        <div className="shrink-0 border-t border-line px-3 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <form
             className="mx-auto w-full max-w-4xl"
             onSubmit={(e) => {
@@ -407,6 +716,19 @@ export default function ChatClient() {
             }}
           >
             {error && <p role="alert" className="mb-2 text-sm text-rose-400">{error}</p>}
+            {cart.count > 0 && (
+              <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                className="mb-2 w-full flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm text-blue-400"
+              >
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" strokeWidth={1.8} />
+                  {cart.count} in cart · {money(cart.total, cart.currency)}
+                </span>
+                <span className="font-medium">Review and approve</span>
+              </button>
+            )}
             <div className="flex items-end gap-2 rounded-2xl border border-line bg-input p-2 focus-within:border-blue-500/60 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
               <textarea
                 ref={inputRef}
@@ -424,19 +746,29 @@ export default function ChatClient() {
                     send(draft);
                   }
                 }}
-                placeholder="Ask Secay to find something, e.g. a USB-C cable under $20"
-                className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none"
+                placeholder="Ask Secay to find something…"
+                className="input-bare flex-1 resize-none bg-transparent px-2 py-1.5 text-[16px] sm:text-sm text-fg placeholder:text-fg-dim"
               />
               <button type="submit" disabled={sending || !draft.trim()} className="intentlock-btn-primary !p-2 !rounded-xl" aria-label="Send">
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2} />}
               </button>
             </div>
-            <p className="mt-2 text-center text-[11px] text-fg-dim">
-              Secay only buys within your spending rules. Enter to send, Shift+Enter for a new line.
+            <p className="mt-2 hidden sm:block text-center text-[11px] text-fg-dim">
+              Secay only suggests what your spending rules allow, and buys nothing until you approve your cart.
             </p>
           </form>
         </div>
       </section>
+
+      <CartSheet
+        open={cartOpen}
+        cart={cart}
+        busy={cartBusy}
+        error={cartError}
+        onClose={() => setCartOpen(false)}
+        onQty={setQty}
+        onApprove={approve}
+      />
     </div>
   );
 }

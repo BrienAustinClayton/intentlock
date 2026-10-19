@@ -378,28 +378,61 @@ def test_chat_suggest_failure_becomes_message(client, two, chat_agent):
     assert out.status_code == 200 and "waking up" in out.json()["messages"][1]["content"]
 
 
-def test_chat_buy_creates_signed_request_and_exact_product_run(client, db, two, chat_agent):
-    calls, _, reply = chat_agent
-    (alice, ha), (_, hb) = two
+SECOND = {"product_id": "c3_hub", "title": "USB-C Hub", "brand": None, "price": "20.00", "currency": "USD",
+          "merchant": "target.com", "category": "electronics", "category_title": "Electronics", "image": None, "url": None}
+
+
+def test_cart_add_update_and_rule_checks(client, db, two, chat_agent):
+    _, suggest, _ = chat_agent
+    (_, ha), (_, hb) = two
     a = _hosted_agent(client, ha)
-    _rule(client, ha, a["id"])
+    _rule(client, ha, a["id"], budget_amount="30.00")
     chat = client.post("/me/chats", headers=ha, json={}).json()
-    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha,
-                        json={"content": "A USB-C cable under $20"}).json()["messages"][1]
-    assert client.post(f"/me/chats/{chat['id']}/buy", headers=hb,
-                       json={"message_id": shown["id"], "product_id": "c3_cable"}).status_code == 404
-    assert client.post(f"/me/chats/{chat['id']}/buy", headers=ha,
-                       json={"message_id": shown["id"], "product_id": "not_shown"}).status_code == 404
+    suggest["value"] = _Resp(200, {"reply": "ok", "products": [SUGGESTED[0], SECOND,
+        {**SECOND, "product_id": "c3_chair", "title": "Office Chair", "category": "furniture", "price": "5.00"}]})
+    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "usb c things"}).json()["messages"][1]
+    add = lambda pid, h=ha: client.post(f"/me/chats/{chat['id']}/cart", headers=h, json={"message_id": shown["id"], "product_id": pid})
+    assert add("c3_cable", hb).status_code == 404
+    assert add("not_shown").status_code == 404
+    cart = add("c3_cable").json()
+    assert cart["count"] == 1 and cart["total"] == "9.99" and cart["issues"] == []
+    cart = add("c3_cable").json()
+    assert cart["count"] == 2 and cart["items"][0]["qty"] == 2 and cart["total"] == "19.98"
+    cart = add("c3_chair").json()
+    assert any("Office Chair" in i for i in cart["issues"])
+    r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha)
+    assert r.status_code == 409 and r.json()["error"] == "cart_not_allowed"
+    cart = client.patch(f"/me/chats/{chat['id']}/cart/c3_chair", headers=ha, json={"qty": 0}).json()
+    assert [i["product_id"] for i in cart["items"]] == ["c3_cable"]
+    cart = add("c3_hub").json()
+    assert any("more than the $30.00" in i for i in cart["issues"])
+    cart = client.patch(f"/me/chats/{chat['id']}/cart/c3_cable", headers=ha, json={"qty": 1}).json()
+    assert cart["issues"] == [] and cart["total"] == "29.99" and cart["stores"] == 2
+    assert client.get(f"/me/chats/{chat['id']}", headers=ha).json()["cart"]["count"] == 2
+
+
+def test_checkout_signs_one_request_per_store_with_exact_items(client, db, two, chat_agent):
+    calls, suggest, reply = chat_agent
+    (alice, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"], budget_amount="100.00")
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    suggest["value"] = _Resp(200, {"reply": "ok", "products": [SUGGESTED[0], SECOND]})
+    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "cables and a hub"}).json()["messages"][1]
+    for pid in ("c3_cable", "c3_cable", "c3_hub"):
+        client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": pid})
     reply["value"] = _Resp(200, {"order_id": None, "summary": "Out of stock now.", "errors": []})
-    msg = client.post(f"/me/chats/{chat['id']}/buy", headers=ha,
-                      json={"message_id": shown["id"], "product_id": "c3_cable", "qty": 2}).json()
-    assert msg["run"]["status"] == "running"
-    run_call = [kw["json"] for u, kw in calls if u.endswith("/run")][-1]
-    assert run_call["product_id"] == "c3_cable" and run_call["qty"] == 2
-    intent = db.get(Intent, run_call["intent_id"])
-    assert intent.user_id == alice.id and "I chose: USB-C to USB-C Cable 1m from baseus.com at $9.99" in intent.request_text
-    after = client.get(f"/me/chats/{chat['id']}", headers=ha).json()["messages"][-1]
-    assert after["run"]["status"] == "failed" and after["run"]["summary"] == "Out of stock now."
+    out = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha).json()
+    assert len(out["messages"]) == 2 and out["cart"]["count"] == 0
+    assert "for $19.98" in out["messages"][0]["content"]
+    runs = [kw["json"] for u, kw in calls if u.endswith("/run")]
+    assert sorted(tuple((i["product_id"], i["qty"]) for i in r["items"]) for r in runs) == [(("c3_cable", 2),), (("c3_hub", 1),)]
+    texts = sorted(db.get(Intent, r["intent_id"]).request_text for r in runs)
+    assert "I approved this cart from baseus.com: 2 × USB-C to USB-C Cable 1m at $9.99" in texts[0]
+    assert "I approved this cart from target.com: 1 × USB-C Hub at $20.00" in texts[1]
+    assert client.post(f"/me/chats/{chat['id']}/checkout", headers=ha).json()["error"] == "cart_empty"
+    msgs = client.get(f"/me/chats/{chat['id']}", headers=ha).json()["messages"]
+    assert [m["run"]["status"] for m in msgs if m["run"]] == ["failed", "failed"]
 
 
 def test_delete_chat(client, db, two, chat_agent):

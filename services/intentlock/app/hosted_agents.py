@@ -158,7 +158,8 @@ def execute_run(run_id: str, db=None) -> None:
             r = httpx.post(endpoint, timeout=RUN_TIMEOUT_S,
                            headers={"Authorization": f"Bearer {secret}", "X-IntentLock-Run": run.id},
                            json={"intent_id": run.intent_id, "agent_id": agent.id, "agent_private_key": key,
-                                 **({"product_id": run.product_id, "qty": run.qty or 1} if run.product_id else {})})
+                                 **({"items": run.items} if run.items else
+                                    {"product_id": run.product_id, "qty": run.qty or 1} if run.product_id else {})})
         except httpx.HTTPError as e:
             run.response_ms = int((time.monotonic() - t0) * 1000)
             run.response_excerpt = f"{type(e).__name__}: {str(e)[:300]}"
@@ -196,10 +197,10 @@ def execute_run(run_id: str, db=None) -> None:
 
 
 def start_run(db, intent_id: str, user_id: str, agent_id: str,
-              product_id: str | None = None, qty: int | None = None) -> AgentRun:
+              product_id: str | None = None, qty: int | None = None, items: list | None = None) -> AgentRun:
     run = AgentRun(id=new_id("run"), intent_id=intent_id, user_id=user_id, agent_id=agent_id,
                    status="running", started_at=datetime.now(timezone.utc), attempts=0,
-                   product_id=product_id, qty=qty)
+                   product_id=product_id, qty=qty, items=items)
     db.add(run)
     db.commit()
     runlog.emit("agent_run.queued", run_id=run.id, intent_id=intent_id, agent_id=agent_id, user_id=user_id)

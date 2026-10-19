@@ -378,6 +378,40 @@ def test_chat_suggest_failure_becomes_message(client, two, chat_agent):
     assert out.status_code == 200 and "waking up" in out.json()["messages"][1]["content"]
 
 
+def test_chat_switches_spending_rule(client, two, chat_agent):
+    calls, _, _ = chat_agent
+    (_, ha), (_, hb) = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"])
+    _rule(client, ha, a["id"], categories=["toys-games"], budget_amount="20.00")
+    rules = {r["categories"][0]: r["id"] for r in client.get("/me/mandates", headers=ha).json()}
+    toys = rules["toys-games"]
+
+    chat = client.post("/me/chats", headers=ha, json={"mandate_id": toys}).json()
+    full = client.get(f"/me/chats/{chat['id']}", headers=ha).json()
+    assert full["rule_id"] == toys and len(full["rule_options"]) == 2
+    assert [r["id"] for r in full["rules"]] == [toys]
+    client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a puzzle"})
+    body = [kw["json"] for u, kw in calls if u.endswith("/suggest")][-1]
+    assert [r["id"] for r in body["rules"]] == [toys]
+
+    out = client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"mandate_id": None}).json()
+    assert out["rule_id"] is None and len(out["rules"]) == 2
+    out = client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"mandate_id": rules["electronics"]}).json()
+    assert [r["categories"] for r in out["rules"]] == [["electronics"]]
+
+    assert client.patch(f"/me/chats/{chat['id']}", headers=hb, json={"mandate_id": None}).status_code == 404
+    assert client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"mandate_id": "mdt_nope"}).status_code == 404
+    client.post(f"/me/mandates/{toys}/revoke", headers=ha)
+    r = client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"mandate_id": toys})
+    assert r.status_code == 409 and r.json()["error"] == "rule_inactive"
+
+    client.post(f"/me/mandates/{rules['electronics']}/revoke", headers=ha)
+    _rule(client, ha, a["id"], categories=["office-supplies"])
+    out = client.get(f"/me/chats/{chat['id']}", headers=ha).json()
+    assert out["rule_id"] is None and [r["categories"] for r in out["rules"]] == [["office-supplies"]]
+
+
 SECOND = {"product_id": "c3_hub", "title": "USB-C Hub", "brand": None, "price": "20.00", "currency": "USD",
           "merchant": "target.com", "category": "electronics", "category_title": "Electronics", "image": None, "url": None}
 

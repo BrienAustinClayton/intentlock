@@ -54,6 +54,21 @@ def agent_rules(db: Session, agent_id: str) -> list[dict[str, Any]]:
     return out
 
 
+def chat_rules(db: Session, chat: Chat) -> list[dict[str, Any]]:
+    """The rules a chat shops under: the one the user picked, or all the agent's active rules
+    (also when the picked rule has since ended)."""
+    rules = agent_rules(db, chat.agent_id)
+    return [r for r in rules if r["id"] == chat.mandate_id] or rules
+
+
+def _check_rule(db: Session, agent_id: str, mandate_id: str) -> None:
+    m = db.get(Mandate, mandate_id)
+    if m is None or m.agent_id != agent_id:
+        raise _not_found("spending rule")
+    if not _is_active(m, utcnow()):
+        raise HTTPException(409, detail={"error": "rule_inactive", "reason": "That spending rule has ended. Pick another one."})
+
+
 def _clean_url(v: Any, limit: int) -> Optional[str]:
     return v[:limit] if isinstance(v, str) and v.startswith("https://") else None
 
@@ -137,6 +152,7 @@ def list_chats(user: User = Depends(current_user), db: Session = Depends(get_db)
 class ChatCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: Optional[str] = Field(default=None, max_length=64)
+    mandate_id: Optional[str] = Field(default=None, max_length=64)
 
 
 @router.post("", status_code=201)
@@ -153,25 +169,50 @@ def create_chat(body: ChatCreate, user: User = Depends(current_user), db: Sessio
     if agent is None or not agent.managed or agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "no_hosted_agent",
                                          "reason": "Create a hosted agent first. It's the one that shops in chat."})
+    if body.mandate_id:
+        _check_rule(db, agent.id, body.mandate_id)
     now = utcnow()
-    chat = Chat(id=new_id("cht"), user_id=user.id, agent_id=agent.id, title="New chat", created_at=now, updated_at=now)
+    chat = Chat(id=new_id("cht"), user_id=user.id, agent_id=agent.id, mandate_id=body.mandate_id,
+                title="New chat", created_at=now, updated_at=now)
     db.add(chat)
     db.commit()
     return {"id": chat.id, "title": chat.title, "agent_id": agent.id, "updated_at": iso_z(now), "preview": ""}
 
 
-@router.get("/{chat_id}")
-def get_chat(chat_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    chat = _own_chat(db, user, chat_id)
+def _thread_view(db: Session, chat: Chat) -> dict[str, Any]:
     msgs = db.execute(
         select(ChatMessage).where(ChatMessage.chat_id == chat.id).order_by(ChatMessage.created_at)
     ).scalars().all()
     runs = _runs_for(db, msgs)
-    rules = agent_rules(db, chat.agent_id)
+    options = agent_rules(db, chat.agent_id)
+    picked = next((r["id"] for r in options if r["id"] == chat.mandate_id), None)
+    rules = [r for r in options if r["id"] == picked] or options
     return {
         "id": chat.id, "title": chat.title, "agent": _agent_view(db.get(Agent, chat.agent_id)),
-        "rules": rules, "messages": [_message_view(m, runs) for m in msgs], "cart": _cart_view(chat, rules),
+        "rule_id": picked, "rule_options": options, "rules": rules,
+        "messages": [_message_view(m, runs) for m in msgs], "cart": _cart_view(chat, rules),
     }
+
+
+@router.get("/{chat_id}")
+def get_chat(chat_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return _thread_view(db, _own_chat(db, user, chat_id))
+
+
+class ChatUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mandate_id: Optional[str] = Field(default=None, max_length=64)  # null = shop under all the agent's rules
+
+
+@router.patch("/{chat_id}")
+def update_chat(chat_id: str, body: ChatUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Switch the spending rule this chat shops under."""
+    chat = _own_chat(db, user, chat_id)
+    if body.mandate_id:
+        _check_rule(db, chat.agent_id, body.mandate_id)
+    chat.mandate_id = body.mandate_id
+    db.commit()
+    return _thread_view(db, chat)
 
 
 @router.delete("/{chat_id}")
@@ -212,7 +253,7 @@ def send_message(chat_id: str, body: MessageIn, user: User = Depends(current_use
     db.commit()
 
     agent = db.get(Agent, chat.agent_id)
-    rules = agent_rules(db, chat.agent_id)
+    rules = chat_rules(db, chat)
     if agent is None or not agent.managed or agent.revoked_at is not None:
         reply = _add(db, chat, "assistant", "This chat's agent is disconnected. Start a new chat with an active hosted agent.")
     elif not rules:
@@ -280,7 +321,7 @@ def add_to_cart(chat_id: str, body: CartAdd, user: User = Depends(current_user),
     chat.cart = lines
     chat.updated_at = utcnow()
     db.commit()
-    return _cart_view(chat, agent_rules(db, chat.agent_id))
+    return _cart_view(chat, chat_rules(db, chat))
 
 
 class CartQty(BaseModel):
@@ -298,7 +339,7 @@ def update_cart(chat_id: str, product_id: str, body: CartQty, user: User = Depen
     chat.cart = [({**l, "qty": body.qty} if l["product_id"] == product_id else l)
                  for l in lines if body.qty > 0 or l["product_id"] != product_id]
     db.commit()
-    return _cart_view(chat, agent_rules(db, chat.agent_id))
+    return _cart_view(chat, chat_rules(db, chat))
 
 
 @router.post("/{chat_id}/checkout")
@@ -312,7 +353,7 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
     agent = db.get(Agent, chat.agent_id)
     if agent is None or not agent.managed or agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_unavailable", "reason": "This chat's agent is disconnected."})
-    view = _cart_view(chat, agent_rules(db, chat.agent_id))
+    view = _cart_view(chat, chat_rules(db, chat))
     if view["issues"]:
         raise HTTPException(409, detail={"error": "cart_not_allowed", "reason": " ".join(view["issues"])})
 
@@ -337,7 +378,7 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
         count = sum(l["qty"] for l in group)
         msg = _add(db, chat, "assistant",
                    f"Buying {count} item{'s' if count > 1 else ''} from {merchant} for ${format_amount(total)}. "
-                   "Secay checks the order against your request and rules before anything is paid.",
+                   "Sepilo checks the order against your request and rules before anything is paid.",
                    intent_id=intent.id, run_id=run.id)
         messages.append((msg, run))
         run_ids.append(run.id)
@@ -346,4 +387,4 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
     for rid in run_ids:
         background.add_task(hosted_agents.execute_run, rid)
     return {"messages": [_message_view(m, {r.id: hosted_agents.run_to_dict(r)}) for m, r in messages],
-            "cart": _cart_view(chat, agent_rules(db, chat.agent_id))}
+            "cart": _cart_view(chat, chat_rules(db, chat))}

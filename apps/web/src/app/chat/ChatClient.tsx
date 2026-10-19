@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Bot,
   Check,
+  ChevronDown,
   ExternalLink,
   History,
   ImageOff,
@@ -15,6 +16,7 @@ import {
   Minus,
   Plus,
   ShieldCheck,
+  ShieldPlus,
   ShoppingCart,
   SquarePen,
   Trash2,
@@ -60,6 +62,109 @@ function rulesLine(rules: ChatRule[]): string | null {
   const left = rules.reduce((m, r) => Math.max(m, Number(r.remaining)), 0);
   const catText = cats.length > 2 ? `${cats.slice(0, 2).join(", ")} +${cats.length - 2}` : cats.join(", ");
   return `${catText} · ${anyStore ? "Any store" : "Selected stores"} · ${money(left, rules[0].currency)} left`;
+}
+
+const PERIOD_TEXT: Record<ChatRule["period"], string> = { month: "a month", week: "a week", once: "once" };
+
+/** Picks the spending rule a chat shops under, like a model switcher; ends with a link to create a new rule. */
+function RulePicker({
+  options,
+  selected,
+  busy,
+  onPick,
+}: {
+  options: ChatRule[];
+  selected: string | null;
+  busy: boolean;
+  onPick: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const current = options.filter((r) => r.id === selected);
+  const label = rulesLine(current.length ? current : options) ?? "No spending rule yet";
+  const pick = (id: string | null) => {
+    setOpen(false);
+    if (id !== selected) onPick(id);
+  };
+  const item = "w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-fg/[0.06] transition";
+  const tick = (on: boolean) => <Check className={`w-4 h-4 mt-0.5 shrink-0 ${on ? "text-blue-400" : "invisible"}`} strokeWidth={2} />;
+
+  return (
+    <div ref={ref} className="relative min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Spending rule"
+        className={`flex items-center gap-1.5 max-w-[11rem] sm:max-w-xs px-2 py-1.5 rounded-lg text-xs text-fg-muted hover:text-fg hover:bg-fg/5 transition ${open ? "bg-fg/5 text-fg" : ""}`}
+      >
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+        ) : (
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
+        )}
+        <span className="truncate">{label}</span>
+        <ChevronDown className="w-3.5 h-3.5 shrink-0 text-fg-dim" strokeWidth={1.8} />
+      </button>
+      {open && (
+        <div role="menu" className="popover absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.5rem)] p-1.5 z-50">
+          <div className="px-2.5 pt-2 pb-1.5 text-[11px] font-medium text-fg-dim">Shop under</div>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {options.length > 1 && (
+              <button type="button" role="menuitemradio" aria-checked={selected === null} onClick={() => pick(null)} className={item}>
+                {tick(selected === null)}
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-medium text-fg">All spending rules</span>
+                  <span className="block text-xs text-fg-dim">Any of your {options.length} rules can cover an order</span>
+                </span>
+              </button>
+            )}
+            {options.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={r.id === selected || options.length === 1}
+                onClick={() => pick(r.id)}
+                className={item}
+              >
+                {tick(r.id === selected || options.length === 1)}
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-medium text-fg truncate">{r.categories.map(categoryName).join(", ")}</span>
+                  <span className="block text-xs text-fg-dim">
+                    {r.merchants.includes("*") ? "Any store" : r.merchants.join(", ")} · {money(r.remaining, r.currency)} left of{" "}
+                    {money(r.budget, r.currency)} {PERIOD_TEXT[r.period]}
+                  </span>
+                </span>
+              </button>
+            ))}
+            {options.length === 0 && <p className="px-2.5 py-2 text-xs text-fg-dim">You have no active spending rule yet.</p>}
+          </div>
+          <div className="h-px bg-line mx-1 my-1" />
+          <Link href="/rules?new=1" role="menuitem" onClick={() => setOpen(false)} className={`${item} items-center text-[13px] text-fg-2 hover:text-fg`}>
+            <ShieldPlus className="w-4 h-4 text-fg-dim" strokeWidth={1.8} />
+            Create spending rule
+          </Link>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Thumb({ src, className }: { src: string | null; className: string }) {
@@ -216,7 +321,7 @@ function Typing() {
   return (
     <div className="flex gap-3">
       <Avatar />
-      <div className="flex items-center gap-1 pt-3" aria-label="Secay is searching">
+      <div className="flex items-center gap-1 pt-3" aria-label="Sepilo is searching">
         {[0, 150, 300].map((d) => (
           <span key={d} className="h-1.5 w-1.5 rounded-full bg-fg-dim animate-bounce" style={{ animationDelay: `${d}ms` }} />
         ))}
@@ -245,7 +350,7 @@ function HistoryPanel({
     <>
       <div className="flex items-center justify-between h-14 px-4">
         <Link href="/" className="pl-1 text-[15px] font-semibold tracking-tight text-fg">
-          Secay
+          Sepilo
         </Link>
       </div>
       <div className="px-3 pb-3">
@@ -406,7 +511,7 @@ function CartSheet({
             <span className="text-lg font-semibold tabular-nums">{money(cart.total, cart.currency)}</span>
           </div>
           <p className="text-xs text-fg-dim">
-            {cart.stores > 1 ? `Secay places one order per store (${cart.stores} stores). ` : ""}
+            {cart.stores > 1 ? `Sepilo places one order per store (${cart.stores} stores). ` : ""}
             Each order is checked against what you asked for and your spending rules before PayPal pays.
           </p>
           {error && <p role="alert" className="text-xs text-rose-400">{error}</p>}
@@ -437,7 +542,9 @@ export default function ChatClient() {
 
   const [chats, setChats] = useState<ChatSummary[] | null>(null);
   const [thread, setThread] = useState<ChatThread | null>(null);
-  const [myRules, setMyRules] = useState<ChatRule[]>([]);
+  const [myRules, setMyRules] = useState<(ChatRule & { agent_id: string })[]>([]);
+  const [pendingRule, setPendingRule] = useState<string | null>(null);
+  const [ruleBusy, setRuleBusy] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
@@ -469,7 +576,7 @@ export default function ChatClient() {
           rs
             .filter((r) => !r.revoked_at && hosted.has(r.agent_id))
             .map((r) => ({
-              id: r.id, categories: r.categories, merchants: r.merchants, budget: r.budget_amount,
+              id: r.id, agent_id: r.agent_id, categories: r.categories, merchants: r.merchants, budget: r.budget_amount,
               remaining: r.budget_amount, period: r.budget_period, currency: r.currency,
             })),
         );
@@ -492,9 +599,11 @@ export default function ChatClient() {
 
   const view = activeId && thread?.id === activeId ? thread : null;
   const messages = view?.messages ?? [];
-  const rules = view?.rules ?? myRules;
+  const ruleOptions: ChatRule[] = view?.rule_options ?? myRules;
+  const ruleId = view ? view.rule_id : myRules.some((r) => r.id === pendingRule) ? pendingRule : null;
+  const picked = myRules.filter((r) => r.id === ruleId);
+  const rules = view?.rules ?? (picked.length ? picked : myRules);
   const cart = view?.cart ?? EMPTY_CART;
-  const line = rulesLine(rules);
 
   const running = view?.messages.some((m) => m.run?.status === "running") ?? false;
   useEffect(() => {
@@ -518,7 +627,7 @@ export default function ChatClient() {
       let current = view;
       if (!chatId || !current) {
         if (!chatId) {
-          const created = await me.createChat();
+          const created = await me.createChat(myRules.find((r) => r.id === ruleId)?.agent_id, ruleId ?? undefined);
           chatId = created.id;
           setChats((cs) => [created, ...(cs ?? [])]);
         }
@@ -548,6 +657,19 @@ export default function ChatClient() {
     } finally {
       setSending(false);
       inputRef.current?.focus();
+    }
+  }
+
+  async function pickRule(id: string | null) {
+    if (!view) return setPendingRule(id);
+    setRuleBusy(true);
+    setError(null);
+    try {
+      setThread(await me.setChatRule(view.id, id));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRuleBusy(false);
     }
   }
 
@@ -650,10 +772,7 @@ export default function ChatClient() {
               <span className="truncate">{view?.agent?.name ?? "Your shopping agent"}</span>
             </div>
           </div>
-          <Link href="/rules" className="hidden md:inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition truncate" title="Spending rules">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
-            <span className="truncate">{line ?? "No spending rule yet"}</span>
-          </Link>
+          <RulePicker options={ruleOptions} selected={ruleId} busy={ruleBusy} onPick={pickRule} />
           <button
             type="button"
             onClick={() => setCartOpen(true)}
@@ -685,7 +804,7 @@ export default function ChatClient() {
             ) : messages.length === 0 && !sending ? (
               <div className="pt-6 sm:pt-12 text-center space-y-6">
                 <div className="space-y-2">
-                  <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">What should Secay buy for you?</h1>
+                  <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">What should Sepilo buy for you?</h1>
                   <p className="text-sm text-fg-muted max-w-lg mx-auto">
                     I search real stores through Channel3 and only suggest what your spending rules allow. Add what you like to
                     your cart; nothing is bought until you approve it.
@@ -746,7 +865,7 @@ export default function ChatClient() {
                     send(draft);
                   }
                 }}
-                placeholder="Ask Secay to find something…"
+                placeholder="Ask Sepilo to find something…"
                 className="input-bare flex-1 resize-none bg-transparent px-2 py-1.5 text-[16px] sm:text-sm text-fg placeholder:text-fg-dim"
               />
               <button type="submit" disabled={sending || !draft.trim()} className="intentlock-btn-primary !p-2 !rounded-xl" aria-label="Send">
@@ -754,7 +873,7 @@ export default function ChatClient() {
               </button>
             </div>
             <p className="mt-2 hidden sm:block text-center text-[11px] text-fg-dim">
-              Secay only suggests what your spending rules allow, and buys nothing until you approve your cart.
+              Sepilo only suggests what your spending rules allow, and buys nothing until you approve your cart.
             </p>
           </form>
         </div>

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { beforeEach, test } from "node:test";
+import { resetChannel3Guards } from "./channel3Guard.ts";
 import { withEnv } from "./config.ts";
-import { suggest, type Rule } from "./suggest.ts";
+import { OFF_TOPIC_REPLY, suggest, type Rule } from "./suggest.ts";
 
 const ENV = { LLM_FAST_BASE_URL: "https://llm.test/v1", LLM_FAST_API_KEY: "k", LLM_FAST_MODEL: "m", CHANNEL3_API_KEY: "c3" };
 const prod = (id: string, title: string, price: number, domain: string, top: string) => ({
@@ -10,6 +11,7 @@ const prod = (id: string, title: string, price: number, domain: string, top: str
 });
 
 let calls: any[] = [];
+beforeEach(() => resetChannel3Guards({ noSleep: true })); // each test has its own fake catalog
 function fake(plan: unknown, pick: unknown, products: unknown[]) {
   calls = [];
   globalThis.fetch = (async (input: any, init?: any) => {
@@ -28,7 +30,7 @@ const rules: Rule[] = [{ categories: ["electronics"], merchants: ["*"], remainin
 const run = (msg: string, r = rules) => withEnv(ENV, () => suggest(msg, [{ role: "user", content: "hi" }], r));
 
 test("small talk does not search", async () => {
-  fake({ search: false, reply: "Hi! What should I find for you?" }, null, []);
+  fake({ topic: "greeting", search: false, reply: "Hi! What should I find for you?" }, null, []);
   const out = await run("hello");
   assert.equal(out.products.length, 0);
   assert.match(out.reply, /What should I find/);
@@ -37,7 +39,7 @@ test("small talk does not search", async () => {
 
 test("filters by rules before the model and returns picks with images", async () => {
   fake(
-    { search: true, query: "usb c cable", max_unit_price: null, quantity: 1 },
+    { topic: "shopping", search: true, query: "usb c cable", max_unit_price: null, quantity: 1 },
     { picks: [1, 0, 9], reply: "Two good cables from $9.99." },
     [
       prod("a", "USB-C Cable A", 12, "target.com", "electronics"),
@@ -57,18 +59,41 @@ test("filters by rules before the model and returns picks with images", async ()
 });
 
 test("explains when nothing fits the rules", async () => {
-  fake({ search: true, query: "office chair", quantity: 1 }, null, [prod("f", "Office Chair", 25, "overstock.com", "furniture")]);
+  fake({ topic: "shopping", search: true, query: "office chair", quantity: 1 }, null, [prod("f", "Office Chair", 25, "overstock.com", "furniture")]);
   const out = await run("office chair");
   assert.equal(out.products.length, 0);
   assert.match(out.reply, /none fit your spending rules: they're in furniture/);
   const storeOnly: Rule[] = [{ categories: ["furniture"], merchants: ["ikea.com"], remaining: "30.00", currency: "USD" }];
-  fake({ search: true, query: "office chair", quantity: 1 }, null, [prod("f", "Office Chair", 25, "overstock.com", "furniture")]);
+  fake({ topic: "shopping", search: true, query: "office chair", quantity: 1 }, null, [prod("f", "Office Chair", 25, "overstock.com", "furniture")]);
   assert.match((await run("office chair", storeOnly)).reply, /from stores your rules don't allow/);
 });
 
 test("no budget left means no search", async () => {
-  fake({ search: true, query: "cable", quantity: 1 }, null, []);
+  fake({ topic: "shopping", search: true, query: "cable", quantity: 1 }, null, []);
   const out = await run("cable", [{ ...rules[0], remaining: "0.00" }]);
   assert.match(out.reply, /budget is used up/);
   assert.ok(!calls.some((c) => c.url.includes("trychannel3")));
+});
+
+
+test("off-topic questions get a fixed reply, never a model answer", async () => {
+  for (const plan of [
+    { topic: "off_topic", search: false, reply: "Paris is the capital of France." },
+    { search: false, reply: "Here is a poem about the sea..." }, // unlabelled: treated as off-topic
+    { topic: "off_topic", search: true, query: "capital of france" },
+  ]) {
+    fake(plan, null, []);
+    const out = await run("what is the capital of France?");
+    assert.equal(out.reply, OFF_TOPIC_REPLY);
+    assert.equal(out.products.length, 0);
+    assert.ok(!calls.some((c) => c.url.includes("trychannel3")), "no Channel3 credits spent");
+  }
+});
+
+test("the plan prompt limits Sepilo to shopping", async () => {
+  fake({ topic: "greeting", search: false, reply: "Hi!" }, null, []);
+  await run("hello");
+  const system = calls.find((c) => c.url.endsWith("/chat/completions")).body.messages[0].content;
+  assert.match(system, /only help with shopping/);
+  assert.match(system, /off_topic/);
 });

@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from app.channel3 import get_product
+from app.channel3 import Channel3Unavailable, get_product
 
 log = logging.getLogger("intentlock.product_truth")
 
@@ -71,6 +71,11 @@ def verify_cart(merchant: str, lines: list[dict], db=None) -> tuple[str, list[di
         except httpx.HTTPStatusError as e:
             reasons.append(f"{name} isn't on Channel3 any more." if e.response.status_code == 404
                            else f"Couldn't re-check {name} with Channel3.")
+            continue
+        except Channel3Unavailable as e:
+            reasons.append("Sepilo has used today's product-check allowance. Try again tomorrow."
+                           if e.reason == "budget" else
+                           f"Couldn't re-check {name} with Channel3 right now. Try again in a minute.")
             continue
         except Exception:
             log.warning("product_truth.lookup_failed product_id=%s", pid[:64])

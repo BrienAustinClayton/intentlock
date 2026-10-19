@@ -1,6 +1,7 @@
 import { createShoppingAgent } from "./agent.ts";
 import { agentId } from "./config.ts";
 import { newRunContext, runWith, type CartLine, type CheckoutResult } from "./context.ts";
+import { Channel3Unavailable } from "./channel3Guard.ts";
 import { getIntent } from "./intentlock.ts";
 import { LlmLimitError } from "./llm.ts";
 import { ShopFailure, shop, shopExact } from "./shop.ts";
@@ -58,6 +59,7 @@ async function doRun(intentId: string, exact?: ExactPick): Promise<RunResult> {
   } catch (e) {
     if (e instanceof ShopFailure) summary = e.message;
     else if (e instanceof LlmLimitError) summary = "The AI model's usage limit is reached for now. Try again later.";
+    else if (e instanceof Channel3Unavailable) summary = e.message;
     else {
       ctx.errors.push((e as Error).message.slice(0, 300));
       summary = ctx.checkouts.length ? "Checked out, but the run ended with an error." : `The agent couldn't check out: ${(e as Error).message.slice(0, 200)}`;

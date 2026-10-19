@@ -4,7 +4,8 @@ name: Keep awake
 # request after that waits ~30 s for a cold start. Ping the API and the agent
 # every 5 minutes so they stay warm. GitHub can delay scheduled runs under load.
 #
-# Override the URLs with repository variables API_URL / AGENT_URL if they change.
+# Each service answers GET /ping with {"ok": true} (no database, no external calls).
+# Override the URLs with repository variables API_URL / AGENT_URL / WEB_URL if they change.
 # Turn it off with: gh workflow disable keep-awake.yml
 
 on:
@@ -27,14 +28,16 @@ jobs:
       matrix:
         include:
           - name: api
-            url: ${{ vars.API_URL || 'https://intentlock-api.onrender.com' }}
+            url: ${{ vars.API_URL || 'https://api.sepilo.space' }}
           - name: agent
             url: ${{ vars.AGENT_URL || 'https://intentlock-agent.onrender.com' }}
+          - name: web
+            url: ${{ vars.WEB_URL || 'https://sepilo.space/api' }}
     name: ping ${{ matrix.name }}
     steps:
-      - name: GET /health
+      - name: GET /ping
         env:
-          URL: ${{ matrix.url }}/health
+          URL: ${{ matrix.url }}/ping
         # A cold start can take up to a minute, so allow a long timeout and a few retries.
         run: |
           curl --fail --silent --show-error --max-time 90 \

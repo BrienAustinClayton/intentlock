@@ -19,6 +19,7 @@ from app.main import app  # noqa: E402
 # Public on purpose: health, sign-in, PayPal redirects, public agent keys, shop catalog, shareable proofs.
 PUBLIC = {
     ("GET", "/health"),
+    ("GET", "/ping"),
     ("POST", "/auth/email/start"),
     ("POST", "/auth/email/verify"),
     ("POST", "/auth/google/url"),
@@ -81,3 +82,9 @@ def test_api_schema_is_private_by_default():
     c = TestClient(app, raise_server_exceptions=False)
     assert c.get("/openapi.json").status_code == 404
     assert c.get("/docs").status_code == 404
+
+
+def test_ping_for_cron_jobs():
+    c = TestClient(app, raise_server_exceptions=False)
+    assert c.get("/ping").json() == {"ok": True}
+    assert c.head("/ping").status_code == 200

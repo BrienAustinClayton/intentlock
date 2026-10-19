@@ -174,3 +174,20 @@ def _no_real_email(monkeypatch):
     set RESEND_API_KEY themselves."""
     from app.config import settings
     monkeypatch.setattr(settings, "RESEND_API_KEY", None)
+
+
+@pytest.fixture(autouse=True)
+def _channel3_guards(monkeypatch):
+    """Channel3's daily budget lives in Postgres; unit tests count in memory instead, and the circuit breaker
+    starts closed. Tests of the budget itself call the real spend_credit."""
+    from app import channel3
+
+    channel3.reset_guards()
+    calls = {"n": 0}
+
+    def spend(kind):
+        calls["n"] += 1
+        return calls["n"]
+
+    monkeypatch.setattr(channel3, "spend_credit", spend)
+    monkeypatch.setattr(channel3, "_sleep", lambda s: None)

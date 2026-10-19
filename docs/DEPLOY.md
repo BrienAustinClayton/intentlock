@@ -307,3 +307,23 @@ generates `ADMIN_API_KEY`, and with it unset those routes stay closed. Public on
 the PayPal return URLs, `/.well-known/agent-keys`, `/catalog`, `POST /proofs/verify`. Proofs are visible to the
 order's owner (and for the attack lab's demo orders). `/docs` and `/openapi.json` are off unless `API_DOCS=1`.
 `tests/security/test_route_access.py` fails if a new route is reachable without credentials.
+
+
+## Channel3 credit guard rails
+
+Channel3 credits are finite, so every live call is guarded, in the API (`app/channel3.py`) and in the agent
+(`apps/agent/src/channel3Guard.ts`):
+
+| Guard | API | Agent |
+|---|---|---|
+| Daily budget (UTC day) | `CHANNEL3_DAILY_LIMIT`, default 300, counted in Postgres (`channel3_usage`) | `CHANNEL3_DAILY_LIMIT`, default 500, per process |
+| Reserve for buying | searches stop at 80% of the budget; price checks can use 100% | same |
+| Cache | searches 24 h (older copy served if Channel3 is down); price checks 2 min | searches 10 min, products 2 min |
+| Retry | once on 429/5xx/timeouts, honouring `Retry-After` (max 5 s) | same |
+| Circuit breaker | 5 straight failures: fail fast for 60 s | same |
+| Limits | 15 s timeout, 2 MB response, query ≤ 200 chars, product id `[A-Za-z0-9_-]{1,64}` | 15 s, 2 MB, query ≤ 120 chars, 4 calls in flight |
+| Response checks | must be a JSON object; a product read must return the requested id | same |
+
+The defaults (300 + 500 a day) spend about 800 credits a day, which lasts 20,000 credits about 25 days.
+Refused calls (over budget, circuit open, bad input) don't use credits. Users see a plain message
+("Sepilo has used today's product-search allowance…"). Usage per day: `SELECT * FROM channel3_usage`.

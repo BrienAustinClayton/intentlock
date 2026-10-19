@@ -85,6 +85,9 @@ services:
         sync: false
       - key: CHANNEL3_API_KEY
         sync: false
+      # Live Channel3 calls per UTC day from the API (price checks before buying); searches stop at 80%
+      - key: CHANNEL3_DAILY_LIMIT
+        value: "300"
       - key: RENDER_API_KEY
         sync: false
       - key: NEO4J_URI
@@ -208,6 +211,9 @@ services:
         sync: false
       - key: CHANNEL3_API_KEY
         sync: false
+      # Live Channel3 calls per UTC day from the agent (chat search + product reads); searches stop at 80%
+      - key: CHANNEL3_DAILY_LIMIT
+        value: "500"
       - key: LLM_FAST_API_KEY
         sync: false
 

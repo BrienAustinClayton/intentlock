@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { timingSafeEqual } from "node:crypto";
 import { env, withEnv } from "./config.ts";
 import { emit } from "./log.ts";
+import { Channel3Unavailable } from "./channel3Guard.ts";
 import { LlmLimitError } from "./llm.ts";
 import { RunError, runShopping, type ExactPick, type RunResult } from "./run.ts";
 import { suggest, type Rule, type Turn } from "./suggest.ts";
@@ -46,6 +47,8 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
     try {
       const path = (req.url ?? "").split("?")[0];
       if (req.method === "GET" && path === "/health") return send(200, { ok: true });
+      // Uptime / keep-awake cron: always 200, no model or Channel3 calls.
+      if ((req.method === "GET" || req.method === "HEAD") && path === "/ping") return send(200, { ok: true });
       if (req.method === "POST" && path === "/suggest") {
         if (!authorized(req.headers.authorization)) return send(401, { reason: "unauthorized" });
         const raw = await readJson(req, 40_000);
@@ -70,6 +73,7 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
           return send(200, out);
         } catch (e) {
           emit("suggest.error", { agent_id: (raw as any).agent_id, reason: (e as Error).message.slice(0, 300) });
+          if (e instanceof Channel3Unavailable) return send(200, { reply: e.message, products: [] });
           if (e instanceof LlmLimitError) {
             return send(200, { reply: "I've hit my AI usage limit for the moment. Please try again in a little while.", products: [] });
           }

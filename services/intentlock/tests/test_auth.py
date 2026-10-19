@@ -229,3 +229,34 @@ def test_google_not_configured(client, monkeypatch):
     monkeypatch.setattr(settings, "GOOGLE_CLIENT_SECRET", None)
     r = client.post("/auth/google/url", json={"state": "s" * 32, "code_challenge": "c" * 43})
     assert r.status_code == 503
+
+
+def test_send_code_email_default_from(monkeypatch):
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test_key")
+    monkeypatch.setattr(settings, "RESEND_FROM", None)
+    posted = []
+
+    class DummyResponse:
+        status_code = 200
+
+    monkeypatch.setattr("httpx.post", lambda url, json, headers, timeout: (posted.append(json), DummyResponse())[1])
+    auth.send_code_email("alice@example.com", "123456")
+    assert len(posted) == 1
+    assert posted[0]["from"] == "Sepilo <support@sepilo.space>"
+    assert posted[0]["to"] == ["alice@example.com"]
+
+
+def test_send_security_notice_default_from(monkeypatch):
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test_key")
+    monkeypatch.setattr(settings, "RESEND_FROM", None)
+    posted = []
+
+    class DummyResponse:
+        status_code = 200
+
+    monkeypatch.setattr("httpx.post", lambda url, json, headers, timeout: (posted.append(json), DummyResponse())[1])
+    auth.send_security_notice("alice@example.com", "Security Alert", "Someone signed in")
+    assert len(posted) == 1
+    assert posted[0]["from"] == "Sepilo <support@sepilo.space>"
+    assert posted[0]["to"] == ["alice@example.com"]
+

@@ -206,17 +206,23 @@ def get_chat(chat_id: str, user: User = Depends(current_user), db: Session = Dep
 
 
 class ChatUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     mandate_id: Optional[str] = Field(default=None, max_length=64)  # null = shop under all the agent's rules
+    title: Optional[str] = Field(default=None, min_length=1, max_length=120)
 
 
 @router.patch("/{chat_id}")
 def update_chat(chat_id: str, body: ChatUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """Switch the spending rule this chat shops under."""
+    """Rename the chat and/or switch the spending rule it shops under (only the fields sent change)."""
     chat = _own_chat(db, user, chat_id)
-    if body.mandate_id:
-        _check_rule(db, chat.agent_id, body.mandate_id)
-    chat.mandate_id = body.mandate_id
+    sent = body.model_fields_set
+    if "mandate_id" in sent:
+        if body.mandate_id:
+            _check_rule(db, chat.agent_id, body.mandate_id)
+        chat.mandate_id = body.mandate_id
+    if "title" in sent and body.title:
+        chat.title = clean(body.title, 120)
+        chat.updated_at = utcnow()
     db.commit()
     return _thread_view(db, chat)
 

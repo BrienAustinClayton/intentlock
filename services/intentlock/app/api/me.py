@@ -316,7 +316,7 @@ def rerun_request(request_id: str, background: BackgroundTasks, user: User = Dep
     agent = _own_agent(db, user, i.agent_id)
     if not agent.managed:
         raise HTTPException(409, detail={"error": "not_hosted",
-                                         "reason": "Only agents hosted by IntentLock can be run from here."})
+                                         "reason": "Only agents hosted by Sepilo can be run from here."})
     if agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_revoked", "reason": "This agent is disconnected."})
     current = _latest_runs(db, user, [i.id]).get(i.id)

@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { LayoutGrid, SquarePen, Trash2 } from "lucide-react";
 import { ChatSummaryItem, HistoryPanelProps } from "../../componentTypes";
 import { ChatHistorySkeleton } from "./ChatThreadSkeleton";
 import ProfileMenu from "@/components/ProfileMenu";
+import { BrandMark } from "@/shared/presentation/components/BrandMark";
+import { ThemeSwitch } from "@/shared/presentation/components/ThemeSwitch";
 import { Button } from "@/shared/presentation/components/Button";
 import { ButtonVariantEnum } from "@/shared/enums";
 
@@ -23,9 +24,9 @@ export function ChatHistoryPanel({
   return (
     <>
       <div className="flex items-center justify-between h-14 px-4">
-        <Link href="/" className="pl-1 text-[15px] font-semibold tracking-tight text-fg">
-          Sepilo
-        </Link>
+        <div className="pl-1">
+          <BrandMark />
+        </div>
       </div>
 
       <div className="px-3 pb-3">
@@ -39,7 +40,7 @@ export function ChatHistoryPanel({
         </Button>
       </div>
 
-      <div className="px-4 pb-1 text-[11px] font-medium text-fg-dim">History</div>
+      <div className="px-4 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-fg-dim">History</div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
         {isLoading && <ChatHistorySkeleton />}
@@ -79,7 +80,7 @@ export function ChatHistoryPanel({
         })}
       </nav>
 
-      <div className="p-3 space-y-1 sidebar-edge-top">
+      <div className="p-3 space-y-2 sidebar-edge-top">
         <button
           type="button"
           onClick={onOpenAppMenu}
@@ -88,6 +89,7 @@ export function ChatHistoryPanel({
           <LayoutGrid className="w-4 h-4 text-fg-dim" strokeWidth={1.8} />
           App menu
         </button>
+        <ThemeSwitch />
         <ProfileMenu collapsed={false} />
       </div>
     </>

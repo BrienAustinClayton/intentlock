@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bot, History, ShoppingCart } from "lucide-react";
+import { Bot, History, ShoppingCart, Store } from "lucide-react";
 import { NavDrawer } from "@/components/Sidebar";
 import { ApiCallError } from "@/shared/api/ApiCallError";
 import { ToastTypeEnum } from "@/shared/enums";
@@ -19,6 +19,8 @@ import { ChatMessageItemView } from "../components/ChatMessageItemView";
 import { ChatStarterPrompts } from "../components/ChatStarterPrompts";
 import { ChatThinking } from "../components/ChatThinking";
 import { ChatThreadSkeleton } from "../components/ChatThreadSkeleton";
+import { ChatTitleEditor } from "../components/ChatTitleEditor";
+import { RecentConversations } from "../components/RecentConversations";
 
 const DEFAULT_EMPTY_CART: ChatCartState = { items: [], total: "0.00", count: 0, currency: "USD", stores: 0, issues: [] };
 
@@ -53,6 +55,7 @@ export function ChatPage() {
     sendMessage,
     isSendingMessage,
     setChatRule,
+    renameChat,
     isSettingRule,
     addToCart,
     setCartQty,
@@ -85,7 +88,7 @@ export function ChatPage() {
   const lastMessage = messages[messages.length - 1];
   const pendingAlreadySaved =
     pendingMessage !== null && lastMessage?.role === ChatRoleEnum.User && lastMessage.content === pendingMessage;
-  const showSkeleton = Boolean(activeChatId) && isLoadingActiveChat && !thread;
+  const showSkeleton = Boolean(activeChatId) && isLoadingActiveChat && !thread && !pendingMessage;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -206,11 +209,16 @@ export function ChatPage() {
             >
               <History className="w-5 h-5" strokeWidth={1.8} />
             </button>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-fg truncate">{thread ? thread.title : "New chat"}</div>
+            <div className="min-w-0 flex-1">
+              <ChatTitleEditor
+                key={thread?.id ?? "new"}
+                title={thread ? thread.title : "New chat"}
+                editable={Boolean(thread)}
+                onRename={(title: string) => renameChat({ chatId: thread!.id, title })}
+              />
               <div className="flex items-center gap-1 text-xs text-fg-dim truncate">
-                <Bot className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
-                {thread?.agent?.name ?? "Your shopping agent"}
+                <Store className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
+                Channel3
               </div>
             </div>
           </div>
@@ -254,6 +262,9 @@ export function ChatPage() {
                   </p>
                 </div>
                 <ChatStarterPrompts prompts={promptsFor(rulesInUse)} onPick={fillFromStarter} />
+                <div className="pt-4 sm:pt-8">
+                  <RecentConversations chats={chats} onOpen={openChat} />
+                </div>
               </div>
             ) : (
               messages.map((message: ChatMessageItem) => (

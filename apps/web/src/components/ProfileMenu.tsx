@@ -1,28 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ChevronsUpDown, CreditCard, Info, LogOut, MessageSquare, Moon, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronsUpDown, CreditCard, Info, LogOut, MessageSquare } from "lucide-react";
 import { signOut, useMe } from "@/lib/useMe";
-
-type Theme = "light" | "dark";
-
-function subscribeTheme(cb: () => void) {
-  const o = new MutationObserver(cb);
-  o.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => o.disconnect();
-}
-
-function readTheme(): Theme {
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
-}
-
-function setTheme(t: Theme) {
-  document.documentElement.dataset.theme = t;
-  try {
-    localStorage.setItem("il-theme", t);
-  } catch {}
-}
 
 const REPO = "https://github.com/BrienAustinClayton/intentlock";
 const itemClass =
@@ -31,7 +12,6 @@ const itemClass =
 export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as Theme);
   const me = useMe();
   const name = me?.name ?? "";
   const initial = (name || me?.email || "").trim().charAt(0).toUpperCase();
@@ -56,19 +36,6 @@ export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
     <div ref={ref} className="relative">
       {open && (
         <div role="menu" className="popover absolute bottom-full left-0 mb-2 w-60 p-1.5 z-50">
-          <div className="px-2.5 pt-2 pb-1.5 text-[11px] font-medium text-fg-dim">Theme</div>
-          <div className="segmented mx-1.5 mb-2">
-            {(["light", "dark"] as const).map((t) => {
-              const Icon = t === "light" ? Sun : Moon;
-              return (
-                <button key={t} type="button" data-value={t} aria-pressed={theme === t} onClick={() => setTheme(t)}>
-                  <Icon className="w-3.5 h-3.5" strokeWidth={1.8} />
-                  {t === "light" ? "Light" : "Dark"}
-                </button>
-              );
-            })}
-          </div>
-          <div className="h-px bg-line mx-1 my-1" />
           <Link href="/payment" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
             <CreditCard className={icon} strokeWidth={1.8} />
             Payment method

@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PanelLeft, X } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
+import { BrandMark } from "@/shared/presentation/components/BrandMark";
+import { ThemeSwitch } from "@/shared/presentation/components/ThemeSwitch";
 import { NAV, findNav } from "@/lib/nav";
 
 function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
@@ -14,7 +16,9 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
     <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
       {NAV.map((section) => (
         <div key={section.title || "main"} className="space-y-0.5">
-          {!collapsed && section.title && <h3 className="px-3 pb-1.5 text-[11px] font-medium text-fg-dim">{section.title}</h3>}
+          {!collapsed && section.title && (
+            <div className="px-3 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-fg-dim">{section.title}</div>
+          )}
           {section.items.map(({ href, label, icon: Icon, soon }) => {
             const isActive = active === href;
             const base = "flex items-center gap-3 h-10 lg:h-9 px-3 rounded-[10px] text-[13px] font-medium transition";
@@ -62,9 +66,9 @@ export default function Sidebar() {
     >
       <div className={`flex items-center h-16 px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
         {!collapsed && (
-          <Link href="/" className="pl-2 text-[15px] font-semibold tracking-tight text-fg">
-            Sepilo
-          </Link>
+          <div className="pl-1">
+            <BrandMark />
+          </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -75,7 +79,8 @@ export default function Sidebar() {
         </button>
       </div>
       <NavLinks collapsed={collapsed} />
-      <div className="p-3 sidebar-edge-top">
+      <div className="p-3 space-y-2 sidebar-edge-top">
+        <ThemeSwitch collapsed={collapsed} />
         <ProfileMenu collapsed={collapsed} />
       </div>
     </aside>
@@ -108,15 +113,16 @@ export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => voi
         }`}
       >
         <div className="flex items-center justify-between h-16 px-4">
-          <Link href="/" onClick={onClose} className="pl-2 text-[15px] font-semibold tracking-tight text-fg">
-            Sepilo
-          </Link>
+          <div className="pl-1">
+            <BrandMark onClick={onClose} />
+          </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-fg-dim hover:text-fg hover:bg-fg/5" aria-label="Close menu">
             <X className="w-4 h-4" strokeWidth={1.8} />
           </button>
         </div>
         <NavLinks collapsed={false} onNavigate={onClose} />
-        <div className="p-3 sidebar-edge-top">
+        <div className="p-3 space-y-2 sidebar-edge-top">
+          <ThemeSwitch />
           <ProfileMenu collapsed={false} />
         </div>
       </aside>

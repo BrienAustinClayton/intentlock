@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Check, ExternalLink, ImageOff, ShoppingCart } from "lucide-react";
 import { ProductCardProps } from "../../componentTypes";
 import { Button } from "@/shared/presentation/components/Button";
@@ -13,10 +13,12 @@ export function ChatProductCard({
   onAddToCart,
 }: ProductCardProps) {
   const isInCart = inCartCount > 0;
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
     <div className="saas-card flex sm:flex-col overflow-hidden">
-      <div className="bg-white flex items-center justify-center overflow-hidden w-24 shrink-0 sm:w-auto sm:h-36 p-2 sm:p-3">
+      <div className="relative bg-white flex items-center justify-center overflow-hidden w-24 shrink-0 sm:w-auto sm:h-36 p-2 sm:p-3">
+        {product.image && !imageLoaded && <div aria-hidden className="absolute inset-0 animate-pulse bg-fg/8" />}
         {product.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -24,7 +26,9 @@ export function ChatProductCard({
             alt=""
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="max-h-full max-w-full object-contain"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
+            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           />
         ) : (
           <ImageOff className="w-5 h-5 text-gray-300" strokeWidth={1.5} />

@@ -722,3 +722,17 @@ def test_cart_uses_the_store_checkout_will_confirm(client, db, two, chat_agent, 
     offers["value"] = [{"domain": "kohls.com", "availability": "OutOfStock", "price": {"price": 24.99, "currency": "USD"}}]
     r = client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "js_url"})
     assert r.status_code == 409 and r.json()["error"] == "product_unavailable"
+
+
+def test_rename_chat_keeps_its_rule(client, two, chat_agent):
+    calls, _, _ = chat_agent
+    (_, ha), (_, hb) = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"])
+    rule = client.get("/me/mandates", headers=ha).json()[0]
+    chat = client.post("/me/chats", headers=ha, json={"mandate_id": rule["id"]}).json()
+    r = client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"title": "  Gifts for mum​  "})
+    assert r.status_code == 200 and r.json()["title"] == "Gifts for mum" and r.json()["rule_id"] == rule["id"]
+    assert client.patch(f"/me/chats/{chat['id']}", headers=ha, json={"title": ""}).status_code == 422
+    assert client.patch(f"/me/chats/{chat['id']}", headers=hb, json={"title": "x"}).status_code == 404
+    assert client.get("/me/chats", headers=ha).json()[0]["title"] == "Gifts for mum"

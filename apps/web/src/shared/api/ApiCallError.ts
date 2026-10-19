@@ -1,4 +1,3 @@
-/** A failed API call with the API's own error code, plain reason and full body (e.g. a cart check). */
 export class ApiCallError extends Error {
   constructor(
     public readonly statusCode: number,

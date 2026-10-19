@@ -104,7 +104,7 @@ export default async function StoreMerchantPage({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-fg-2 bg-fg/[0.04] px-3 py-1.5 rounded-xl border border-fg/10">
+            <span className="font-mono text-xs text-fg-2 bg-fg/4 px-3 py-1.5 rounded-xl border border-fg/10">
               {products.length} Products
             </span>
           </div>
@@ -126,7 +126,7 @@ export default async function StoreMerchantPage({
                 className="group saas-card overflow-hidden hover:border-fg/20 flex flex-col justify-between"
               >
                 {/* Product image */}
-                <div className="relative aspect-square bg-fg/[0.02] overflow-hidden flex items-center justify-center p-6 border-b border-fg/[0.06]">
+                <div className="relative aspect-square bg-fg/2 overflow-hidden flex items-center justify-center p-6 border-b border-fg/6">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.image_url}
@@ -146,7 +146,7 @@ export default async function StoreMerchantPage({
                     </h2>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-fg/[0.06] flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-fg/6 flex items-center justify-between">
                     <span className="text-sm font-bold font-mono text-fg">
                       ${p.price.toFixed(2)} <span className="text-xs font-normal text-fg-muted">{p.currency}</span>
                     </span>

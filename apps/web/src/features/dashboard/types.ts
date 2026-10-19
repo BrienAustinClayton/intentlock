@@ -1,3 +1,5 @@
+import { OrderSummary } from "@/features/orders/types";
+
 export interface MonthStats {
   orders: number;
   paid: number;
@@ -13,6 +15,7 @@ export interface DashboardSummary {
   rules_active: number;
   requests: number;
   payment_connected: boolean;
+  recent_orders: OrderSummary[];
 }
 
 export interface StatCardProps {

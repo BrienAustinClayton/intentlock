@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ShieldPlus } from "lucide-react";
 import { RuleModalModeEnum } from "../../enums";
 import { useSpendingRules } from "../../hooks/useSpendingRules";
@@ -11,8 +12,9 @@ import { Button } from "@/shared/presentation/components/Button";
 import { ButtonVariantEnum } from "@/shared/enums";
 
 export function RulesPage() {
-  const [modalMode, setModalMode] = useState<RuleModalModeEnum>(
-    RuleModalModeEnum.Closed
+  const params = useSearchParams();
+  const [modalMode, setModalMode] = useState<RuleModalModeEnum>(() =>
+    params.get("new") === "1" ? RuleModalModeEnum.Create : RuleModalModeEnum.Closed
   );
   const [activeRuleForEdit, setActiveRuleForEdit] = useState<SpendingRule | null>(null);
 

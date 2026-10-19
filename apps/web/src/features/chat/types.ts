@@ -34,6 +34,17 @@ export interface ChatMessageItem {
   run: AgentRunInfo | null;
 }
 
+export interface ChatRuleOption {
+  id: string;
+  agent_id?: string;
+  categories: string[];
+  merchants: string[];
+  budget: string;
+  remaining: string;
+  period: string;
+  currency: string;
+}
+
 export interface CartItemLine extends ChatProductItem {
   qty: number;
 }
@@ -45,7 +56,6 @@ export interface CartCheckItem {
   detail: string;
 }
 
-/** Sepilo's cart check: code checks plus Jev's second opinion. */
 export interface CartReview {
   decision: CartReviewDecisionEnum;
   checks: CartCheckItem[];

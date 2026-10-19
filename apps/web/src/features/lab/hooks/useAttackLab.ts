@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
+import { SCENARIOS } from "../constants";
 import { RevealPhaseEnum, ScenarioIdEnum, ScenarioPhaseEnum } from "../enums";
 import {
   ScenarioDefinition,
@@ -32,6 +33,7 @@ export function useAttackLab() {
     INITIAL_STATES
   );
   const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [runAllState, setRunAll] = useState<{ running: boolean; done: number; passed: number } | null>(null);
 
   const setSingleState = (id: ScenarioIdEnum, updater: (prev: ScenarioState) => ScenarioState) => {
     setScenarioStates((prev) => ({
@@ -40,15 +42,14 @@ export function useAttackLab() {
     }));
   };
 
-  const runScenario = (scenarioId: ScenarioIdEnum) => {
+  const runScenario = (scenarioId: ScenarioIdEnum): Promise<boolean> => {
     setSingleState(scenarioId, (s) => ({
       ...s,
       phase: ScenarioPhaseEnum.Running,
       error: null,
     }));
 
-    // Signed-in lab route (the web proxy adds the session); the run returns the order with its checks.
-    makeApiCall<ScenarioRunResult>({
+    return makeApiCall<ScenarioRunResult>({
       endpoint: `/api/me/lab/${encodeURIComponent(scenarioId)}`,
       method: HttpMethodEnum.Post,
     })
@@ -60,6 +61,7 @@ export function useAttackLab() {
           result: runResult,
           checks,
         }));
+        return runResult.actual_decision?.toLowerCase() === runResult.expected_decision?.toLowerCase();
       })
       .catch((error: Error) => {
         setSingleState(scenarioId, (s) => ({
@@ -67,21 +69,37 @@ export function useAttackLab() {
           phase: ScenarioPhaseEnum.Error,
           error: error.message,
         }));
+        return false;
       });
   };
 
-  const resetLab = () => {
+  const resetLab = (): Promise<boolean> => {
     setIsResetting(true);
-    makeApiCall<{ ok: boolean }>({
+    return makeApiCall<{ ok: boolean }>({
       endpoint: "/api/me/lab/reset",
       method: HttpMethodEnum.Post,
     })
       .then(() => {
         setScenarioStates(INITIAL_STATES);
+        return true;
       })
+      .catch(() => false)
       .finally(() => {
         setIsResetting(false);
       });
+  };
+
+  const runAll = async () => {
+    setRunAll({ running: true, done: 0, passed: 0 });
+    if (!(await resetLab())) {
+      setRunAll(null);
+      return;
+    }
+    let passed = 0;
+    for (const [index, scenario] of SCENARIOS.entries()) {
+      if (await runScenario(scenario.id)) passed += 1;
+      setRunAll({ running: index < SCENARIOS.length - 1, done: index + 1, passed });
+    }
   };
 
   const revealPage = (scenario: ScenarioDefinition) => {
@@ -126,5 +144,7 @@ export function useAttackLab() {
     resetLab,
     isResetting,
     revealPage,
+    runAll,
+    runAllState,
   };
 }

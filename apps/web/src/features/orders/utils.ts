@@ -1,3 +1,4 @@
+import { OrderStatusEnum } from "./enums";
 import { SecurityCheckStepEnum } from "./enums";
 
 export function formatCurrency(amount: string | number, currency: string = "USD"): string {
@@ -55,4 +56,24 @@ export function getStepDisplayName(step: SecurityCheckStepEnum): string {
     [SecurityCheckStepEnum.BuildProof]: "Build Proof",
   };
   return labels[step] || step;
+}
+
+const TONE = {
+  success: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  danger: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  warning: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  brand: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+};
+
+const STATUS_TAG: Partial<Record<OrderStatusEnum, { label: string; style: string }>> = {
+  [OrderStatusEnum.Captured]: { label: "Paid", style: TONE.success },
+  [OrderStatusEnum.Voided]: { label: "Blocked", style: TONE.danger },
+  [OrderStatusEnum.Rejected]: { label: "Blocked", style: TONE.danger },
+  [OrderStatusEnum.Failed]: { label: "Failed", style: TONE.danger },
+  [OrderStatusEnum.PendingApproval]: { label: "Needs Approval", style: TONE.warning },
+  [OrderStatusEnum.AwaitingPayment]: { label: "Pay in PayPal", style: TONE.warning },
+};
+
+export function orderStatusTag(status: OrderStatusEnum): { label: string; style: string } {
+  return STATUS_TAG[status] ?? { label: "Checking", style: TONE.brand };
 }

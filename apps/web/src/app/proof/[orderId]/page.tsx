@@ -15,7 +15,6 @@ export default async function ProofPage({
   let errorMessage: string | null = null;
   let proofData: GetProofResponse | null = null;
 
-  // Proofs are private to the order's owner (the attack lab's demo orders are open), so ask as the signed-in user.
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const r = await callApi(`/orders/${encodeURIComponent(orderId)}/proof`, { token });
   if (r.status === 200) {

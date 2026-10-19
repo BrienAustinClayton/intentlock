@@ -7,9 +7,16 @@ import { usePaymentConnection } from "../../hooks/usePaymentConnection";
 import { Button } from "@/shared/presentation/components/Button";
 import { ButtonVariantEnum } from "@/shared/enums";
 
+const SETUP_ERRORS: Record<string, string> = {
+  cancelled: "You cancelled on PayPal. Nothing was saved.",
+  paypal_error: "PayPal couldn't save the payment method. Try again.",
+};
+
 export function PaymentPage() {
   const searchParams = useSearchParams();
   const vaulted = searchParams.get("vaulted");
+  const setupError =
+    vaulted === "0" ? SETUP_ERRORS[searchParams.get("reason") ?? ""] ?? "PayPal setup didn't finish. Try again." : null;
   const { isConnected, isLoadingStatus, setupPayment, isSettingUp } = usePaymentConnection();
 
   const handleConnect = () => {
@@ -84,6 +91,12 @@ export function PaymentPage() {
           >
             Connect PayPal
           </Button>
+        )}
+
+        {setupError && !isConnected && (
+          <span role="alert" className="text-sm text-rose-400">
+            {setupError}
+          </span>
         )}
 
         {isConnected && vaulted === "1" && (

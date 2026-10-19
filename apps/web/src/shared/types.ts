@@ -16,7 +16,6 @@ export interface ApiCallOptions<PayloadType> {
   method?: HttpMethodEnum;
   payload?: PayloadType;
   customHeaders?: Record<string, string>;
-  /** Don't toast failures: the caller shows them inline. */
   silent?: boolean;
 }
 

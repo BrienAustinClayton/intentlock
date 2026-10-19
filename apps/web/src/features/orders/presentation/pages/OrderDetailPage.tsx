@@ -2,11 +2,11 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Shield, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileCheck2, Shield, Wallet } from "lucide-react";
 import { OrderStatusEnum } from "../../enums";
 import { useOrdersManagement } from "../../hooks/useOrdersManagement";
 import { OrderDetailPageProps } from "../../pageTypes";
-import { formatCurrency, formatRelativeTime } from "../../utils";
+import { formatCurrency, formatRelativeTime, orderStatusTag } from "../../utils";
 import { OrderApprovalActions } from "../components/OrderApprovalActions";
 import { OrderCartItemsTable } from "../components/OrderCartItemsTable";
 import { SecurityChecksTimeline } from "../components/SecurityChecksTimeline";
@@ -40,28 +40,8 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
 
   const { order, checks } = orderDetail;
 
-  const isPaid = order.status === OrderStatusEnum.Captured;
-  const isBlocked = order.status === OrderStatusEnum.Voided || order.status === OrderStatusEnum.Rejected;
-  const isPending = order.status === OrderStatusEnum.PendingApproval;
   const isAwaitingPayment = order.status === OrderStatusEnum.AwaitingPayment && Boolean(order.pay_url);
-
-  const statusStyle = isPaid
-    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-    : isBlocked
-    ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-    : isPending
-    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-    : "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-
-  const statusLabel = isPaid
-    ? "Paid"
-    : isBlocked
-    ? "Blocked"
-    : isPending
-    ? "Needs Approval"
-    : isAwaitingPayment
-    ? "Pay in PayPal"
-    : "Checking";
+  const { label: statusLabel, style: statusStyle } = orderStatusTag(order.status);
 
   const isApprovalRequired = order.status === OrderStatusEnum.PendingApproval;
   const isProcessingApproval = isApprovingOrder || isDecliningOrder;
@@ -151,6 +131,15 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
             </div>
             <SecurityChecksTimeline checks={checks} />
           </div>
+
+          <Link href={`/proof/${order.id}`} className="saas-card flex items-center gap-3 px-5 py-4 hover:border-blue-500/40 transition">
+            <FileCheck2 className="w-4 h-4 text-blue-400 shrink-0" strokeWidth={1.8} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-fg">View Proof of Intent</span>
+              <span className="block text-xs text-fg-muted">Signed record of the request, the rules and every check.</span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-fg-dim shrink-0" />
+          </Link>
         </div>
       </div>
     </div>

@@ -79,7 +79,7 @@ export function OrderCards({ orders }: { orders: Order[] }) {
     <ul className="sm:hidden divide-y divide-line">
       {orders.map((o) => (
         <li key={o.id}>
-          <Link href={`/orders/${o.id}`} className="flex items-start justify-between gap-3 px-4 py-3 active:bg-fg/[0.04]">
+          <Link href={`/orders/${o.id}`} className="flex items-start justify-between gap-3 px-4 py-3 active:bg-fg/4">
             <div className="min-w-0">
               <div className="text-sm text-fg line-clamp-2">{orderItems(o)}</div>
               <div className="mt-0.5 text-xs text-fg-dim truncate">
@@ -149,7 +149,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center text-center px-6 py-14">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-fg/[0.05] text-fg-muted mb-4">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-fg/5 text-fg-muted mb-4">
         <Icon className="w-5 h-5" strokeWidth={1.8} />
       </span>
       <h3 className="text-sm font-semibold text-fg">{title}</h3>
@@ -166,8 +166,8 @@ export function Panel({ children, className = "" }: { children: React.ReactNode;
 export const th = "px-4 py-2.5 text-left text-xs font-medium text-fg-dim whitespace-nowrap";
 export const td = "px-4 py-3 text-sm text-fg-2 align-middle";
 export const tableClass = "w-full border-collapse";
-export const theadClass = "border-b border-line bg-fg/[0.02]";
-export const rowClass = "border-b border-line last:border-0 transition hover:bg-fg/[0.025]";
+export const theadClass = "border-b border-line bg-fg/2";
+export const rowClass = "border-b border-line last:border-0 transition hover:bg-fg/2.5";
 
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
@@ -185,7 +185,7 @@ export function SkeletonRows({ rows = 4, cols = 5 }: { rows?: number; cols?: num
         <tr key={r} className="border-b border-line last:border-0">
           {Array.from({ length: cols }).map((__, c) => (
             <td key={c} className={td}>
-              <span className="block h-3.5 rounded bg-fg/[0.06] animate-pulse" style={{ width: `${50 + ((r + c) % 4) * 12}%` }} />
+              <span className="block h-3.5 rounded bg-fg/6 animate-pulse" style={{ width: `${50 + ((r + c) % 4) * 12}%` }} />
             </td>
           ))}
         </tr>

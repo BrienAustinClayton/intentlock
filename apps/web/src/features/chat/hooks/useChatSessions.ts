@@ -1,19 +1,47 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
 import { ChatSummaryItem } from "../componentTypes";
-import { ChatCartState, ChatMessageItem, CartReview } from "../types";
+import { IN_PROGRESS_ORDER } from "../constants";
+import { ChatRoleEnum } from "../enums";
+import { ChatCartState, ChatMessageItem, ChatRuleOption, CartReview } from "../types";
 
 export interface ActiveChatThread {
   id: string;
   title: string;
+  agent: { id: string; name: string } | null;
   rule_id: string | null;
+  rule_options: ChatRuleOption[];
+  rules: ChatRuleOption[];
   messages: ChatMessageItem[];
   cart: ChatCartState;
 }
 
+interface MandateRow {
+  id: string;
+  agent_id: string;
+  categories: string[];
+  merchants: string[];
+  budget_amount: string;
+  budget_period: string;
+  currency: string;
+  revoked_at: string | null;
+}
+
+interface AgentRow {
+  id: string;
+  managed: boolean;
+  revoked_at: string | null;
+}
+
+const isInProgress = (thread: ActiveChatThread | undefined): boolean =>
+  Boolean(thread?.messages?.some((m) =>
+    m.run?.status === "running" || (m.run?.order_status != null && IN_PROGRESS_ORDER.has(m.run.order_status))));
+
 export function useChatSessions(activeChatId: string | null = null) {
   const queryClient = useQueryClient();
+  const [arrivedIds, setArrivedIds] = useState<Set<string>>(() => new Set());
 
   const chatsListQuery = useQuery<ChatSummaryItem[]>({
     queryKey: ["chatList"],
@@ -33,14 +61,45 @@ export function useChatSessions(activeChatId: string | null = null) {
         method: HttpMethodEnum.Get,
       }),
     enabled: shouldFetchThread,
+    refetchInterval: (query) => (isInProgress(query.state.data) ? 3000 : false),
   });
 
-  const createChatMutation = useMutation<ChatSummaryItem, Error, { agentId?: string }>({
+  const myRulesQuery = useQuery<ChatRuleOption[]>({
+    queryKey: ["chatRuleOptions"],
+    queryFn: () =>
+      Promise.all([
+        makeApiCall<MandateRow[]>({ endpoint: "/api/me/mandates", method: HttpMethodEnum.Get, silent: true }),
+        makeApiCall<AgentRow[]>({ endpoint: "/api/me/agents", method: HttpMethodEnum.Get, silent: true }),
+      ]).then(([mandates, agents]) => {
+        const hosted = new Set((Array.isArray(agents) ? agents : []).filter((a) => a.managed && !a.revoked_at).map((a) => a.id));
+        return (Array.isArray(mandates) ? mandates : [])
+          .filter((m) => !m.revoked_at && hosted.has(m.agent_id))
+          .map((m) => ({
+            id: m.id, agent_id: m.agent_id, categories: m.categories, merchants: m.merchants, budget: m.budget_amount,
+            remaining: m.budget_amount, period: m.budget_period, currency: m.currency,
+          }));
+      }),
+  });
+
+  const setChatRuleMutation = useMutation<ActiveChatThread, Error, { chatId: string; ruleId: string | null }>({
+    mutationFn: ({ chatId, ruleId }) =>
+      makeApiCall<ActiveChatThread, { mandate_id: string | null }>({
+        endpoint: `/api/me/chats/${encodeURIComponent(chatId)}`,
+        method: HttpMethodEnum.Patch,
+        payload: { mandate_id: ruleId },
+      }),
+    onSuccess: (thread, { chatId }) => {
+      queryClient.setQueryData(["chatThread", chatId], thread);
+    },
+  });
+
+  const createChatMutation = useMutation<ChatSummaryItem, Error, { agentId?: string; ruleId?: string | null }>({
     mutationFn: (payload) =>
-      makeApiCall<ChatSummaryItem, { agent_id?: string }>({
+      makeApiCall<ChatSummaryItem, { agent_id?: string; mandate_id?: string }>({
         endpoint: "/api/me/chats",
         method: HttpMethodEnum.Post,
-        payload: { agent_id: payload.agentId },
+        payload: { agent_id: payload.agentId, ...(payload.ruleId ? { mandate_id: payload.ruleId } : {}) },
+        silent: true,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chatList"] });
@@ -57,9 +116,16 @@ export function useChatSessions(activeChatId: string | null = null) {
         endpoint: `/api/me/chats/${encodeURIComponent(chatId)}/messages`,
         method: HttpMethodEnum.Post,
         payload: { content },
+        silent: true,
       }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["chatThread", variables.chatId] });
+    onSuccess: (out, variables) => {
+      const replies = out.messages.filter((m) => m.role === ChatRoleEnum.Assistant).map((m) => m.id);
+      setArrivedIds((prev) => new Set([...prev, ...replies]));
+      queryClient.setQueryData<ActiveChatThread>(["chatThread", variables.chatId], (thread) => {
+        if (!thread) return thread;
+        const known = new Set(thread.messages.map((m) => m.id));
+        return { ...thread, title: out.title, messages: [...thread.messages, ...out.messages.filter((m) => !known.has(m.id))] };
+      });
       queryClient.invalidateQueries({ queryKey: ["chatList"] });
     },
   });
@@ -101,8 +167,6 @@ export function useChatSessions(activeChatId: string | null = null) {
     Error,
     { chatId: string; confirm?: boolean }
   >({
-    // Sepilo checks the cart first; a blocked or needs-confirmation cart comes back as an ApiCallError
-    // carrying the review, which the cart drawer shows inline (so no toast).
     mutationFn: ({ chatId, confirm }) =>
       makeApiCall<{ messages: ChatMessageItem[]; cart: ChatCartState; review: CartReview }, { confirm: boolean }>({
         endpoint: `/api/me/chats/${encodeURIComponent(chatId)}/checkout`,
@@ -131,7 +195,12 @@ export function useChatSessions(activeChatId: string | null = null) {
     chats: Array.isArray(chatsListQuery.data) ? chatsListQuery.data : [],
     isLoadingChats: chatsListQuery.isLoading,
     activeChat: activeChatQuery.data || null,
+    arrivedIds,
     isLoadingActiveChat: activeChatQuery.isLoading,
+    activeChatError: activeChatQuery.error,
+    myRules: myRulesQuery.data ?? [],
+    setChatRule: setChatRuleMutation.mutateAsync,
+    isSettingRule: setChatRuleMutation.isPending,
     createChat: createChatMutation.mutateAsync,
     isCreatingChat: createChatMutation.isPending,
     sendMessage: sendMessageMutation.mutateAsync,

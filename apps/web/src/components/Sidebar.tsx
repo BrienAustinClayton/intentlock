@@ -38,7 +38,7 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
                 onClick={onNavigate}
                 aria-current={isActive ? "page" : undefined}
                 title={label}
-                className={`${base} ${isActive ? "nav-item-active" : "text-fg-muted hover:text-fg hover:bg-fg/[0.04]"}`}
+                className={`${base} ${isActive ? "nav-item-active" : "text-fg-muted hover:text-fg hover:bg-fg/4"}`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-blue-400" : "text-fg-dim"}`} strokeWidth={1.8} />
                 {!collapsed && <span className="truncate">{label}</span>}

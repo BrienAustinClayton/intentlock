@@ -3,9 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { OrdersListProps } from "../../componentTypes";
-import { OrderStatusEnum } from "../../enums";
 import { OrderSummary } from "../../types";
-import { formatCurrency, formatRelativeTime } from "../../utils";
+import { formatCurrency, formatRelativeTime, orderStatusTag } from "../../utils";
 
 export function OrdersTableDesktop({ orders }: OrdersListProps) {
   return (
@@ -23,25 +22,7 @@ export function OrdersTableDesktop({ orders }: OrdersListProps) {
         </thead>
         <tbody>
           {orders.map((order: OrderSummary) => {
-            const isPaid = order.status === OrderStatusEnum.Captured;
-            const isBlocked = order.status === OrderStatusEnum.Voided || order.status === OrderStatusEnum.Rejected;
-            const isPending = order.status === OrderStatusEnum.PendingApproval;
-
-            const statusStyle = isPaid
-              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-              : isBlocked
-              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-              : isPending
-              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-              : "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-
-            const statusLabel = isPaid
-              ? "Paid"
-              : isBlocked
-              ? "Blocked"
-              : isPending
-              ? "Needs Approval"
-              : "Checking";
+            const { label: statusLabel, style: statusStyle } = orderStatusTag(order.status);
 
             const cartItems = order.cart || [];
             const hasItems = cartItems.length > 0;

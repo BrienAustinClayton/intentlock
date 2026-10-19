@@ -125,3 +125,18 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def web_origins() -> list[str]:
+    """WEB_ORIGIN as a list: comma-separated, trailing slashes dropped, https:// added when missing.
+    The first entry is the canonical web URL (redirects, Google sign-in)."""
+    out: list[str] = []
+    for raw in (settings.WEB_ORIGIN or "").split(","):
+        o = raw.strip().rstrip("/")
+        if not o or o == "__FILL_ME__":
+            continue
+        if "://" not in o:
+            o = f"https://{o}"
+        if o not in out:
+            out.append(o)
+    return out or ["http://localhost:3000"]

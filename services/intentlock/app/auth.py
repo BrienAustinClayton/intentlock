@@ -22,7 +22,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.config import settings, web_origins
 from app.db import get_db
 from app.ids import new_id
 from app.models import AuthCode, User, UserSession
@@ -64,7 +64,7 @@ def utcnow() -> datetime:
 
 
 def web_origin() -> str:
-    return (_cfg("WEB_ORIGIN") or "http://localhost:3000").rstrip("/")
+    return web_origins()[0]
 
 
 def _is_local() -> bool:

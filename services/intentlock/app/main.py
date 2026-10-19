@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import settings
+from app.config import settings, web_origins
 from app.errors import http_exception_handler, unhandled_exception_handler
 from app.api import (
     agents,
@@ -82,11 +82,11 @@ app = FastAPI(
 # ------------------------------------------------------------------ #
 # CORS — default to localhost:3000 if WEB_ORIGIN is not configured
 # ------------------------------------------------------------------ #
-_web_origin = settings.WEB_ORIGIN or "http://localhost:3000"
+_web_origins = web_origins()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[_web_origin],
+    allow_origins=_web_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

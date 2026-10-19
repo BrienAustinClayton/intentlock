@@ -192,7 +192,7 @@ Then point every service at the new URLs (no trailing slashes):
 | Service | Variable | Value |
 |---|---|---|
 | intentlock-api | `PUBLIC_BASE_URL` | `https://api.sepilo.space` |
-| intentlock-api | `WEB_ORIGIN` | `https://sepilo.space` |
+| intentlock-api | `WEB_ORIGIN` | `https://sepilo.space,https://www.sepilo.space` (comma-separated; the first is the canonical web URL) |
 | intentlock-api | `AGENT_SERVICE_URL` | `https://purchase-agent.sepilo.space` |
 | intentlock-web | `APP_URL` | `https://sepilo.space` |
 | intentlock-web | `NEXT_PUBLIC_API_URL` | `https://api.sepilo.space` (build time: redeploy web after changing) |

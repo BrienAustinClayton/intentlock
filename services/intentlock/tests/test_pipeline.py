@@ -983,3 +983,21 @@ def test_agent_daily_order_limit(client, db, seed, monkeypatch):
     seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
     r = post(client, seed, body(seed))
     assert r.status_code == 429 and r.json()["error"] == "rate_limited"
+
+
+def test_failed_orders_dont_count_and_the_limit_is_configurable(client, db, seed, monkeypatch):
+    from app import velocity
+
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    monkeypatch.setenv("AGENT_ORDERS_PER_DAY", "1")
+    paypal_service.mock_fail_next("authorize", PayPalError("INSTRUMENT_DECLINED"))
+    assert ok(client, seed)["status"] == "failed"  # never reached PayPal: doesn't use the allowance
+    seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    assert ok(client, seed)["status"] == "captured"
+    seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    r = post(client, seed, body(seed))
+    assert r.status_code == 429 and "limit of 1 orders" in r.json()["reason"]
+    monkeypatch.setenv("AGENT_ORDERS_PER_DAY", "5")
+    assert post(client, seed, body(seed)).status_code == 200
+    assert velocity.AGENT_ORDERS_PER_DAY == 100

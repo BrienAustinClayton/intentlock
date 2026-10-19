@@ -7,6 +7,7 @@ export class ApiError extends Error {
     public status: number,
     public body: unknown,
     msg: string,
+    public reason?: string,
   ) {
     super(msg);
   }
@@ -41,8 +42,10 @@ export async function signedFetch<T = unknown>(
     /* keep text */
   }
   if (!res.ok) {
-    const d = (parsed as { detail?: { reason?: string; error?: string } } | null)?.detail;
-    throw new ApiError(res.status, parsed, `${method} ${path} -> ${res.status} ${d?.error ?? ""} ${d?.reason ?? ""}`.trim());
+    type Body = { error?: string; reason?: string; detail?: { reason?: string; error?: string } };
+    const body = (parsed && typeof parsed === "object" ? parsed : {}) as Body;
+    const d = body.detail ?? body;
+    throw new ApiError(res.status, parsed, `${method} ${path} -> ${res.status} ${d.error ?? ""} ${d.reason ?? ""}`.trim(), d.reason);
   }
   return parsed as T;
 }

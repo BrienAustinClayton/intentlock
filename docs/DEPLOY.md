@@ -183,7 +183,8 @@ A watchdog in the API resends runs that were saved but never sent (for example t
 | intentlock-web | `sepilo.space` | `A` `@` → `216.24.57.1` (or ALIAS/ANAME/flattened CNAME → `intentlock-web.onrender.com`) |
 | intentlock-web | `www.sepilo.space` | `CNAME` `www` → `intentlock-web.onrender.com` |
 | intentlock-api | `api.sepilo.space` | `CNAME` `api` → `intentlock-api-9eo1.onrender.com` |
-| intentlock-agent | `purchase-agent.sepilo.space` | `CNAME` `purchase-agent` → `intentlock-agent.onrender.com` |
+
+The agent keeps its Render URL, `https://intentlock-agent.onrender.com` (no custom domain).
 
 Add each domain under the service's **Settings → Custom Domains**, create the DNS records, then **Verify**; Render issues TLS certificates automatically. Remove any `AAAA` records on these names.
 
@@ -193,10 +194,10 @@ Then point every service at the new URLs (no trailing slashes):
 |---|---|---|
 | intentlock-api | `PUBLIC_BASE_URL` | `https://api.sepilo.space` |
 | intentlock-api | `WEB_ORIGIN` | `https://sepilo.space,https://www.sepilo.space` (comma-separated; the first is the canonical web URL) |
-| intentlock-api | `AGENT_SERVICE_URL` | `https://purchase-agent.sepilo.space` |
+| intentlock-api | `AGENT_SERVICE_URL` | `https://intentlock-agent.onrender.com` |
 | intentlock-web | `APP_URL` | `https://sepilo.space` |
 | intentlock-web | `NEXT_PUBLIC_API_URL` | `https://api.sepilo.space` (build time: redeploy web after changing) |
-| intentlock-web | `AGENT_RUN_URL` | `https://purchase-agent.sepilo.space/run` |
+| intentlock-web | `AGENT_RUN_URL` | `https://intentlock-agent.onrender.com/run` |
 | intentlock-agent | `INTENTLOCK_API_URL` | `https://api.sepilo.space` |
 | intentlock-agent | `INTENTLOCK_SIGN_BASE_URL` | `https://api.sepilo.space` (must equal the API's `PUBLIC_BASE_URL`) |
 

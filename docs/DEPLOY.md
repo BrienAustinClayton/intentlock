@@ -327,3 +327,16 @@ Channel3 credits are finite, so every live call is guarded, in the API (`app/cha
 The defaults (300 + 500 a day) spend about 800 credits a day, which lasts 20,000 credits about 25 days.
 Refused calls (over budget, circuit open, bad input) don't use credits. Users see a plain message
 ("Sepilo has used today's product-search allowance…"). Usage per day: `SELECT * FROM channel3_usage`.
+
+
+## Abuse limits (intentlock-api)
+
+Change any of these on the running API with an env var of the same name (no deploy needed beyond the restart):
+
+| Variable | Default | Limits |
+|---|---|---|
+| `AGENT_ORDERS_PER_DAY` | 100 | orders one agent may create in 24 h (failed and rejected orders don't count) |
+| `CART_CHECKOUTS_PER_HOUR` | 20 | carts a user may approve per hour |
+| `CHAT_MESSAGES_PER_MINUTE` | 12 | chat messages per user per minute |
+
+Over a limit the API answers 429 with a plain reason, which the chat shows.

@@ -1,4 +1,7 @@
-"""Lab router: POST /lab/{scenario}.
+"""Lab router: POST /me/lab/{scenario} (signed-in users) and POST /lab/{scenario} (operator key).
+
+The lab always runs as the demo user with the lab's own agents; callers can't pick another user.
+Reset only deletes the demo user's orders, never other users' data or replay nonces.
 
 Runs an Attack Lab scenario through the same verification and pipeline path as
 POST /checkout: sign the request with the scenario agent's key, verify it with
@@ -17,7 +20,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.access import require_admin
 from app.api.checkout import CheckoutBody, build_order
+from app.api.orders import _order_to_dict
+from app.auth import current_user
 from app.config import settings
 from app.crypto.http_sig import (
     AgentVerificationError,
@@ -27,12 +33,13 @@ from app.crypto.http_sig import (
 from app.crypto.vector import VECTOR_PRIVATE_KEY
 from app.db import get_db
 from app.intents import create_intent, new_signed_intent
-from app.models import Agent, User
+from app.models import Agent, Order, User
 from app.pipeline.runner import run_checkout
 from app.pipeline.steps import record_check
 from app.service_errors import ServiceError
 
-router = APIRouter(tags=["lab"])
+router = APIRouter(tags=["lab"], dependencies=[Depends(require_admin)])
+me_router = APIRouter(prefix="/me", tags=["lab"], dependencies=[Depends(current_user)])
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SCENARIOS_PATH = REPO_ROOT / "data" / "lab" / "scenarios.json"
@@ -77,12 +84,13 @@ def _target_uri(request: Request) -> str:
     return f"{base}/checkout"
 
 
-_RESET_TABLES = ["approvals", "checks", "proofs", "schedule_events", "orders", "nonces"]
+_ORDER_CHILDREN = ["approvals", "checks", "proofs"]
 
 
 @router.post("/lab/reset")
+@me_router.post("/lab/reset")
 async def reset_lab(db: Session = Depends(get_db)):
-    """Delete all order-related rows so the lab can run from a clean state.
+    """Delete the demo user's orders so the lab can run from a clean state.
 
     Disabled (403) when env LAB_RESET_ENABLED == "0".
     """
@@ -91,22 +99,22 @@ async def reset_lab(db: Session = Depends(get_db)):
             status_code=403,
             detail={"error": "lab_reset_disabled", "reason": "reset is disabled"},
         )
+    mine = "select id from orders where user_id = :uid"
     counts: dict[str, int] = {}
-    for t in _RESET_TABLES:
-        if t == "schedule_events":
-            n = db.execute(
-                text("select count(*) from schedule_events where type = 'order'")
-            ).scalar() or 0
-            db.execute(text("delete from schedule_events where type = 'order'"))
-        else:
-            n = db.execute(text(f"select count(*) from {t}")).scalar() or 0  # noqa: S608
-            db.execute(text(f"delete from {t}"))  # noqa: S608
-        counts[t] = n
+    for t in _ORDER_CHILDREN:
+        counts[t] = db.execute(text(f"delete from {t} where order_id in ({mine})"),  # noqa: S608
+                               {"uid": DEFAULT_USER_ID}).rowcount or 0
+    counts["schedule_events"] = db.execute(
+        text(f"delete from schedule_events where type = 'order' and order_id in ({mine})"),  # noqa: S608
+        {"uid": DEFAULT_USER_ID}).rowcount or 0
+    counts["orders"] = db.execute(text("delete from orders where user_id = :uid"),
+                                  {"uid": DEFAULT_USER_ID}).rowcount or 0
     db.commit()
     return {"ok": True, "deleted": counts}
 
 
 @router.post("/lab/{scenario}")
+@me_router.post("/lab/{scenario}")
 async def run_lab_scenario(
     scenario: str,
     request: Request,
@@ -116,9 +124,7 @@ async def run_lab_scenario(
     sc = _load_scenarios().get(scenario)
     if sc is None:
         raise _err(404, "not_found", "unknown scenario")
-    user_id = DEFAULT_USER_ID
-    if isinstance(body, dict) and isinstance(body.get("user_id"), str) and body["user_id"]:
-        user_id = body["user_id"]
+    user_id = DEFAULT_USER_ID  # never caller-chosen
     agent_id = sc["agent_id"]
 
     # Intent for the lab user (signed by the wallet key). A revoked agent cannot get one
@@ -179,7 +185,10 @@ async def run_lab_scenario(
     db.commit()
 
     outcome = await run_checkout(db, order.id, allow_fixtures=True)
+    db.expire_all()
+    done = db.get(Order, order.id)
     return {
+        "order": _order_to_dict(done, include_checks=True) if done is not None else None,
         "order_id": outcome.order_id,
         "scenario": scenario,
         "expected_decision": sc["expected_decision"],

@@ -47,4 +47,6 @@ markers = [
     "payments: payment edge-case tests (mock PayPal); run with -m payments",
     "sandbox: live PayPal Sandbox calls; run with RUN_SANDBOX=1",
     "security: end-to-end adversarial tests (mock PayPal, mock Jev/LLM); run with -m security",
+    "real_catalog_check: checkout re-reads lines through app.product_truth (Channel3 faked per test)",
+    "real_cart_review: chat checkout runs app.cart_review (Channel3/Jev faked per test)",
 ]

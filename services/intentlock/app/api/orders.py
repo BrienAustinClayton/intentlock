@@ -49,6 +49,28 @@ def _approval_to_dict(a: Approval) -> dict[str, Any]:
     }
 
 
+def _user_safe_details(c: Check) -> Optional[dict[str, Any]]:
+    """What a shopper may see about a check: plain reasons, never scores, probabilities or thresholds."""
+    d = c.details_json if isinstance(c.details_json, dict) else {}
+    if c.step == "intent_diff":
+        items = [{k: i.get(k) for k in ("product_id", "title", "explained", "issue", "reason")}
+                 for i in d.get("items") or [] if isinstance(i, dict)]
+        return {"items": items, "price_anomaly": bool(d.get("price_anomaly"))}
+    if c.step == "decide":
+        return {"decision": d.get("decision"), "reasons": list(d.get("reasons") or [])}
+    if c.step in ("capture_or_void", "authorize_payment"):
+        return {"action": d.get("action")} if d.get("action") else None
+    return None
+
+
+def user_order_dict(order: Order) -> dict[str, Any]:
+    """Order as its owner sees it (the /me routes): checks without internals."""
+    d = _order_to_dict(order, include_checks=True)
+    by_id = {c.id: c for c in order.checks}
+    d["checks"] = [{**c, "score": None, "details": _user_safe_details(by_id[c["id"]])} for c in d["checks"]]
+    return d
+
+
 def _order_to_dict(order: Order, *, include_checks: bool = False) -> dict[str, Any]:
     d: dict[str, Any] = {
         "id": order.id,

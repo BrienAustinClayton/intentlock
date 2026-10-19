@@ -1,6 +1,7 @@
 import { HttpMethodEnum, ToastTypeEnum } from "@/shared/enums";
 import { showToast } from "@/shared/toast/toastManager";
 import { ApiCallOptions } from "@/shared/types";
+import { ApiCallError } from "./ApiCallError";
 
 export async function makeApiCall<ResponseType, PayloadType = null>(
   options: ApiCallOptions<PayloadType>
@@ -33,23 +34,26 @@ export async function makeApiCall<ResponseType, PayloadType = null>(
 
     const isUnauthorized = response.status === 401;
     if (isUnauthorized) {
-      showToast("Session expired. Please sign in.", ToastTypeEnum.Error);
-      throw new Error("Session expired");
+      if (!options.silent) showToast("Session expired. Please sign in.", ToastTypeEnum.Error);
+      throw new ApiCallError(401, "unauthenticated", "Session expired");
     }
 
     const isFailedRequest = !response.ok;
     if (isFailedRequest) {
-      const errorText = response.statusText || "Request failed";
-      showToast(errorText, ToastTypeEnum.Error);
-      throw new Error(errorText);
+      // The API explains failures as {error, reason}; show its reason, not the HTTP status text.
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const reason = typeof body.reason === "string" ? body.reason : response.statusText || "Request failed";
+      const code = typeof body.error === "string" ? body.error : "http_error";
+      if (!options.silent) showToast(reason, ToastTypeEnum.Error);
+      throw new ApiCallError(response.status, code, reason, body);
     }
 
     const responseData: ResponseType = await response.json();
     return responseData;
   } catch (error) {
-    const isErrorInstance = error instanceof Error;
-    const finalErrorMessage = isErrorInstance ? error.message : "Network error";
-    showToast(finalErrorMessage, ToastTypeEnum.Error);
-    throw new Error(finalErrorMessage);
+    if (error instanceof ApiCallError) throw error;
+    const finalErrorMessage = error instanceof Error ? error.message : "Network error";
+    if (!options.silent) showToast(finalErrorMessage, ToastTypeEnum.Error);
+    throw new ApiCallError(0, "network_error", finalErrorMessage);
   }
 }

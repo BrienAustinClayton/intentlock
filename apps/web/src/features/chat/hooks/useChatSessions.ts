@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
 import { ChatSummaryItem } from "../componentTypes";
-import { ChatCartState, ChatMessageItem } from "../types";
+import { ChatCartState, ChatMessageItem, CartReview } from "../types";
 
 export interface ActiveChatThread {
   id: string;
@@ -97,16 +97,20 @@ export function useChatSessions(activeChatId: string | null = null) {
   });
 
   const checkoutMutation = useMutation<
-    { messages: ChatMessageItem[]; cart: ChatCartState },
+    { messages: ChatMessageItem[]; cart: ChatCartState; review: CartReview },
     Error,
-    string
+    { chatId: string; confirm?: boolean }
   >({
-    mutationFn: (chatId: string) =>
-      makeApiCall<{ messages: ChatMessageItem[]; cart: ChatCartState }>({
+    // Sepilo checks the cart first; a blocked or needs-confirmation cart comes back as an ApiCallError
+    // carrying the review, which the cart drawer shows inline (so no toast).
+    mutationFn: ({ chatId, confirm }) =>
+      makeApiCall<{ messages: ChatMessageItem[]; cart: ChatCartState; review: CartReview }, { confirm: boolean }>({
         endpoint: `/api/me/chats/${encodeURIComponent(chatId)}/checkout`,
         method: HttpMethodEnum.Post,
+        payload: confirm ? { confirm: true } : undefined,
+        silent: true,
       }),
-    onSuccess: (_, chatId: string) => {
+    onSuccess: (_, { chatId }) => {
       queryClient.invalidateQueries({ queryKey: ["chatThread", chatId] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },

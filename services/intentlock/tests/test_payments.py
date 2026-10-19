@@ -43,6 +43,7 @@ from app.pipeline.core import run_pipeline  # noqa: E402
 from app.pipeline.runner import LocalExecutor  # noqa: E402
 from app.pipeline.steps import record_check  # noqa: E402
 from app.signing import b64url_encode, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 # --------------------------------------------------------------------------- #
 # Sandbox availability (evaluated at import time, not test time)
@@ -94,7 +95,7 @@ def test_client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        with TestClient(fastapi_app, raise_server_exceptions=False) as c:
+        with TestClient(fastapi_app, raise_server_exceptions=False, headers=ADMIN) as c:
             yield c
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)

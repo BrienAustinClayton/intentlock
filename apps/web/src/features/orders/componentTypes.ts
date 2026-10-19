@@ -20,7 +20,9 @@ export interface CartItemsTableProps {
 export interface OrderApprovalActionsProps {
   orderId: string;
   timeoutAt: string | null;
-  onApprove: () => void;
+  /** Order total; at HIGH_VALUE_APPROVAL or more the user types it back to approve. */
+  total: string;
+  onApprove: (confirmTotal?: string) => void;
   onDecline: () => void;
   isProcessing: boolean;
 }

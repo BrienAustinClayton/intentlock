@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { makeApiCall } from "@/shared/api/makeApiCall";
 import { HttpMethodEnum } from "@/shared/enums";
 import { OrderFilterTabEnum } from "../enums";
+import { ApiOrderDetail, toOrderDetail } from "../mappers";
 import { OrderDetailResponse, OrderSummary } from "../types";
 
 export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilterTabEnum.All, activeOrderId: string | null = null) {
@@ -20,21 +21,21 @@ export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilte
   const orderDetailQuery = useQuery<OrderDetailResponse>({
     queryKey: ["orderDetail", activeOrderId],
     queryFn: () =>
-      makeApiCall<OrderDetailResponse>({
+      makeApiCall<ApiOrderDetail>({
         endpoint: `/api/me/orders/${encodeURIComponent(activeOrderId || "")}`,
         method: HttpMethodEnum.Get,
-      }),
+      }).then(toOrderDetail),
     enabled: shouldFetchDetail,
   });
 
-  const approveOrderMutation = useMutation<OrderSummary, Error, string>({
-    mutationFn: (orderId: string) =>
-      makeApiCall<OrderSummary, { decision: string }>({
+  const approveOrderMutation = useMutation<OrderSummary, Error, { orderId: string; confirmTotal?: string }>({
+    mutationFn: ({ orderId, confirmTotal }) =>
+      makeApiCall<OrderSummary, { decision: string; confirm_total?: string }>({
         endpoint: `/api/me/orders/${encodeURIComponent(orderId)}/approval`,
         method: HttpMethodEnum.Post,
-        payload: { decision: "approve" },
+        payload: { decision: "approve", ...(confirmTotal ? { confirm_total: confirmTotal } : {}) },
       }),
-    onSuccess: (_, orderId: string) => {
+    onSuccess: (_, { orderId }) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["orderDetail", orderId] });
     },

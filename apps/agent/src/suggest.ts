@@ -5,6 +5,7 @@
  */
 import { channel3Search, moneyString, toCents, type Product } from "./catalog.ts";
 import { chatJson } from "./llm.ts";
+import { safeListings } from "./untrusted.ts";
 
 export interface Rule {
   categories: string[];
@@ -126,7 +127,10 @@ export async function suggest(message: string, history: Turn[], rules: Rule[]): 
     };
   }
 
-  const candidates = allowed.slice(0, 10);
+  const candidates = safeListings(allowed).slice(0, 10);
+  if (candidates.length === 0) {
+    return { reply: `I found products for "${query}", but their listings looked unsafe, so I left them out. Try another search.`, products: [] };
+  }
   const list = candidates
     .map((p, i) => `[${i}] ${p.title.slice(0, 110)}${p.brand ? ` | ${p.brand}` : ""} | $${p.price} | ${p.merchant} | ${p.category_title ?? p.category}`)
     .join("\n");

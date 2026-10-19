@@ -13,6 +13,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings, web_origins
+from app.access import require_admin
+from app.auth import send_security_notice
 from app.db import get_db
 from app.models import User
 from app.paypal import service as paypal
@@ -61,7 +63,7 @@ def reset_pending() -> None:  # tests
         _LATEST.clear()
 
 
-@router.get("/vault/setup")
+@router.get("/vault/setup", dependencies=[Depends(require_admin)])
 def vault_setup(user_id: str | None = None, db: Session = Depends(get_db)):
     if not user_id or not _USER_RE.fullmatch(user_id):
         _bad("invalid_user_id")
@@ -114,5 +116,7 @@ def vault_return(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(f"{_web()}/wallet?vaulted=0&reason=paypal_error", status_code=303)
     user.paypal_payment_token = pt
     db.commit()
+    send_security_notice(user.email, "PayPal was connected to your Sepilo account",
+                         "Your agents can now pay with this PayPal account, within your spending rules.")
     log.info("vault.vaulted user_id=%s token_suffix=%s", uid, pt[-4:])
     return RedirectResponse(f"{_web()}/wallet?vaulted=1", status_code=303)

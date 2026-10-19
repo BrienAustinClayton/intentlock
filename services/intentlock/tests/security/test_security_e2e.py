@@ -63,6 +63,7 @@ from app.models import Agent, Check, Intent, Mandate, Nonce, Order, Proof, User 
 from app.paypal import service as paypal_service  # noqa: E402
 from app.pipeline import adapters, limits  # noqa: E402
 from app.signing import b64url_encode, sign_payload, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 pytestmark = pytest.mark.security
 
@@ -159,7 +160,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        yield TestClient(fastapi_app)
+        yield TestClient(fastapi_app, headers=ADMIN)
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
 
@@ -206,6 +207,13 @@ def signed(seed, payload, *, keyid=None, key=None, **kw):
 def post(client, seed, payload, **kw):
     raw, h = signed(seed, payload, **kw)
     return client.post("/checkout", content=raw, headers=h)
+
+
+def new_request(db, seed):
+    """One order per purchase request: a second checkout needs a new signed request."""
+    seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id,
+                                request_text=seed.intent.request_text)
+    return seed.intent
 
 
 def ok(client, seed, **over):
@@ -465,6 +473,7 @@ def test_llm_hook_junk_decision_is_ignored(client, db, seed, monkeypatch):
     assert_never_captured(db, j)
     # wrong item count / wrong type
     monkeypatch.setattr(adapters, "_import_llm_intent_diff", lambda: (lambda rt, m, cart, rule: {"items": "capture"}))
+    new_request(db, seed)
     j2 = ok(client, seed)
     assert j2["decision"] == "hold"
     assert_never_captured(db, j2)
@@ -478,10 +487,12 @@ def test_llm_cannot_clear_a_heuristic_injection_flag(client, db, seed, jev):
     assert ops() == ["authorize", "void"]
     # LLMs failing or returning junk does not help the attacker either
     jev.inj_raises = True
+    new_request(db, seed)
     j2 = ok(client, seed, page_urls=["https://freshmart.example/p/attack"])
     assert j2["decision"] == "void"
     jev.inj_raises = False
     jev.inj_jev, jev.inj_guard = math.nan, 5.0
+    new_request(db, seed)
     j3 = ok(client, seed, page_urls=["https://freshmart.example/p/attack"])
     assert j3["decision"] == "void"
     assert "capture" not in ops()

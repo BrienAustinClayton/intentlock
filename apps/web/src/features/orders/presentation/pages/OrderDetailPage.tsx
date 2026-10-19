@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield, Wallet } from "lucide-react";
 import { OrderStatusEnum } from "../../enums";
 import { useOrdersManagement } from "../../hooks/useOrdersManagement";
 import { OrderDetailPageProps } from "../../pageTypes";
@@ -43,6 +43,7 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
   const isPaid = order.status === OrderStatusEnum.Captured;
   const isBlocked = order.status === OrderStatusEnum.Voided || order.status === OrderStatusEnum.Rejected;
   const isPending = order.status === OrderStatusEnum.PendingApproval;
+  const isAwaitingPayment = order.status === OrderStatusEnum.AwaitingPayment && Boolean(order.pay_url);
 
   const statusStyle = isPaid
     ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -58,6 +59,8 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
     ? "Blocked"
     : isPending
     ? "Needs Approval"
+    : isAwaitingPayment
+    ? "Pay in PayPal"
     : "Checking";
 
   const isApprovalRequired = order.status === OrderStatusEnum.PendingApproval;
@@ -98,11 +101,28 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
         </div>
       </div>
 
+      {isAwaitingPayment && order.pay_url && (
+        <div className="saas-card px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-fg">Approve the payment in PayPal</div>
+            <p className="mt-0.5 text-xs text-fg-muted">
+              PayPal holds the money while Sepilo checks the order, then charges or releases it. After this first
+              approval your agent pays on its own.
+            </p>
+          </div>
+          <a href={order.pay_url} className="intentlock-btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0">
+            <Wallet className="w-4 h-4" strokeWidth={1.8} />
+            Pay with PayPal
+          </a>
+        </div>
+      )}
+
       {isApprovalRequired && (
         <OrderApprovalActions
           orderId={order.id}
           timeoutAt={order.approval_timeout_at}
-          onApprove={() => approveOrder(order.id)}
+          total={order.total}
+          onApprove={(confirmTotal?: string) => approveOrder({ orderId: order.id, confirmTotal })}
           onDecline={() => declineOrder(order.id)}
           isProcessing={isProcessingApproval}
         />

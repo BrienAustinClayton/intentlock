@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import subprocess
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.access import require_admin
 from app.config import settings, web_origins
 from app.errors import http_exception_handler, unhandled_exception_handler
 from app.api import (
@@ -73,11 +75,16 @@ async def _lifespan(app: FastAPI):  # noqa: ARG001
                 pass
 
 
+_DOCS = os.environ.get("API_DOCS") == "1"  # API schema stays private unless turned on (local dev)
+
 app = FastAPI(
     title="IntentLock",
     description="Autonomous agent payment guard service",
     version="0.1.0",
     lifespan=_lifespan,
+    docs_url="/docs" if _DOCS else None,
+    redoc_url="/redoc" if _DOCS else None,
+    openapi_url="/openapi.json" if _DOCS else None,
 )
 
 # ------------------------------------------------------------------ #
@@ -129,21 +136,22 @@ async def health() -> dict[str, Any]:
 app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(chats.router)
-app.include_router(users.router)
+app.include_router(users.router, dependencies=[Depends(require_admin)])
 app.include_router(vault.router)
 app.include_router(paypal_return.router)
 app.include_router(agents.router)
-app.include_router(mandates.router)
+app.include_router(mandates.router, dependencies=[Depends(require_admin)])
 app.include_router(intents.router)
 app.include_router(catalog.router)
 app.include_router(checkout.router)
 # proofs before orders: proofs owns GET /orders/{order_id}/proof (orders.py keeps a stub of it)
 app.include_router(proofs.router)
-app.include_router(orders.router)
-app.include_router(approvals.router)
-app.include_router(graph.router)
+app.include_router(orders.router, dependencies=[Depends(require_admin)])
+app.include_router(approvals.router, dependencies=[Depends(require_admin)])
+app.include_router(graph.router, dependencies=[Depends(require_admin)])
 app.include_router(schedule.router)
 app.include_router(lab.router)
+app.include_router(lab.me_router)
 app.include_router(webhooks.router)
-app.include_router(llm.router)
-app.include_router(console.router)
+app.include_router(llm.router, dependencies=[Depends(require_admin)])
+app.include_router(console.router, dependencies=[Depends(require_admin)])

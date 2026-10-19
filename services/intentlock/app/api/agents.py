@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.crypto.keys import load_public_key
+from app.access import require_admin
 from app.db import get_db
 from app.ids import new_id
 from app.models import Agent, User
@@ -35,7 +36,7 @@ def _agent_out(a: Agent) -> dict:
     }
 
 
-@router.post("/agents", status_code=201)
+@router.post("/agents", status_code=201, dependencies=[Depends(require_admin)])
 def create_agent(payload: AgentCreate, db: Session = Depends(get_db)):
     if db.get(User, payload.user_id) is None:
         raise HTTPException(
@@ -61,7 +62,7 @@ def create_agent(payload: AgentCreate, db: Session = Depends(get_db)):
     return _agent_out(agent)
 
 
-@router.post("/agents/{agent_id}/revoke")
+@router.post("/agents/{agent_id}/revoke", dependencies=[Depends(require_admin)])
 def revoke_agent(agent_id: str, db: Session = Depends(get_db)):
     agent = db.get(Agent, agent_id)
     if agent is None:

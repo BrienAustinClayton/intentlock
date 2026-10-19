@@ -27,6 +27,7 @@ from app.jev import compute_cost, decide, usage_summary  # noqa: E402
 from app.llm import LLMUnavailable  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
 from app.models import LLMCache, LLMUsage  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 ADVISORY_LOCK_KEY = 912345
 
@@ -370,7 +371,7 @@ def test_usage_endpoint(monkeypatch, db):
     decide("state", QS, "intent_diff", db=db)
     fastapi_app.dependency_overrides[get_db] = lambda: db
     try:
-        r = TestClient(fastapi_app).get("/llm/usage")
+        r = TestClient(fastapi_app, headers=ADMIN).get("/llm/usage")
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
     assert r.status_code == 200

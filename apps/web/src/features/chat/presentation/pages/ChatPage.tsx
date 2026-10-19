@@ -3,13 +3,15 @@
 import React, { useState } from "react";
 import { ArrowUp, Menu, ShoppingCart } from "lucide-react";
 import { useChatSessions } from "../../hooks/useChatSessions";
-import { ChatCartState, ChatMessageItem, ChatProductItem } from "../../types";
+import { CartReview, ChatCartState, ChatMessageItem, ChatProductItem } from "../../types";
 import { ChatCartDrawer } from "../components/ChatCartDrawer";
 import { ChatHistoryPanel } from "../components/ChatHistoryPanel";
 import { ChatMessageItemView } from "../components/ChatMessageItemView";
 import { Button } from "@/shared/presentation/components/Button";
 import { Input } from "@/shared/presentation/components/Input";
-import { ButtonVariantEnum } from "@/shared/enums";
+import { ButtonVariantEnum, ToastTypeEnum } from "@/shared/enums";
+import { ApiCallError } from "@/shared/api/ApiCallError";
+import { showToast } from "@/shared/toast/toastManager";
 
 const DEFAULT_EMPTY_CART: ChatCartState = {
   items: [],
@@ -24,6 +26,7 @@ export function ChatPage() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [inputText, setInputText] = useState<string>("");
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [cartReview, setCartReview] = useState<CartReview | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
@@ -182,14 +185,24 @@ export function ChatPage() {
         onClose={() => setIsCartOpen(false)}
         onUpdateQty={(productId: string, qty: number) => {
           if (activeChatId) {
+            setCartReview(null); // the cart changed: it is checked again on checkout
             setCartQty({ chatId: activeChatId, productId, qty });
           }
         }}
-        onCheckout={() => {
-          if (activeChatId) {
-            checkout(activeChatId);
-          }
+        onCheckout={(confirm: boolean) => {
+          if (!activeChatId) return;
+          checkout({ chatId: activeChatId, confirm })
+            .then(() => {
+              setCartReview(null);
+              setIsCartOpen(false);
+            })
+            .catch((error: unknown) => {
+              const review = error instanceof ApiCallError ? (error.data.review as CartReview | undefined) : undefined;
+              setCartReview(review ?? null);
+              if (!review) showToast(error instanceof Error ? error.message : "Checkout failed", ToastTypeEnum.Error);
+            });
         }}
+        review={cartReview}
       />
     </div>
   );

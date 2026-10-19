@@ -112,7 +112,8 @@ def test_scenario_reaches_expected_decision(lab_env, fake_jev, scenario):
     r = lab_env.post(f"/lab/{scenario}", json={"user_id": PRIYA})
     assert r.status_code == 200, r.text
     j = r.json()
-    assert set(j) == {"order_id", "scenario", "expected_decision", "actual_decision", "status", "reasons"}
+    assert set(j) == {"order_id", "order", "scenario", "expected_decision", "actual_decision", "status", "reasons"}
+    assert j["order"]["id"] == j["order_id"] and j["order"]["checks"]
     assert j["scenario"] == scenario
     assert j["expected_decision"] == expected
     assert j["actual_decision"] == expected, j
@@ -173,9 +174,46 @@ def test_unknown_scenario_404(lab_env):
     assert r.status_code == 404 and r.json()["error"] == "not_found"
 
 
-def test_unknown_user_404(lab_env):
-    r = lab_env.post("/lab/normal", json={"user_id": "usr_missing"})
-    assert r.status_code == 404
+def test_caller_cannot_pick_the_lab_user(lab_env, db):
+    r = lab_env.post("/lab/normal", json={"user_id": "usr_someone_else"})
+    assert r.status_code == 200
+    assert db.get(Order, r.json()["order_id"]).user_id == PRIYA
+
+
+def test_lab_routes_closed_without_operator_key_or_session(lab_env):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    anon = TestClient(app)
+    assert anon.post("/lab/normal").status_code == 401
+    assert anon.post("/lab/reset").status_code == 401
+    assert anon.post("/me/lab/normal").status_code == 401
+    assert anon.post("/me/lab/reset").status_code == 401
+
+
+def test_lab_reset_keeps_other_users_orders(lab_env, db):
+    from decimal import Decimal
+    from app.ids import new_id
+    from app.models import Agent, Intent, User
+    from app.intents import new_signed_intent
+
+    u = User(id=new_id("usr"), name="Other")
+    db.add(u)
+    db.flush()
+    a = Agent(id=new_id("agt"), user_id=u.id, name="x", public_key="k", device_id="d", verified=True)
+    db.add(a)
+    db.flush()
+    i = new_signed_intent(user_id=u.id, agent_id=a.id, request_text="socks")
+    db.add(i)
+    db.flush()
+    other = Order(id=new_id("ord"), intent_id=i.id, agent_id=a.id, user_id=u.id, merchant="m",
+                  cart_json=[], total=Decimal("1.00"), currency="USD", status="captured")
+    db.add(other)
+    db.commit()
+    lab_env.post("/lab/revoked_agent")
+    assert lab_env.post("/lab/reset").status_code == 200
+    db.expire_all()
+    assert db.get(Order, other.id) is not None
 
 
 def test_lab_reset_deletes_data(lab_env, db):

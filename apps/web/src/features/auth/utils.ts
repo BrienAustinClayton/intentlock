@@ -5,6 +5,13 @@ export async function handleSignOut(): Promise<void> {
   window.location.assign("/login");
 }
 
+/** Step-up: end this session and sign in again, then come back to `next`. */
+export async function signInAgainFor(next: string): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+}
+
 export function sanitizeDigits(inputVal: string, maxDigits: number): string {
   const digitsOnly = inputVal.replace(/\D/g, "");
   return digitsOnly.slice(0, maxDigits);

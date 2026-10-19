@@ -43,6 +43,7 @@ from app.pipeline.core import run_pipeline  # noqa: E402
 from app.pipeline.runner import LocalExecutor  # noqa: E402
 from app.pipeline.steps import ALL_STEPS, record_check  # noqa: E402
 from app.signing import b64url_encode, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 ADVISORY_LOCK_KEY = 912345
 PAGES = {
@@ -143,7 +144,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        yield TestClient(fastapi_app)
+        yield TestClient(fastapi_app, headers=ADMIN)
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
 
@@ -812,3 +813,173 @@ def test_refused_saved_paypal_falls_back_to_buyer_in_sandbox(client, db, seed, b
     o = _awaiting(client, db, seed)
     assert ops() == ["authorize", "create_checkout"]
     assert o.status == "awaiting_payment"
+
+
+def test_agent_reads_only_its_own_intent_with_a_signature(client, db, seed):  # client: DB override
+    from app.main import app
+
+    url = f"/intents/{seed.intent.id}"
+    anon = TestClient(app)
+    assert anon.get(url).status_code == 401
+    h = sign_request("GET", f"http://testserver{url}", b"", seed.priv, seed.agent.id)
+    r = anon.get(url, headers=h)
+    assert r.status_code == 200 and r.json()["request_text"] == seed.intent.request_text
+    other = _make_seed(db, name="Ravi")
+    h2 = sign_request("GET", f"http://testserver{url}", b"", other.priv, other.agent.id)
+    assert anon.get(url, headers=h2).status_code == 404
+
+
+def test_lab_test_key_agent_cannot_use_real_checkout(client, db, seed):
+    from app.crypto.vector import VECTOR_PRIVATE_KEY, VECTOR_PUBLIC_KEY
+
+    seed.agent.public_key = VECTOR_PUBLIC_KEY
+    db.commit()
+    raw = json.dumps(body(seed)).encode()
+    h = sign_request("POST", "http://testserver/checkout", raw, VECTOR_PRIVATE_KEY, seed.agent.id)
+    r = client.post("/checkout", content=raw, headers=h)
+    assert r.status_code == 403 and r.json()["error"] == "lab_agent"
+
+
+# --------------------------------------------------------------------------- #
+# Server-side truth at checkout, approved-cart lock, one order per request
+# --------------------------------------------------------------------------- #
+def _channel3(monkeypatch, *, price=3.5, domain="freshmart.com", category="food-beverages", stock="InStock"):
+    from app import product_truth
+
+    def fake(pid, db=None, fresh=False):
+        assert fresh is True
+        return {"id": pid, "title": "Whole Milk 1L (Channel3)", "category": {"path": [{"slug": category}]},
+                "offers": [{"domain": domain, "availability": stock, "url": f"https://{domain}/p/{pid}",
+                            "price": {"price": price, "currency": "USD"}}]}
+
+    monkeypatch.setattr(product_truth, "get_product", fake)
+
+
+@pytest.fixture()
+def real_seed(db):
+    """Seed whose rule allows the Channel3 category and store used by _channel3."""
+    s = _make_seed(db, name="Mia")
+    s.mandate.categories = ["food-beverages"]
+    s.mandate.merchants = ["freshmart.com"]
+    db.commit()
+    return s
+
+
+def _cart_body(seed, **line):
+    return body(seed, merchant="freshmart.com", cart=[{**MILK, **line}])
+
+
+@pytest.mark.real_catalog_check
+def test_checkout_price_must_match_channel3(client, db, real_seed, monkeypatch):
+    _channel3(monkeypatch, price=4.10)
+    r = post(client, real_seed, _cart_body(real_seed))
+    assert r.status_code == 409 and r.json()["error"] == "cart_not_verified"
+    assert "$4.10" in r.json()["reason"]
+    assert db.query(Order).filter_by(intent_id=real_seed.intent.id).count() == 0
+
+
+@pytest.mark.real_catalog_check
+def test_checkout_store_must_sell_the_product(client, real_seed, monkeypatch):
+    _channel3(monkeypatch, domain="other-shop.com")
+    r = post(client, real_seed, _cart_body(real_seed))
+    assert r.status_code == 409 and "isn't sold by freshmart.com" in r.json()["reason"]
+    _channel3(monkeypatch, stock="OutOfStock")
+    assert "out of stock" in post(client, real_seed, _cart_body(real_seed)).json()["reason"]
+
+
+@pytest.mark.real_catalog_check
+def test_checkout_uses_channel3_category_not_the_agents(client, db, real_seed, monkeypatch):
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    _channel3(monkeypatch, category="electronics")  # the agent claims "groceries"
+    j = ok(client, real_seed, merchant="freshmart.com")
+    assert j["status"] == "rejected"
+    o = order_of(db, j["order_id"])
+    assert o.cart_json[0]["category"] == "electronics" and o.cart_json[0]["title"] == "Whole Milk 1L (Channel3)"
+    assert "https://freshmart.com/p/p_milk" in o.page_urls
+
+
+@pytest.mark.real_catalog_check
+def test_checkout_must_match_the_cart_the_user_approved(client, db, real_seed, monkeypatch):
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    _channel3(monkeypatch)
+    approved = [{"product_id": "p_milk", "qty": 1, "unit_price": "3.50", "merchant": "freshmart.com"}]
+
+    def fresh_intent(cart):
+        real_seed.intent = create_intent(db, user_id=real_seed.user.id, agent_id=real_seed.agent.id,
+                                         request_text="Whole milk", approved_cart=cart)
+        return real_seed.intent
+
+    fresh_intent(approved)
+    r = post(client, real_seed, _cart_body(real_seed, qty=2))
+    assert r.status_code == 409 and r.json()["error"] == "not_what_you_approved"
+    r = post(client, real_seed, _cart_body(real_seed, product_id="p_gift_card"))
+    assert r.status_code == 409 and r.json()["error"] == "not_what_you_approved"
+    fresh_intent([{**approved[0], "unit_price": "3.00"}])
+    r = post(client, real_seed, _cart_body(real_seed))
+    assert r.status_code == 409 and "more than the $3.00 you approved" in r.json()["reason"]
+    fresh_intent([{**approved[0], "unit_price": "3.99"}])  # cheaper now: fine
+    assert post(client, real_seed, _cart_body(real_seed)).status_code == 200
+
+
+def test_one_order_per_purchase_request(client, db, seed, monkeypatch):
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    first = ok(client, seed)
+    assert first["status"] == "captured"
+    r = post(client, seed, body(seed))
+    assert r.status_code == 409 and r.json()["error"] == "intent_used"
+    order_of(db, first["order_id"]).status = "failed"  # a technical failure frees the request
+    db.commit()
+    assert post(client, seed, body(seed)).status_code == 200
+
+
+def test_intent_signature_covers_the_approved_cart(db, seed):
+    from app.intents import verify_intent_signature
+
+    cart = [{"product_id": "p_milk", "qty": 1, "unit_price": "3.50", "merchant": "freshmart.com"}]
+    i = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="milk", approved_cart=cart)
+    assert verify_intent_signature(i) is True
+    i.approved_cart = [{**cart[0], "qty": 5}]
+    assert verify_intent_signature(i) is False
+    assert verify_intent_signature(seed.intent) is True  # requests without a cart keep the old payload
+
+
+def _hold_everything(monkeypatch):
+    from app.policy import Decision
+
+    real = core.decide
+
+    def hold(*a, **k):
+        d = real(*a, **k)
+        return Decision("hold", ["Graph risk is high"]) if d.decision != "reject" else d
+    monkeypatch.setattr(core, "decide", hold)
+
+
+def test_pending_approvals_are_capped_per_agent(client, db, seed, monkeypatch):
+    from app.pipeline.core import TOO_MANY_PENDING_REASON
+
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    _hold_everything(monkeypatch)
+    monkeypatch.setattr(core, "PENDING_APPROVALS_PER_AGENT", 2)
+    statuses = []
+    for _ in range(3):
+        statuses.append(ok(client, seed)["status"])
+        seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    assert statuses == ["pending_approval", "pending_approval", "voided"]
+    last = db.query(Order).filter_by(agent_id=seed.agent.id, status="voided").one()
+    assert TOO_MANY_PENDING_REASON in last.reasons
+
+
+def test_agent_daily_order_limit(client, db, seed, monkeypatch):
+    from app import velocity
+
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    monkeypatch.setattr(velocity, "AGENT_ORDERS_PER_DAY", 1)
+    assert ok(client, seed)["status"] == "captured"
+    seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    r = post(client, seed, body(seed))
+    assert r.status_code == 429 and r.json()["error"] == "rate_limited"

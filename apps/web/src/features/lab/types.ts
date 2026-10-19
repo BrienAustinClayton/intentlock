@@ -20,6 +20,8 @@ export interface ScenarioRunResult {
   actual_decision: string;
   status: string;
   reasons: string[];
+  /** The lab order with its checks (lab orders belong to the demo user, so they come back with the run). */
+  order: { checks?: ScenarioCheckStep[] } | null;
 }
 
 export interface ScenarioCheckStep {

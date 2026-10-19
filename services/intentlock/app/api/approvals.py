@@ -4,7 +4,9 @@ from __future__ import annotations
 from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, field_validator
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,12 +15,15 @@ from app.models import Approval, Order
 from app.paypal import service as paypal
 from app.pipeline.steps import build_proof_step, set_status
 from app.signing import utcnow
+from app.velocity import require_typed_total
 
 router = APIRouter(tags=["approvals"])
 
 
 class ApprovalRequest(BaseModel):
     decision: str
+    # Approving an order of HIGH_VALUE or more needs its total typed back (approval fatigue)
+    confirm_total: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("decision")
     @classmethod
@@ -68,6 +73,7 @@ def post_approval(
             raise HTTPException(status_code=409, detail={"error": "conflict", "reason": "approval window has expired"})
 
     if body.decision == "approve":
+        require_typed_total(order.total, body.confirm_total)
         try:
             capture_id = paypal.capture(order.authorization_id, request_id=order.id + "-approval")
         except paypal.PayPalError as e:

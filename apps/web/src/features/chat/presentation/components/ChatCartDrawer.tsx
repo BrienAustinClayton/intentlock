@@ -6,6 +6,8 @@ import { CartDrawerProps } from "../../componentTypes";
 import { CartItemLine } from "../../types";
 import { Button } from "@/shared/presentation/components/Button";
 import { ButtonVariantEnum } from "@/shared/enums";
+import { CartReviewDecisionEnum } from "../../enums";
+import { CartCheckList } from "./CartCheckList";
 
 export function ChatCartDrawer({
   isOpen,
@@ -14,10 +16,19 @@ export function ChatCartDrawer({
   onClose,
   onUpdateQty,
   onCheckout,
+  review,
 }: CartDrawerProps) {
   const cartItems = cart && Array.isArray(cart.items) ? cart.items : [];
   const storeNames = Array.from(new Set(cartItems.map((item: CartItemLine) => item.merchant)));
   const hasNoItems = cartItems.length === 0;
+  const isBlocked = review?.decision === CartReviewDecisionEnum.Block;
+  const needsConfirmation = review?.decision === CartReviewDecisionEnum.Confirm;
+  const cartIssues = Array.isArray(cart.issues) ? cart.issues : [];
+  const checkoutLabel = isBusy
+    ? "Checking cart…"
+    : needsConfirmation
+    ? "Buy anyway"
+    : "Review & Checkout with PayPal";
 
   return (
     <div className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`} aria-hidden={!isOpen}>
@@ -138,14 +149,19 @@ export function ChatCartDrawer({
             <span className="text-lg font-bold tabular-nums text-fg">${cart.total}</span>
           </div>
 
+          {review && <CartCheckList review={review} />}
+          <p className="text-xs text-fg-dim">
+            Sepilo checks your rules, the prices with Channel3 and the listings (with Jev&apos;s second opinion)
+            before anything is paid.
+          </p>
           <Button
             variant={ButtonVariantEnum.Primary}
-            disabled={hasNoItems}
+            disabled={hasNoItems || isBlocked || cartIssues.length > 0}
             isLoading={isBusy}
-            onClick={onCheckout}
+            onClick={() => onCheckout(needsConfirmation)}
             className="w-full"
           >
-            Review & Checkout with PayPal
+            {checkoutLabel}
           </Button>
         </div>
       </aside>

@@ -12,6 +12,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any
 
 import httpx
@@ -102,6 +103,14 @@ def run_to_dict(run: AgentRun | None, order: Order | None = None) -> dict[str, A
     }
 
 
+def order_summary(order: Order) -> str:
+    lines = [l for l in order.cart_json or [] if isinstance(l, dict)]
+    count = sum(int(l.get("qty") or 0) for l in lines)
+    what = (f"{lines[0].get('qty')} × {str(lines[0].get('title') or 'item')[:120]}" if len(lines) == 1
+            else f"{count} items")
+    return f"Bought {what} from {order.merchant} for ${Decimal(str(order.total)):.2f}."
+
+
 def _finish(db, run: AgentRun, status: str, summary: str, errors: list[str] | None = None,
             order_id: str | None = None) -> None:
     run.status = status
@@ -181,9 +190,17 @@ def execute_run(run_id: str, db=None) -> None:
         errors = data.get("errors") if isinstance(data.get("errors"), list) else []
         order_id = data.get("order_id") if isinstance(data.get("order_id"), str) else None
         if order_id:
-            if data.get("status") == "awaiting_payment":
-                summary = f"{summary or 'Order placed.'} Approve the payment in PayPal to finish."
-            return _finish(db, run, "ordered", summary or "Order placed.", errors, order_id)
+            placed = db.get(Order, order_id)
+            if placed is None or placed.intent_id != run.intent_id or placed.user_id != run.user_id:
+                # The agent's reply is untrusted: only an order made for this request counts.
+                runlog.emit("agent_run.foreign_order", run_id=run.id, order_id=order_id[:64])
+                return _finish(db, run, "failed", "The shopping agent reported an order that isn't this purchase.")
+            # What the user reads comes from the order itself, not from the agent's account of it, so an agent
+            # can't hide that it bought something else, from another store or for more.
+            summary = order_summary(placed)
+            if placed.status == "awaiting_payment":
+                summary += " Approve the payment in PayPal to finish."
+            return _finish(db, run, "ordered", summary, errors, order_id)
         return _finish(db, run, "failed", summary or "The agent finished without placing an order.", errors)
     except Exception:
         log.exception("hosted_agents.run_crashed run=%s", run_id)

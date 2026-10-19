@@ -24,6 +24,7 @@ from app.pipeline.steps import (
 )
 from app.policy import decide
 from app.signing import iso_z, utcnow
+from app.velocity import PENDING_APPROVALS_PER_AGENT, pending_approvals
 
 log = logging.getLogger("intentlock.pipeline")
 
@@ -31,6 +32,7 @@ PAYMENT_FAILED_REASON = "Payment could not be authorized"
 CHECKOUT_FAILED_REASON = "Checkout could not be completed"
 PIPELINE_HOLD_REASON = "Policy check could not be completed; needs your review"
 NO_SAVED_PAYMENT = "no_payment_token"
+TOO_MANY_PENDING_REASON = "Too many orders from this agent are already waiting for your approval"
 
 
 class Executor(Protocol):
@@ -274,10 +276,15 @@ async def _check_and_settle(db, order, ex, intent, mandate, agent, verify, manda
     t0 = time.perf_counter()
     d = decide(verify, mandate_out, inj, diff, graph)
     decision = d.decision if d.decision in ("capture", "void", "hold") else "void"
+    reasons = list(d.reasons)
+    if decision == "hold" and pending_approvals(db, order.agent_id, exclude_order_id=order.id) >= PENDING_APPROVALS_PER_AGENT:
+        # Approval fatigue: don't queue yet another order for a human who already has a pile to review.
+        decision = "void"
+        reasons.append(TOO_MANY_PENDING_REASON)
     record_check(db, order.id, "decide", decision_result(decision),
-                 {"decision": decision, "reasons": d.reasons}, ms_since(t0))
+                 {"decision": decision, "reasons": reasons}, ms_since(t0))
     order.decision = decision
-    order.reasons = list(d.reasons)
+    order.reasons = reasons
     db.commit()
 
     # Block 6: capture / void / hold

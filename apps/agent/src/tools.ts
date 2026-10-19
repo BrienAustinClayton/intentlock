@@ -7,6 +7,7 @@ import {
 import { agentId } from "./config.ts";
 import { currentRun, type CartLine, type CheckoutResult } from "./context.ts";
 import { signedFetch } from "./intentlock.ts";
+import { fetchPublicPage } from "./safeFetch.ts";
 
 const slim = (p: Product) => ({
   product_id: p.product_id,
@@ -107,8 +108,7 @@ export const readPage = createTool({
     url: z.string(), status: z.number(), html_length: z.number(), untrusted_page_text: z.string(),
   }),
   execute: async ({ url }) => {
-    if (!/^https?:\/\//i.test(url)) throw new Error("only http(s) pages");
-    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(10_000) });
+    const res = await fetchPublicPage(url); // public hosts only, every redirect re-checked (SSRF)
     const html = (await res.text()).slice(0, 2_000_000);
     return {
       url,

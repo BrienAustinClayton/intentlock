@@ -36,7 +36,7 @@ export interface CreateOrUpdateRulePayload {
 export interface RuleModalProps {
   mode: RuleModalModeEnum;
   initialRule: SpendingRule | null;
-  availableAgents: Array<{ id: string; name: string }>;
+  availableAgents: Array<{ id: string; name: string; managed?: boolean; revoked_at?: string | null }>;
   onClose: () => void;
 }
 

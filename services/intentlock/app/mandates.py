@@ -176,7 +176,7 @@ def mandate_row_matches(mandate: Mandate) -> bool:
 # --------------------------------------------------------------------------- #
 def _check_window(mandate: Mandate) -> None:
     if mandate.expires_at is not None and mandate.expires_at <= mandate.starts_at:
-        raise ServiceError(422, "invalid_window", "expires_at must be after starts_at")
+        raise ServiceError(422, "invalid_window", "The end date must be after the rule starts. Pick a later date.")
 
 
 def _apply_fields(mandate: Mandate, fields: dict) -> None:

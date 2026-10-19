@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 import { PERIOD_LABELS, SHOPPING_CATEGORIES } from "../../constants";
 import { RuleModalModeEnum, RulePeriodEnum, RuleStoresSelectionEnum } from "../../enums";
@@ -10,7 +11,11 @@ import { RuleModalProps } from "../../types";
 import { isValidStoreDomain, parseStoreDomains } from "../../utils";
 import { Button } from "@/shared/presentation/components/Button";
 import { Input } from "@/shared/presentation/components/Input";
+import { Select } from "@/shared/presentation/components/Select";
 import { ButtonVariantEnum, InputTypeEnum } from "@/shared/enums";
+
+const localDateString = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export function RuleFormModal({
   mode,
@@ -20,12 +25,12 @@ export function RuleFormModal({
 }: RuleModalProps) {
   const isEditMode = mode === RuleModalModeEnum.Edit && initialRule !== null;
 
-  const initialAgentId = initialRule ? initialRule.agent_id : availableAgents[0]?.id || "";
+  const initialAgentId = initialRule ? initialRule.agent_id : "";
   const initialBudget = initialRule ? initialRule.budget_amount : "";
   const initialPeriod = initialRule ? initialRule.budget_period : RulePeriodEnum.Month;
   const initialCategories = initialRule ? [...initialRule.categories] : [];
   const initialStoresSelection =
-    initialRule && initialRule.merchants.includes("*")
+    !initialRule || initialRule.merchants.includes("*")
       ? RuleStoresSelectionEnum.Any
       : RuleStoresSelectionEnum.Only;
   const initialStoresText =
@@ -43,8 +48,11 @@ export function RuleFormModal({
   const [expires, setExpires] = useState<string>(initialExpires);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { createRule, updateRule, isCreatingRule, isUpdatingRule } = useSpendingRules();
+  const { createRule, updateRule, isCreatingRule, isUpdatingRule, isLoadingAgents } = useSpendingRules();
   const isSubmitting = isCreatingRule || isUpdatingRule;
+  const activeAgents = availableAgents.filter((agent) => !agent.revoked_at);
+  const selectedAgentId = activeAgents.some((agent) => agent.id === agentId) ? agentId : activeAgents[0]?.id ?? "";
+  const today = localDateString(new Date());
 
   const toggleCategory = (catKey: string) => {
     const isAlreadySelected = categories.includes(catKey);
@@ -58,7 +66,7 @@ export function RuleFormModal({
     event.preventDefault();
 
     const formValidation = spendingRuleFormSchema.safeParse({
-      agentId,
+      agentId: selectedAgentId,
       budget,
       period,
       categories,
@@ -92,10 +100,16 @@ export function RuleFormModal({
       return;
     }
 
-    const parsedExpiryDate = expires.length > 0 ? new Date(`${expires}T23:59:59`).toISOString() : null;
+    const endOfExpiryDay = expires.length > 0 ? new Date(`${expires}T23:59:59`) : null;
+    if (endOfExpiryDay && (Number.isNaN(endOfExpiryDay.getTime()) || endOfExpiryDay.getTime() <= Date.now())) {
+      setErrorMessage("Pick an end date from today onwards, or leave it empty.");
+      return;
+    }
+    const parsedExpiryDate = endOfExpiryDay ? endOfExpiryDay.toISOString() : null;
+    setErrorMessage(null);
 
     const payload = {
-      agent_id: agentId,
+      agent_id: selectedAgentId,
       categories,
       merchants: stores,
       budget_amount: Number(budget).toFixed(2),
@@ -105,13 +119,13 @@ export function RuleFormModal({
     };
 
     if (isEditMode && initialRule) {
-      updateRule({ ruleId: initialRule.id, payload }).then(() => {
-        onClose();
-      });
+      updateRule({ ruleId: initialRule.id, payload })
+        .then(() => onClose())
+        .catch((error: Error) => setErrorMessage(error.message));
     } else {
-      createRule(payload).then(() => {
-        onClose();
-      });
+      createRule(payload)
+        .then(() => onClose())
+        .catch((error: Error) => setErrorMessage(error.message));
     }
   };
 
@@ -137,6 +151,15 @@ export function RuleFormModal({
           </button>
         </div>
 
+        {!isLoadingAgents && activeAgents.length === 0 && (
+          <p className="text-xs text-amber-400">
+            Create or connect an agent first, then give it a spending rule.{" "}
+            <Link href="/agents" className="font-medium text-blue-400 hover:text-blue-300">
+              Go to Agents
+            </Link>
+          </p>
+        )}
+
         {errorMessage !== null && (
           <p role="alert" className="text-xs text-rose-400">
             {errorMessage}
@@ -146,17 +169,18 @@ export function RuleFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
           <label className="block space-y-1.5">
             <span className="block text-[13px] font-medium text-fg-2">Agent</span>
-            <select
-              value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
-              className="saas-input h-10"
-            >
-              {availableAgents.map((ag) => (
-                <option key={ag.id} value={ag.id}>
-                  {ag.name}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={selectedAgentId}
+              onChange={setAgentId}
+              options={activeAgents.map((agent) => ({
+                value: agent.id,
+                label: agent.name,
+                description: agent.managed ? "Hosted by Sepilo" : "Your own agent",
+              }))}
+              placeholder={isLoadingAgents ? "Loading agents…" : "No agents yet"}
+              disabled={activeAgents.length === 0}
+              ariaLabel="Agent"
+            />
           </label>
 
           <label className="block space-y-1.5">
@@ -173,15 +197,15 @@ export function RuleFormModal({
 
           <label className="block space-y-1.5">
             <span className="block text-[13px] font-medium text-fg-2">Frequency</span>
-            <select
+            <Select
               value={period}
-              onChange={(e) => setPeriod(e.target.value as RulePeriodEnum)}
-              className="saas-input h-10"
-            >
-              <option value={RulePeriodEnum.Month}>{PERIOD_LABELS[RulePeriodEnum.Month]}</option>
-              <option value={RulePeriodEnum.Week}>{PERIOD_LABELS[RulePeriodEnum.Week]}</option>
-              <option value={RulePeriodEnum.Once}>{PERIOD_LABELS[RulePeriodEnum.Once]}</option>
-            </select>
+              onChange={(next: string) => setPeriod(next as RulePeriodEnum)}
+              options={[RulePeriodEnum.Month, RulePeriodEnum.Week, RulePeriodEnum.Once].map((option) => ({
+                value: option,
+                label: PERIOD_LABELS[option],
+              }))}
+              ariaLabel="Frequency"
+            />
           </label>
         </div>
 
@@ -211,14 +235,15 @@ export function RuleFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
           <label className="block space-y-1.5">
             <span className="block text-[13px] font-medium text-fg-2">Store Restrictions</span>
-            <select
+            <Select
               value={storesSelection}
-              onChange={(e) => setStoresSelection(e.target.value as RuleStoresSelectionEnum)}
-              className="saas-input h-10"
-            >
-              <option value={RuleStoresSelectionEnum.Any}>Any Store</option>
-              <option value={RuleStoresSelectionEnum.Only}>Specific Stores Only</option>
-            </select>
+              onChange={(next: string) => setStoresSelection(next as RuleStoresSelectionEnum)}
+              options={[
+                { value: RuleStoresSelectionEnum.Any, label: "Any store", description: "Any store Channel3 lists" },
+                { value: RuleStoresSelectionEnum.Only, label: "Specific stores only", description: "Only the store websites you list" },
+              ]}
+              ariaLabel="Store restrictions"
+            />
           </label>
 
           {storesSelection === RuleStoresSelectionEnum.Only && (
@@ -238,8 +263,9 @@ export function RuleFormModal({
             <input
               type="date"
               value={expires}
+              min={today}
               onChange={(e) => setExpires(e.target.value)}
-              className="saas-input h-10"
+              className="saas-input h-10 w-full"
             />
           </label>
         </div>
@@ -249,6 +275,7 @@ export function RuleFormModal({
             type="submit"
             variant={ButtonVariantEnum.Primary}
             isLoading={isSubmitting}
+            disabled={activeAgents.length === 0}
           >
             {isEditMode ? "Save Changes" : "Create Rule"}
           </Button>

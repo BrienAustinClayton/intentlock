@@ -186,7 +186,7 @@ def send_code_email(email: str, code: str) -> None:
         raise AuthError(503, "email_not_configured", "Email sign-in is not configured.")
     text, html = _email_bodies(code)
     body = {
-        "from": _cfg("RESEND_FROM") or "Sepilo <onboarding@resend.dev>",
+        "from": _cfg("RESEND_FROM") or "Sepilo <support@sepilo.space>",
         "to": [email],
         "subject": f"{code} is your Sepilo sign-in code",
         "text": text,
@@ -357,7 +357,7 @@ def send_security_notice(email: str | None, subject: str, text: str) -> None:
     if not email or not key:
         log.info("auth.security_notice_skipped subject=%r", subject)
         return
-    body = {"from": _cfg("RESEND_FROM") or "Sepilo <onboarding@resend.dev>", "to": [email], "subject": subject,
+    body = {"from": _cfg("RESEND_FROM") or "Sepilo <support@sepilo.space>", "to": [email], "subject": subject,
             "text": text + "\n\nIf this wasn't you, sign in to Sepilo now and disconnect it."}
     try:
         r = httpx.post(RESEND_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=10)

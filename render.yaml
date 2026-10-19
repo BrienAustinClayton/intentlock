@@ -109,7 +109,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM
-        value: "IntentLock <onboarding@resend.dev>"
+        value: "Sepilo <support@sepilo.space>"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

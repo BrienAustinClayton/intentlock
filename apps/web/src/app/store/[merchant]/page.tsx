@@ -151,7 +151,7 @@ export default async function StoreMerchantPage({
                       ${p.price.toFixed(2)} <span className="text-xs font-normal text-fg-muted">{p.currency}</span>
                     </span>
                     {p.offers.length > 0 && (
-                      <span className="text-[11px] text-indigo-400 font-medium">
+                      <span className="text-[11px] text-blue-400 font-medium">
                         +{p.offers.length} offer{p.offers.length !== 1 ? "s" : ""}
                       </span>
                     )}

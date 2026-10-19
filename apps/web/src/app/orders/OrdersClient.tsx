@@ -78,7 +78,7 @@ export default function OrdersClient() {
             }`}
           >
             {v.label}
-            {v.id === view && <span className="absolute left-2 right-2 -bottom-px h-0.5 rounded-full bg-indigo-500" />}
+            {v.id === view && <span className="absolute left-2 right-2 -bottom-px h-0.5 rounded-full bg-blue-500" />}
           </button>
         ))}
       </div>
@@ -108,7 +108,7 @@ export default function OrdersClient() {
                   rows.map((o) => (
                     <tr key={o.id} onClick={() => router.push(`/orders/${o.id}`)} className={`${rowClass} cursor-pointer`}>
                       <td className={td}>
-                        <Link href={`/orders/${o.id}`} className="font-mono text-xs text-fg hover:text-indigo-400">
+                        <Link href={`/orders/${o.id}`} className="font-mono text-xs text-fg hover:text-blue-400">
                           {o.id.slice(-6).toUpperCase()}
                         </Link>
                       </td>

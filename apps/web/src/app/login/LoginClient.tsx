@@ -168,7 +168,7 @@ export default function LoginClient() {
               type="button"
               disabled={wait > 0 || busy}
               onClick={() => sendCode()}
-              className="text-indigo-400 hover:text-indigo-300 disabled:text-fg-dim transition"
+              className="text-blue-400 hover:text-blue-300 disabled:text-fg-dim transition"
             >
               {wait > 0 ? `Resend in ${wait}s` : "Resend code"}
             </button>

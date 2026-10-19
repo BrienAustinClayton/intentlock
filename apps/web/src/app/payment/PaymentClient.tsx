@@ -96,7 +96,7 @@ export default function PaymentClient() {
       <div className="grid sm:grid-cols-3 gap-3">
         {HOW.map(({ icon: Icon, title, body }) => (
           <div key={title} className="saas-card p-4">
-            <Icon className="w-4 h-4 text-indigo-400 mb-2" strokeWidth={1.8} />
+            <Icon className="w-4 h-4 text-blue-400 mb-2" strokeWidth={1.8} />
             <div className="text-sm font-medium">{title}</div>
             <p className="mt-1 text-xs text-fg-muted leading-relaxed">{body}</p>
           </div>

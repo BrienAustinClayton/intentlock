@@ -63,7 +63,7 @@ export default function Sidebar() {
                   title={label}
                   className={`${base} ${isActive ? "nav-item-active" : "text-fg-muted hover:text-fg hover:bg-fg/[0.04]"}`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-indigo-400" : "text-fg-dim"}`} strokeWidth={1.8} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-blue-400" : "text-fg-dim"}`} strokeWidth={1.8} />
                   {!collapsed && <span className="truncate">{label}</span>}
                 </Link>
               );

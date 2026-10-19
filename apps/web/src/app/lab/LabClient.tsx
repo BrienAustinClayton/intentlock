@@ -203,7 +203,7 @@ const SCENARIO_BORDER_COLORS: Record<string, string> = {
   wrong_variant: "border-l-amber-400 dark:border-l-amber-500",
   overpriced_merchant: "border-l-amber-400 dark:border-l-amber-500",
   bot_farm: "border-l-rose-400 dark:border-l-rose-500",
-  revoked_agent: "border-l-indigo-400 dark:border-l-indigo-500",
+  revoked_agent: "border-l-blue-400 dark:border-l-blue-500",
 };
 
 function ScenarioCard({
@@ -283,7 +283,7 @@ function ScenarioCard({
           {attackPages.length > 0 && state.revealPhase === "idle" && (
             <button
               onClick={() => onReveal(info.scenario, attackPages[0].href)}
-              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-1 cursor-pointer text-[11px]"
+              className="text-blue-600 dark:text-blue-400 hover:underline font-medium ml-1 cursor-pointer text-[11px]"
             >
               <span className="inline-flex items-center gap-1">Inspect injections<ArrowRight className="w-3.5 h-3.5" strokeWidth={2.2} /></span>
             </button>
@@ -328,13 +328,7 @@ function ScenarioCard({
           <button
             onClick={() => onRun(info.scenario)}
             disabled={isRunning}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
-              isRunning
-                ? "bg-fg/10 text-fg-muted cursor-not-allowed"
-                : isDone
-                ? "border border-fg/10 bg-fg/5 text-fg-2 hover:bg-fg/10"
-                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm shadow-indigo-500/20"
-            }`}
+            className={`btn-sm ${isDone || isRunning ? "intentlock-btn-outline" : "intentlock-btn-primary"}`}
           >
             {isRunning ? (
               <>
@@ -369,7 +363,7 @@ function ScenarioCard({
           <div className="flex items-center gap-3 text-[11px]">
             <Link
               href={`/proof/${state.result.order_id}`}
-              className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+              className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
             >
               Proof of intent
             </Link>
@@ -565,7 +559,7 @@ export default function LabClient({
         <button
           onClick={handleRunAll}
           disabled={isRunAllActive}
-          className="btn-approve-glow px-4 py-2 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          className="intentlock-btn-primary"
         >
           {runAll.phase === "resetting" ? (
             <>

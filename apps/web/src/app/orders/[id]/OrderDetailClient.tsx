@@ -461,16 +461,14 @@ function ApprovalPanel({
       )}
       <div className="flex gap-3 mt-2">
         <button
-          className="intentlock-btn-primary"
-          style={{ background: "var(--color-status-captured)" }}
+          className="btn-success"
           disabled={loading !== null}
           onClick={() => handleDecision("approve")}
         >
           {loading === "approve" ? "Approving..." : "Approve"}
         </button>
         <button
-          className="intentlock-btn-outline"
-          style={{ color: "var(--color-status-voided)", borderColor: "var(--color-status-voided)" }}
+          className="btn-danger"
           disabled={loading !== null}
           onClick={() => handleDecision("decline")}
         >
@@ -575,13 +573,7 @@ export default function OrderDetailClient({ orderId }: Props) {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <span>{error ?? "Order not found."}</span>
             <button
-              className="intentlock-btn-outline"
-              style={{
-                fontSize: "0.75rem",
-                padding: "0.25rem 0.75rem",
-                color: "var(--color-status-voided)",
-                borderColor: "var(--color-status-voided)",
-              }}
+              className="intentlock-btn-outline btn-sm"
               onClick={loadOrder}
               aria-label="Retry loading order"
             >

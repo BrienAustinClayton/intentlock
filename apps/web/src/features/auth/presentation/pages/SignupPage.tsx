@@ -4,6 +4,7 @@ import React from "react";
 import { ButtonVariantEnum, InputTypeEnum } from "@/shared/enums";
 import { Button } from "@/shared/presentation/components/Button";
 import { Input } from "@/shared/presentation/components/Input";
+import { Select } from "@/shared/presentation/components/Select";
 import { COUNTRIES, CURRENCIES } from "../../constants";
 import { useSignupForm } from "../../hooks/useSignupForm";
 import { AuthField } from "../components/AuthField";
@@ -67,31 +68,24 @@ export function SignupPage() {
 
           <div className="grid grid-cols-[1fr_8rem] gap-3">
             <AuthField label="Country" hint={null}>
-              <select
+              <Select
                 value={country}
-                onChange={(e) => handleCountryChange(e.target.value)}
-                className="saas-input h-11 rounded-xl px-3.5"
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+                onChange={handleCountryChange}
+                options={COUNTRIES.map((c) => ({ value: c.code, label: c.label }))}
+                searchable
+                buttonClassName="h-11 rounded-xl px-3.5"
+                ariaLabel="Country"
+              />
             </AuthField>
 
             <AuthField label="Currency" hint={null}>
-              <select
+              <Select
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="saas-input h-11 rounded-xl px-3.5"
-              >
-                {CURRENCIES.map((c: string) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={setCurrency}
+                options={CURRENCIES.map((c: string) => ({ value: c, label: c }))}
+                buttonClassName="h-11 rounded-xl px-3.5"
+                ariaLabel="Currency"
+              />
             </AuthField>
           </div>
         </div>

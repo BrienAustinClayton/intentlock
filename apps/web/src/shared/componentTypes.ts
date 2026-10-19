@@ -39,3 +39,22 @@ export interface CardPanelProps {
   children: React.ReactNode;
   className?: string;
 }
+
+export interface SelectOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface SelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+  searchable?: boolean;
+  className?: string;
+  buttonClassName?: string;
+  ariaLabel?: string;
+  id?: string;
+}

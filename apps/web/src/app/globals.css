@@ -21,7 +21,7 @@
   --color-fg-muted: var(--fg-muted);
   --color-fg-dim: var(--fg-dim);
   --color-fg-faint: var(--fg-faint);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -32,7 +32,7 @@
 html, body {
   background-color: var(--canvas);
   color: var(--fg);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -100,7 +100,7 @@ code, pre, kbd, samp {
 }
 
 .saas-card-interactive:hover {
-  border-color: rgba(129, 140, 248, 0.35);
+  border-color: rgba(96, 165, 250, 0.35);
 }
 
 /* Tags: tinted key-caps. Colour comes from --tag (r g b). */
@@ -129,13 +129,13 @@ code, pre, kbd, samp {
 .saas-badge-warning { --tag: 251 191 36; }
 .saas-badge-danger { --tag: 251 113 133; }
 .saas-badge-neutral { --tag: 148 163 184; }
-.saas-badge-brand { --tag: 165 180 252; }
+.saas-badge-brand { --tag: 147 197 253; }
 
 [data-theme="light"] .saas-badge-success { --tag: 4 140 98; }
 [data-theme="light"] .saas-badge-warning { --tag: 180 83 9; }
 [data-theme="light"] .saas-badge-danger { --tag: 214 31 72; }
 [data-theme="light"] .saas-badge-neutral { --tag: 82 90 108; }
-[data-theme="light"] .saas-badge-brand { --tag: 79 70 229; }
+[data-theme="light"] .saas-badge-brand { --tag: 29 78 216; }
 
 .tag-dot {
   width: 6px;
@@ -146,65 +146,71 @@ code, pre, kbd, samp {
 }
 
 /* Buttons */
+/* Buttons: one shape, colour per variant. px-4 py-2 text-sm font-medium rounded-xl, solid fill,
+   lighter on hover, darker when pressed, 30% tinted border, 150 ms transitions. */
 .intentlock-btn-primary,
-.btn-approve-glow,
-.intentlock-btn-outline {
+.intentlock-btn-outline,
+.btn-success,
+.btn-danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 10px;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
   font-size: 0.875rem;
+  line-height: 1.25rem;
   font-weight: 500;
-  transition: filter 0.15s ease, transform 0.08s ease, background 0.15s ease;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
-/* Flat fills; depth comes only from a 1px inner highlight and shade. */
-.intentlock-btn-primary,
-.btn-approve-glow {
+.intentlock-btn-primary {
   color: #ffffff;
-  background: #6c5ce7;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(0, 0, 0, 0.16), 0 1px 2px var(--drop);
+  background: #2563eb;
+  border-color: rgb(96 165 250 / 0.3);
 }
+.intentlock-btn-primary:hover { background: #3b82f6; }
+.intentlock-btn-primary:active { background: #1d4ed8; }
+
+.btn-success {
+  color: #ffffff;
+  background: #059669;
+  border-color: rgb(52 211 153 / 0.3);
+}
+.btn-success:hover { background: #10b981; }
+.btn-success:active { background: #047857; }
+
+.btn-danger {
+  color: #ffffff;
+  background: #e11d48;
+  border-color: rgb(251 113 133 / 0.3);
+}
+.btn-danger:hover { background: #f43f5e; }
+.btn-danger:active { background: #be123c; }
 
 .intentlock-btn-outline {
-  color: var(--key-text);
+  color: var(--fg);
   background: var(--btn-bg);
-  border: 1px solid var(--btn-edge);
-  box-shadow: var(--btn-inset), 0 1px 2px var(--drop);
+  border-color: var(--btn-edge);
 }
-
-.intentlock-btn-primary:hover,
-.btn-approve-glow:hover {
-  background: #7a6bf0;
-}
-
-.intentlock-btn-outline:hover {
-  background: var(--btn-bg-hover);
-}
-
-.intentlock-btn-primary:active,
-.btn-approve-glow:active,
-.intentlock-btn-outline:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 1px 2px var(--well);
-}
+.intentlock-btn-outline:hover { background: var(--btn-bg-hover); }
+.intentlock-btn-outline:active { background: var(--btn-bg-active); }
 
 .intentlock-btn-primary:disabled,
-.btn-approve-glow:disabled,
-.intentlock-btn-outline:disabled {
+.intentlock-btn-outline:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
   opacity: 0.5;
-  transform: none;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-sm {
-  padding: 0.3125rem 0.625rem;
+  padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
-  border-radius: 8px;
+  border-radius: 0.625rem;
 }
 
 /* Hairline edges with a very faint glow */
@@ -231,7 +237,7 @@ code, pre, kbd, samp {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 10px;
-  color: #a5b4fc;
+  color: #93c5fd;
   background: linear-gradient(180deg, var(--key-from) 0%, var(--key-to) 100%);
   border: 1px solid var(--key-edge);
   box-shadow:
@@ -243,18 +249,18 @@ code, pre, kbd, samp {
 
 .icon-tile-brand {
   color: #ffffff;
-  background: linear-gradient(180deg, #8f80fa 0%, #6450e6 100%);
-  border-color: #4535c0;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #1d4ed8;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     inset 0 -2px 0 rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.45),
-    0 6px 16px -6px rgba(100, 80, 230, 0.7);
+    0 6px 16px -6px rgba(37, 99, 235, 0.7);
 }
 
 .icon-tile-success { color: #6ee7b7; }
 .icon-tile-warning { color: #fcd34d; }
-[data-theme="light"] .icon-tile { color: #4f46e5; }
+[data-theme="light"] .icon-tile { color: #2563eb; }
 [data-theme="light"] .icon-tile-success { color: #059669; }
 [data-theme="light"] .icon-tile-warning { color: #b45309; }
 [data-theme="light"] .icon-tile-brand { color: #ffffff; }
@@ -323,10 +329,10 @@ input[type="text"], input[type="search"], input[type="number"], textarea, select
 [data-theme="light"] .text-emerald-300, [data-theme="light"] .text-emerald-400 { color: #047857; }
 [data-theme="light"] .text-amber-300, [data-theme="light"] .text-amber-400 { color: #b45309; }
 [data-theme="light"] .text-rose-300, [data-theme="light"] .text-rose-400 { color: #be123c; }
-[data-theme="light"] .text-indigo-300, [data-theme="light"] .text-indigo-400 { color: #4338ca; }
+[data-theme="light"] .text-blue-300, [data-theme="light"] .text-blue-400 { color: #1d4ed8; }
 
 /* Keyboard focus visibility */
 :focus-visible {
-  outline: 2px solid #818cf8;
+  outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }

@@ -57,8 +57,7 @@ function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className="ml-2 px-2 py-0.5 text-xs rounded border intentlock-btn-outline"
-      style={{ borderRadius: "4px", padding: "2px 8px" }}
+      className="ml-2 intentlock-btn-outline btn-sm"
       aria-label={copied ? "Copied to clipboard" : "Copy SHA-256 to clipboard"}
       onClick={() => {
         navigator.clipboard.writeText(text).then(() => {

@@ -35,7 +35,7 @@ export default function AuthFrame({
               </div>
               <div className="h-1 rounded-full bg-fg/[0.07] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                  className="h-full rounded-full bg-blue-500 transition-all duration-300"
                   style={{ width: `${(step.current / step.total) * 100}%` }}
                 />
               </div>
@@ -59,7 +59,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 export const inputClass =
-  "w-full h-11 rounded-xl bg-input border border-line px-3.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/10 transition";
+  "w-full h-11 rounded-xl bg-input border border-line px-3.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition";
 
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
@@ -88,7 +88,7 @@ export function OptionCard({
       aria-pressed={selected}
       className={`w-full text-left rounded-xl px-4 py-3 border transition ${
         selected
-          ? "border-indigo-500 bg-indigo-500/[0.14] shadow-[0_0_0_3px_rgba(99,102,241,0.16)]"
+          ? "border-blue-500 bg-blue-500/[0.14] shadow-[0_0_0_3px_rgba(99,102,241,0.16)]"
           : "border-line bg-input hover:border-fg/20"
       }`}
     >
@@ -106,7 +106,7 @@ export function Chip({ selected, onClick, label }: { selected: boolean; onClick:
       aria-pressed={selected}
       className={`h-9 px-3.5 rounded-[10px] text-[13px] font-medium border transition ${
         selected
-          ? "border-indigo-500 bg-indigo-500/[0.2] text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+          ? "border-blue-500 bg-blue-500/[0.2] text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
           : "border-line bg-input text-fg-muted hover:text-fg hover:border-fg/20"
       }`}
     >

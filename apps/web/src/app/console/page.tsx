@@ -15,7 +15,7 @@ export default function ConsolePage() {
         </div>
         <Link
           href="/lab"
-          className="btn-approve-glow px-4 py-2 text-xs font-semibold inline-flex items-center gap-2"
+          className="intentlock-btn-primary"
         >
           Simulate in Lab
         </Link>
@@ -26,7 +26,7 @@ export default function ConsolePage() {
         {[
           { label: "Total Checkouts", value: "824", trend: "↑ 14% this month", trendColor: "text-emerald-400" },
           { label: "Avg Fraud Risk", value: "14 / 100", trend: "Safe threshold (<30)", trendColor: "text-fg-muted" },
-          { label: "Neutralized Attacks", value: "38", trend: "Prompt injection & bot farms", trendColor: "text-indigo-400" },
+          { label: "Neutralized Attacks", value: "38", trend: "Prompt injection & bot farms", trendColor: "text-blue-400" },
           { label: "Approval Holds", value: "12", trend: "Variant drift & price spikes", trendColor: "text-amber-400" },
         ].map((m) => (
           <div key={m.label} className="saas-card p-5">

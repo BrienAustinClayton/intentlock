@@ -157,7 +157,7 @@ export default function HomePage() {
                 s.recent_orders.map((o) => (
                   <tr key={o.id} className={`${rowClass} cursor-pointer`}>
                     <td className={td}>
-                      <Link href={`/orders/${o.id}`} className="font-mono text-xs text-fg hover:text-indigo-400">
+                      <Link href={`/orders/${o.id}`} className="font-mono text-xs text-fg hover:text-blue-400">
                         {o.id.slice(-6).toUpperCase()}
                       </Link>
                     </td>

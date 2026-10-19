@@ -46,7 +46,7 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <Link
             href="/wallet"
-            className="btn-approve-glow px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5"
+            className="intentlock-btn-primary"
           >
             Manage Mandates
           </Link>

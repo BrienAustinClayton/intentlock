@@ -72,7 +72,7 @@ export default function RequestsClient() {
             <RunOutcome run={run} />
           )}
           {run.status === "failed" && (
-            <button type="button" onClick={() => setWhy(r)} className="text-xs text-indigo-400 hover:text-indigo-300 transition">
+            <button type="button" onClick={() => setWhy(r)} className="text-xs text-blue-400 hover:text-blue-300 transition">
               See why
             </button>
           )}

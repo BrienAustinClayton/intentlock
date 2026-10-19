@@ -9,47 +9,48 @@
   color-scheme: dark;
 
   /* Neutrals */
-  --canvas: #0c0d12;
-  --sidebar: #0e0f14;
-  --input: #14161e;
-  --raised: #1e2130;
-  --line: #1c1f28;
-  --fg: #f3f4f6;
-  --fg-2: #d1d5db;
-  --fg-muted: #9ca3af;
-  --fg-dim: #6b7280;
-  --fg-faint: #4b5563;
+  --canvas: #0a0e17;
+  --sidebar: #0b111c;
+  --input: #0f1625;
+  --raised: #172033;
+  --line: #1a2335;
+  --fg: #f1f5f9;
+  --fg-2: #cbd5e1;
+  --fg-muted: #94a3b8;
+  --fg-dim: #64748b;
+  --fg-faint: #475569;
 
   /* Tactile surfaces */
-  --card-from: #171a24;
-  --card-to: #13151d;
+  --card-from: #111a2a;
+  --card-to: #0e1522;
   --card-edge: rgba(255, 255, 255, 0.06);
   --card-edge-hover: rgba(255, 255, 255, 0.1);
-  --key-from: #252834;
-  --key-to: #1b1d27;
-  --key-edge: #0b0c10;
-  --key-text: #e5e7eb;
+  --key-from: #1b2538;
+  --key-to: #141c2c;
+  --key-edge: #070b12;
+  --key-text: #e2e8f0;
   --hl: rgba(255, 255, 255, 0.08);
   --shade: rgba(0, 0, 0, 0.3);
   --ring-soft: rgba(255, 255, 255, 0.04);
   --drop: rgba(0, 0, 0, 0.5);
   --well: rgba(0, 0, 0, 0.45);
-  --nav-active: rgba(255, 255, 255, 0.07);
-  --popover: #1b1d27;
-  --btn-bg: #1e2029;
-  --btn-bg-hover: #252833;
-  --btn-edge: rgba(255, 255, 255, 0.07);
+  --nav-active: rgba(59, 130, 246, 0.14);
+  --popover: #121b2b;
+  --btn-bg: #152033;
+  --btn-bg-hover: #1c2a42;
+  --btn-bg-active: #0f1828;
+  --btn-edge: rgb(255 255 255 / 0.1);
   --btn-inset: inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-  --edge-glow: rgba(129, 140, 248, 0.06);
-  --edge-glow-soft: rgba(129, 140, 248, 0.22);
+  --edge-glow: rgba(96, 165, 250, 0.06);
+  --edge-glow-soft: rgba(96, 165, 250, 0.22);
 
   /* Legacy names used by proof / order detail pages */
   --color-bg: var(--canvas);
   --color-sidebar: var(--sidebar);
-  --color-surface: #151720;
-  --color-surface-subtle: #1a1d28;
+  --color-surface: #101827;
+  --color-surface-subtle: #142033;
   --color-surface-raised: var(--raised);
-  --color-surface-hover: #222634;
+  --color-surface-hover: #1b2840;
   --color-border: rgba(255, 255, 255, 0.07);
   --color-border-subtle: rgba(255, 255, 255, 0.04);
   --color-border-strong: rgba(255, 255, 255, 0.14);
@@ -58,63 +59,62 @@
   --color-text-dim: var(--fg-dim);
 
   /* Accent */
-  --color-brand: #6366f1;
-  --color-brand-glow: rgba(99, 102, 241, 0.35);
-  --color-brand-hover: #4f46e5;
-  --color-purple-pill: #7064e9;
+  --color-brand: #3b82f6;
+  --color-brand-glow: rgba(59, 130, 246, 0.35);
+  --color-brand-hover: #2563eb;
 
   /* Status */
   --color-status-captured: #10b981;
   --color-status-voided: #f43f5e;
   --color-status-rejected: #e11d48;
   --color-status-pending-approval: #f59e0b;
-  --color-status-checking: #818cf8;
+  --color-status-checking: #60a5fa;
 
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.6);
   --shadow-card: 0 4px 12px 0 rgba(0, 0, 0, 0.4);
-  --shadow-purple-glow: 0 0 20px rgba(112, 100, 233, 0.35);
 }
 
 [data-theme="light"] {
   color-scheme: light;
 
-  --canvas: #f5f6f8;
-  --sidebar: #fbfbfc;
+  --canvas: #f3f6fb;
+  --sidebar: #f8fafd;
   --input: #ffffff;
   --raised: #ffffff;
-  --line: #e4e6eb;
-  --fg: #111318;
-  --fg-2: #2f3440;
-  --fg-muted: #565d6b;
-  --fg-dim: #737a88;
-  --fg-faint: #a3a9b5;
+  --line: #e2e8f0;
+  --fg: #0f172a;
+  --fg-2: #334155;
+  --fg-muted: #475569;
+  --fg-dim: #64748b;
+  --fg-faint: #94a3b8;
 
   --card-from: #ffffff;
-  --card-to: #fcfcfd;
+  --card-to: #fbfcfe;
   --card-edge: rgba(15, 17, 24, 0.08);
   --card-edge-hover: rgba(15, 17, 24, 0.14);
   --key-from: #ffffff;
-  --key-to: #f1f2f5;
+  --key-to: #edf2f8;
   --key-edge: rgba(15, 17, 24, 0.16);
-  --key-text: #1f2430;
+  --key-text: #1e293b;
   --hl: rgba(255, 255, 255, 0.9);
   --shade: rgba(15, 17, 24, 0.06);
   --ring-soft: rgba(15, 17, 24, 0.02);
   --drop: rgba(15, 17, 24, 0.08);
   --well: rgba(15, 17, 24, 0.08);
-  --nav-active: #ffffff;
+  --nav-active: #e6efff;
   --popover: #ffffff;
   --btn-bg: #ffffff;
-  --btn-bg-hover: #f6f7f9;
-  --btn-edge: rgba(15, 17, 24, 0.12);
+  --btn-bg-hover: #f1f5fb;
+  --btn-bg-active: #e3eaf5;
+  --btn-edge: rgb(15 17 24 / 0.12);
   --btn-inset: inset 0 1px 0 #ffffff, inset 0 -1px 0 rgba(15, 17, 24, 0.07);
-  --edge-glow: rgba(79, 70, 229, 0.03);
-  --edge-glow-soft: rgba(79, 70, 229, 0.08);
+  --edge-glow: rgba(37, 99, 235, 0.03);
+  --edge-glow-soft: rgba(37, 99, 235, 0.08);
 
   --color-surface: #ffffff;
-  --color-surface-subtle: #f7f8fa;
-  --color-surface-hover: #f0f1f4;
+  --color-surface-subtle: #f5f8fc;
+  --color-surface-hover: #ebf1fa;
   --color-border: rgba(15, 17, 24, 0.09);
   --color-border-subtle: rgba(15, 17, 24, 0.05);
   --color-border-strong: rgba(15, 17, 24, 0.18);

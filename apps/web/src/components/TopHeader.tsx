@@ -46,7 +46,7 @@ export default function TopHeader() {
               <li key={i} className="flex items-center gap-1.5">
                 <ChevronRight className="w-3.5 h-3.5 text-fg-faint" strokeWidth={2} />
                 {last ? (
-                  <span aria-current="page" className="font-medium text-indigo-400">
+                  <span aria-current="page" className="font-medium text-blue-400">
                     {c.label}
                   </span>
                 ) : c.href ? (

@@ -343,6 +343,7 @@ class Chat(Base):
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     title = Column(String(120), nullable=False, default="New chat")
     cart = Column(JSONB, nullable=True)  # [{...product snapshot, qty}] waiting for the user's approval
+    mandate_id = Column(String, ForeignKey("mandates.id"), nullable=True)  # picked rule; null = all active rules
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

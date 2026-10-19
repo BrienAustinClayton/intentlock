@@ -91,6 +91,9 @@ export interface ChatThread {
   id: string;
   title: string;
   agent: { id: string; name: string; managed: boolean; active: boolean } | null;
+  /** The rule this chat shops under; null means all of the agent's active rules. */
+  rule_id: string | null;
+  rule_options: ChatRule[];
   rules: ChatRule[];
   messages: ChatMessage[];
   cart: Cart;
@@ -162,8 +165,10 @@ export const me = {
   createRequest: (b: { agent_id: string; request_text: string }) => call<PurchaseRequest>("requests", "POST", b),
   runRequest: (requestId: string) => call<AgentRunView>(`requests/${id(requestId)}/run`, "POST"),
   chats: () => call<ChatSummary[]>("chats"),
-  createChat: (agentId?: string) => call<ChatSummary>("chats", "POST", agentId ? { agent_id: agentId } : {}),
+  createChat: (agentId?: string, ruleId?: string) =>
+    call<ChatSummary>("chats", "POST", { ...(agentId && { agent_id: agentId }), ...(ruleId && { mandate_id: ruleId }) }),
   chat: (chatId: string) => call<ChatThread>(`chats/${id(chatId)}`),
+  setChatRule: (chatId: string, ruleId: string | null) => call<ChatThread>(`chats/${id(chatId)}`, "PATCH", { mandate_id: ruleId }),
   deleteChat: (chatId: string) => call<{ ok: boolean }>(`chats/${id(chatId)}`, "DELETE"),
   send: (chatId: string, content: string) =>
     call<{ messages: ChatMessage[]; title: string }>(`chats/${id(chatId)}/messages`, "POST", { content }),

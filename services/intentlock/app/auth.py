@@ -165,11 +165,11 @@ def logout(db: Session, sess: UserSession) -> None:
 
 def _email_bodies(code: str) -> tuple[str, str]:
     text = (
-        f"Your Secay sign-in code is {code}\n\n"
+        f"Your Sepilo sign-in code is {code}\n\n"
         "It expires in 10 minutes. If you didn't try to sign in, you can ignore this email."
     )
     html = f"""<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:420px;margin:0 auto;padding:32px 24px;color:#111318">
-<p style="font-size:15px;font-weight:600;margin:0 0 24px">Secay</p>
+<p style="font-size:15px;font-weight:600;margin:0 0 24px">Sepilo</p>
 <p style="font-size:14px;margin:0 0 12px">Your sign-in code:</p>
 <p style="font-size:32px;letter-spacing:8px;font-weight:700;font-family:ui-monospace,Menlo,monospace;margin:0 0 24px">{code}</p>
 <p style="font-size:13px;color:#565d6b;margin:0">It expires in 10 minutes. If you didn't try to sign in, you can ignore this email.</p>
@@ -186,9 +186,9 @@ def send_code_email(email: str, code: str) -> None:
         raise AuthError(503, "email_not_configured", "Email sign-in is not configured.")
     text, html = _email_bodies(code)
     body = {
-        "from": _cfg("RESEND_FROM") or "Secay <onboarding@resend.dev>",
+        "from": _cfg("RESEND_FROM") or "Sepilo <onboarding@resend.dev>",
         "to": [email],
-        "subject": f"{code} is your Secay sign-in code",
+        "subject": f"{code} is your Sepilo sign-in code",
         "text": text,
         "html": html,
     }

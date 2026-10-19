@@ -13,7 +13,7 @@ const RETURN_MSG: Record<string, string> = {
 
 const HOW = [
   { icon: LockKeyhole, title: "Held, not charged", body: "When your agent checks out, the amount is authorised on your PayPal account but not taken." },
-  { icon: ShieldCheck, title: "Checked first", body: "Secay compares the order with your request and rules, and scans the store page for hidden instructions." },
+  { icon: ShieldCheck, title: "Checked first", body: "Sepilo compares the order with your request and rules, and scans the store page for hidden instructions." },
   { icon: Undo2, title: "Paid or released", body: "If everything matches, the payment is captured. If not, the hold is released or you're asked to decide." },
 ];
 
@@ -46,7 +46,7 @@ export default function PaymentClient() {
     <div className="max-w-3xl">
       <PageHeader
         title="Payment method"
-        description="The account Secay uses when your agent checks out. Payments are only captured after every check passes."
+        description="The account Sepilo uses when your agent checks out. Payments are only captured after every check passes."
       />
 
       <Panel className="mb-5">
@@ -68,8 +68,8 @@ export default function PaymentClient() {
               </div>
               <p className="text-xs text-fg-muted">
                 {connected
-                  ? "Saved securely with PayPal. Secay never sees your card details."
-                  : "You'll approve once on PayPal. Secay stores only a token, never card details."}
+                  ? "Saved securely with PayPal. Sepilo never sees your card details."
+                  : "You'll approve once on PayPal. Sepilo stores only a token, never card details."}
               </p>
             </div>
           </div>

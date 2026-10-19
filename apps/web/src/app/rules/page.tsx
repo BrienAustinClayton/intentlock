@@ -75,6 +75,12 @@ export default function RulesPage() {
       ([r, a]) => {
         setRules(r);
         setAgents(a);
+        // The chat's rule picker links here with ?new=1 to open a blank rule straight away.
+        const first = a.find((x) => !x.revoked_at);
+        if (first && new URLSearchParams(window.location.search).get("new") === "1") {
+          setForm(blank(a.find((x) => x.managed && !x.revoked_at)?.id ?? first.id));
+          setEditing("new");
+        }
       },
       (e: Error) => setLoadError(e.message),
     );

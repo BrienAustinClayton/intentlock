@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { LayoutGrid, SquarePen, Trash2 } from "lucide-react";
 import { ChatSummaryItem, HistoryPanelProps } from "../../componentTypes";
+import { ChatHistorySkeleton } from "./ChatThreadSkeleton";
 import ProfileMenu from "@/components/ProfileMenu";
 import { Button } from "@/shared/presentation/components/Button";
 import { ButtonVariantEnum } from "@/shared/enums";
@@ -15,8 +16,9 @@ export function ChatHistoryPanel({
   onNewChat,
   onDeleteChat,
   onOpenAppMenu,
+  isLoading = false,
 }: HistoryPanelProps) {
-  const hasNoChats = chats.length === 0;
+  const hasNoChats = !isLoading && chats.length === 0;
 
   return (
     <>
@@ -40,6 +42,7 @@ export function ChatHistoryPanel({
       <div className="px-4 pb-1 text-[11px] font-medium text-fg-dim">History</div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+        {isLoading && <ChatHistorySkeleton />}
         {hasNoChats && (
           <p className="px-2 py-3 text-xs text-fg-dim">Your conversations will appear here.</p>
         )}

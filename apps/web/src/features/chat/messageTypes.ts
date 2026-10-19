@@ -5,4 +5,5 @@ export interface ChatMessageItemProps {
   cart: ChatCartState;
   addingProductId: string | null;
   onAddToCart: (message: ChatMessageItem, product: ChatProductItem) => void;
+  animate?: boolean;
 }

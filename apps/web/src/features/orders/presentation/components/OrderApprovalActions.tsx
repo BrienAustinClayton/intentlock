@@ -7,7 +7,6 @@ import { Button } from "@/shared/presentation/components/Button";
 import { Input } from "@/shared/presentation/components/Input";
 import { ButtonVariantEnum } from "@/shared/enums";
 
-/** Approving this much needs the total typed back, so a large order can't be approved by reflex. */
 const HIGH_VALUE_APPROVAL = 100;
 
 export function OrderApprovalActions({

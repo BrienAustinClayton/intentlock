@@ -83,7 +83,7 @@ export default async function StoreProductPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         {/* Product Image */}
-        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-fg/[0.02]">
+        <div className="saas-card flex items-center justify-center p-8 aspect-square overflow-hidden bg-fg/2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={p.image_url}

@@ -1,6 +1,5 @@
 import { OrderApprovalRecord, OrderDetailResponse, OrderSummary, SecurityCheckRecord } from "./types";
 
-/** /me/orders/{id} as the API sends it: the order, flat, with its checks and approval inside. */
 export interface ApiOrderDetail extends Omit<OrderSummary, "approval_timeout_at" | "decision_reasons"> {
   reasons?: string[] | null;
   pay_url?: string | null;

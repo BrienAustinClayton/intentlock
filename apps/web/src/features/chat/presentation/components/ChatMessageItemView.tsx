@@ -6,14 +6,18 @@ import { ChatMessageItemProps } from "../../messageTypes";
 import { CartItemLine, ChatProductItem } from "../../types";
 import { ChatProductCard } from "./ChatProductCard";
 import { PurchaseStatusCard } from "./PurchaseStatusCard";
+import { SepiloAvatar } from "./SepiloAvatar";
+import { useTypewriter } from "../../hooks/useTypewriter";
 
 export function ChatMessageItemView({
   message,
   cart,
   addingProductId,
   onAddToCart,
+  animate = false,
 }: ChatMessageItemProps) {
   const isUserMessage = message.role === ChatRoleEnum.User;
+  const typing = useTypewriter(message.content, animate && !isUserMessage && !message.run);
 
   if (isUserMessage) {
     return (
@@ -32,21 +36,20 @@ export function ChatMessageItemView({
 
   return (
     <div className="flex gap-3">
-      <span className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
-        S
-      </span>
+      <SepiloAvatar />
 
       <div className="min-w-0 flex-1 space-y-3 sm:pt-1">
         {hasRun ? (
           <PurchaseStatusCard message={message} />
         ) : (
           <p className="text-[15px] sm:text-sm text-fg-2 leading-relaxed whitespace-pre-wrap">
-            {message.content}
+            {typing.shown}
+            {!typing.done && <span aria-hidden className="ml-0.5 inline-block w-1.5 h-4 align-[-2px] rounded-sm bg-blue-400/80 animate-pulse" />}
           </p>
         )}
 
-        {hasProducts && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        {hasProducts && typing.done && (
+          <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 ${animate ? "animate-[fade-up_.35s_ease-out]" : ""}`}>
             {productList.map((product: ChatProductItem) => {
               const matchedCartLine = cartItems.find(
                 (item: CartItemLine) => item.product_id === product.product_id

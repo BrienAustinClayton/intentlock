@@ -1,16 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Receipt } from "lucide-react";
 import { OrderFilterTabEnum } from "../../enums";
 import { useOrdersManagement } from "../../hooks/useOrdersManagement";
 import { OrderCardsMobile } from "../components/OrderCardsMobile";
 import { OrdersTableDesktop } from "../components/OrdersTableDesktop";
 
+const EMPTY_TEXT: Record<OrderFilterTabEnum, string> = {
+  [OrderFilterTabEnum.All]: "When your agent checks out, each order shows up here with every check Sepilo ran.",
+  [OrderFilterTabEnum.NeedsApproval]: "Nothing is waiting for you. Held orders appear here until you approve or decline.",
+  [OrderFilterTabEnum.Paid]: "No orders have been paid yet.",
+  [OrderFilterTabEnum.Blocked]: "Nothing has been blocked. Orders that fail a check are stopped before payment.",
+  [OrderFilterTabEnum.InProgress]: "No orders are being checked right now.",
+};
+
+const TABS = Object.values(OrderFilterTabEnum) as string[];
+
 export function OrdersListPage() {
-  const [currentTab, setCurrentTab] = useState<OrderFilterTabEnum>(
-    OrderFilterTabEnum.All
-  );
+  const router = useRouter();
+  const params = useSearchParams();
+  const requested = params.get("view") ?? "";
+  const currentTab = (TABS.includes(requested) ? requested : OrderFilterTabEnum.All) as OrderFilterTabEnum;
+  const setCurrentTab = (tab: OrderFilterTabEnum) =>
+    router.replace(tab === OrderFilterTabEnum.All ? "/orders" : `/orders?view=${tab}`, { scroll: false });
 
   const { orders, isLoadingOrders } = useOrdersManagement(currentTab);
 
@@ -66,9 +80,7 @@ export function OrdersListPage() {
               <Receipt className="w-5 h-5" strokeWidth={1.8} />
             </span>
             <h3 className="text-sm font-semibold text-fg">No orders here</h3>
-            <p className="mt-1 text-sm text-fg-muted max-w-sm">
-              When your agent checks out, orders will appear here.
-            </p>
+            <p className="mt-1 text-sm text-fg-muted max-w-sm">{EMPTY_TEXT[currentTab]}</p>
           </div>
         ) : (
           <>

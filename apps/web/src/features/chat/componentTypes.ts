@@ -26,6 +26,7 @@ export interface HistoryPanelProps {
   onNewChat: () => void;
   onDeleteChat: (id: string) => void;
   onOpenAppMenu: () => void;
+  isLoading?: boolean;
 }
 
 export interface CartDrawerProps {
@@ -34,7 +35,6 @@ export interface CartDrawerProps {
   isBusy: boolean;
   onClose: () => void;
   onUpdateQty: (productId: string, qty: number) => void;
-  /** confirm: the user saw the cart check's warnings and still wants to buy. */
   onCheckout: (confirm: boolean) => void;
   review: CartReview | null;
 }

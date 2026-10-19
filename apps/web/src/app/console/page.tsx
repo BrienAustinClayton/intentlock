@@ -57,7 +57,7 @@ export default function ConsolePage() {
                   <span className="text-fg-2">{item.label}</span>
                   <span className={`font-mono font-semibold ${item.textColor}`}>{item.pct}</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-fg/[0.06] overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-fg/6 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${item.color}`}
                     style={{ width: item.width }}
@@ -75,15 +75,15 @@ export default function ConsolePage() {
               Gateways & Services
             </h2>
             <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+              <div className="flex items-center justify-between py-1 border-b border-fg/6">
                 <span className="text-fg-2">PayPal Vault</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Connected</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+              <div className="flex items-center justify-between py-1 border-b border-fg/6">
                 <span className="text-fg-2">Channel3 Feed</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Synced</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-fg/[0.06]">
+              <div className="flex items-center justify-between py-1 border-b border-fg/6">
                 <span className="text-fg-2">FastAPI Gateway</span>
                 <span className="saas-badge saas-badge-success text-[10px]">Port 8000</span>
               </div>
@@ -94,7 +94,7 @@ export default function ConsolePage() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-fg/[0.08]">
+          <div className="pt-3 border-t border-fg/8">
             <Link
               href="/wallet"
               className="intentlock-btn-outline w-full text-xs font-medium justify-center"

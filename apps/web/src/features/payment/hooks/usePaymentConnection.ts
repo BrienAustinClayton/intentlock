@@ -18,7 +18,6 @@ export function usePaymentConnection() {
   });
 
   const setupPaymentMutation = useMutation<PaymentSetupResponse, Error, void>({
-    // Changing the payment method needs a recent sign-in; an older session is sent to sign in again first.
     mutationFn: () =>
       makeApiCall<PaymentSetupResponse>({
         endpoint: "/api/me/payment/setup",

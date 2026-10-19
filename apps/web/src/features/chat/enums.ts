@@ -9,7 +9,6 @@ export enum AgentRunStatusEnum {
   Failed = "failed",
 }
 
-/** Outcome of Sepilo's cart check before anything is bought. */
 export enum CartReviewDecisionEnum {
   Ok = "ok",
   Confirm = "confirm",

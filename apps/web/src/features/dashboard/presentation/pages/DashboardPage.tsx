@@ -2,7 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Circle, CircleCheck, MessageSquarePlus, TriangleAlert } from "lucide-react";
+import { ArrowRight, Circle, CircleCheck, MessageSquarePlus, Receipt, TriangleAlert } from "lucide-react";
+import { OrderCardsMobile } from "@/features/orders/presentation/components/OrderCardsMobile";
+import { OrdersTableDesktop } from "@/features/orders/presentation/components/OrdersTableDesktop";
 import { useDashboardSummary } from "../../hooks/useDashboardSummary";
 import { SetupStep, StatCardProps } from "../../types";
 
@@ -50,6 +52,7 @@ export function DashboardPage() {
 
   const setupLeft = steps.filter((step: SetupStep) => !step.done).length;
   const hasNeedsApproval = summary !== null && summary.needs_approval > 0;
+  const recentOrders = summary && Array.isArray(summary.recent_orders) ? summary.recent_orders : [];
 
   return (
     <div className="space-y-6">
@@ -108,6 +111,31 @@ export function DashboardPage() {
           hint="Captured this month"
         />
       </div>
+
+      {summary && (
+        <div className="saas-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+            <h2 className="text-sm font-semibold text-fg">Recent orders</h2>
+            <Link href="/orders" className="text-xs font-medium text-blue-400 hover:text-blue-300">
+              View all
+            </Link>
+          </div>
+          {recentOrders.length === 0 ? (
+            <div className="flex flex-col items-center text-center px-6 py-12">
+              <Receipt className="w-5 h-5 text-fg-muted mb-3" strokeWidth={1.8} />
+              <div className="text-sm font-semibold text-fg">No orders yet</div>
+              <p className="mt-1 text-sm text-fg-muted max-w-sm">
+                When your agent checks out, the order and every check Sepilo ran on it show up here.
+              </p>
+            </div>
+          ) : (
+            <>
+              <OrderCardsMobile orders={recentOrders} />
+              <OrdersTableDesktop orders={recentOrders} />
+            </>
+          )}
+        </div>
+      )}
 
       {summary && setupLeft > 0 && (
         <div className="saas-card overflow-hidden">

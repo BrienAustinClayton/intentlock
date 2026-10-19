@@ -40,7 +40,6 @@ export async function makeApiCall<ResponseType, PayloadType = null>(
 
     const isFailedRequest = !response.ok;
     if (isFailedRequest) {
-      // The API explains failures as {error, reason}; show its reason, not the HTTP status text.
       const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       const reason = typeof body.reason === "string" ? body.reason : response.statusText || "Request failed";
       const code = typeof body.error === "string" ? body.error : "http_error";

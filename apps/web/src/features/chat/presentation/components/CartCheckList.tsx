@@ -24,7 +24,6 @@ const TONE: Record<CartReviewDecisionEnum, string> = {
   [CartReviewDecisionEnum.Block]: "bg-rose-500/10",
 };
 
-/** Result of Sepilo's cart check: spending rules, Channel3 prices, listing text and Jev's second opinion. */
 export function CartCheckList({ review }: CartCheckListProps) {
   return (
     <div role="status" className={`rounded-2xl p-3.5 space-y-1.5 ${TONE[review.decision]}`}>

@@ -26,7 +26,7 @@ function setTheme(t: Theme) {
 
 const REPO = "https://github.com/BrienAustinClayton/intentlock";
 const itemClass =
-  "w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-[13px] text-fg-2 hover:text-fg hover:bg-fg/[0.06] transition";
+  "w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-[13px] text-fg-2 hover:text-fg hover:bg-fg/6 transition";
 
 export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
@@ -94,13 +94,13 @@ export default function ProfileMenu({ collapsed }: { collapsed: boolean }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`w-full flex items-center gap-3 p-2 rounded-xl transition hover:bg-fg/[0.05] ${open ? "bg-fg/[0.05]" : ""} ${collapsed ? "justify-center" : ""}`}
+        className={`w-full flex items-center gap-3 p-2 rounded-xl transition hover:bg-fg/5 ${open ? "bg-fg/5" : ""} ${collapsed ? "justify-center" : ""}`}
       >
         {me?.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={me.avatar_url} alt="" referrerPolicy="no-referrer" className="w-8 h-8 rounded-full object-cover shrink-0" />
         ) : (
-          <span className="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-fg/[0.08] text-[13px] font-medium text-fg-2">
+          <span className="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-fg/8 text-[13px] font-medium text-fg-2">
             {initial}
           </span>
         )}

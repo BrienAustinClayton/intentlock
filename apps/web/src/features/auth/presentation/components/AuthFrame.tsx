@@ -3,6 +3,7 @@
 import React from "react";
 import { AuthFrameProps } from "@/features/auth/componentTypes";
 import { handleSignOut } from "@/features/auth/utils";
+import { BrandMark } from "@/shared/presentation/components/BrandMark";
 
 export function AuthFrame({ children, step, showSignOut, wide }: AuthFrameProps) {
   const maxWidthClass = wide ? "max-w-xl" : "max-w-sm";
@@ -11,9 +12,9 @@ export function AuthFrame({ children, step, showSignOut, wide }: AuthFrameProps)
   return (
     <div className="min-h-screen flex flex-col">
       <header className="flex items-center justify-between h-16 px-6 sm:px-10">
-        <span className="flex items-baseline gap-2">
-          <span className="text-[15px] font-semibold tracking-tight text-fg">Sepilo</span>
-          <span className="hidden sm:inline text-xs text-fg-dim">Your secured PayPal agent</span>
+        <span className="flex items-center gap-3">
+          <BrandMark href="/login" />
+          <span className="hidden sm:inline text-xs tracking-normal text-fg-dim">Your secured PayPal agent</span>
         </span>
         {showSignOut ? (
           <button

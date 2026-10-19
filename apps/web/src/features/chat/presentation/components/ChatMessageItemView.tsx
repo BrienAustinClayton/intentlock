@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useDoubleTap } from "@/shared/hooks/useDoubleTap";
+import { messageTime } from "@/shared/utils/time";
 import { ChatRoleEnum } from "../../enums";
 import { ChatMessageItemProps } from "../../messageTypes";
 import { CartItemLine, ChatProductItem } from "../../types";
 import { ChatProductCard } from "./ChatProductCard";
+import { ProductCardsSkeleton } from "./ChatThreadSkeleton";
 import { PurchaseStatusCard } from "./PurchaseStatusCard";
 import { SepiloAvatar } from "./SepiloAvatar";
 import { useTypewriter } from "../../hooks/useTypewriter";
@@ -18,11 +21,19 @@ export function ChatMessageItemView({
 }: ChatMessageItemProps) {
   const isUserMessage = message.role === ChatRoleEnum.User;
   const typing = useTypewriter(message.content, animate && !isUserMessage && !message.run);
+  const [showTime, setShowTime] = useState(false);
+  const doubleTap = useDoubleTap(() => setShowTime((v) => !v));
+  const time = showTime && message.created_at ? (
+    <time dateTime={message.created_at} className="shrink-0 self-center text-[11px] tabular-nums text-fg-dim animate-[fade-up_.2s_ease-out]">
+      {messageTime(message.created_at)}
+    </time>
+  ) : null;
 
   if (isUserMessage) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-lg rounded-3xl bg-fg/7 px-4 py-2.5 text-[15px] sm:text-sm leading-relaxed text-fg whitespace-pre-wrap wrap-break-word">
+      <div className="flex justify-end items-center gap-2" {...doubleTap}>
+        {time}
+        <div className="max-w-lg rounded-3xl bg-fg/7 px-4 py-2.5 text-[15px] sm:text-sm leading-relaxed text-fg whitespace-pre-wrap wrap-break-word select-text">
           {message.content}
         </div>
       </div>
@@ -35,10 +46,11 @@ export function ChatMessageItemView({
   const cartItems = cart && Array.isArray(cart.items) ? cart.items : [];
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3" {...doubleTap}>
       <SepiloAvatar />
 
       <div className="min-w-0 flex-1 space-y-3 sm:pt-1">
+        {time && <div className="sm:hidden">{time}</div>}
         {hasRun ? (
           <PurchaseStatusCard message={message} />
         ) : (
@@ -48,6 +60,7 @@ export function ChatMessageItemView({
           </p>
         )}
 
+        {hasProducts && !typing.done && <ProductCardsSkeleton />}
         {hasProducts && typing.done && (
           <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 ${animate ? "animate-[fade-up_.35s_ease-out]" : ""}`}>
             {productList.map((product: ChatProductItem) => {
@@ -70,6 +83,7 @@ export function ChatMessageItemView({
           </div>
         )}
       </div>
+      {time && <div className="hidden sm:flex items-start pt-1.5">{time}</div>}
     </div>
   );
 }

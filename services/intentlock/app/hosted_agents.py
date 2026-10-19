@@ -151,7 +151,7 @@ def execute_run(run_id: str, db=None) -> None:
             missing = " and ".join(n for n, v in (("AGENT_SERVICE_URL", url), ("AGENT_RUN_SECRET", secret)) if not v)
             return _finish(db, run, "failed", f"The hosted shopping agent isn't configured ({missing} not set on the API).")
         if agent is None or not agent.managed or not agent.secret_enc or agent.revoked_at is not None:
-            return _finish(db, run, "failed", "This agent can't be run by IntentLock.")
+            return _finish(db, run, "failed", "This agent can't be run by Sepilo.")
         try:
             key = unseal(agent.secret_enc, agent.id)
         except Exception:

@@ -6,7 +6,7 @@ import { draftTools, tools } from "./tools.ts";
 export function createShoppingAgent(opts: { chat?: boolean; draft?: boolean; memory?: ConstructorParameters<typeof Agent>[0]["memory"] } = {}) {
   return new Agent({
     id: "intentlock-agent",
-    name: "IntentLock Shopping Agent",
+    name: "Sepilo Shopping Agent",
     instructions: opts.chat ? CHAT_INSTRUCTIONS : SHOPPING_INSTRUCTIONS,
     model: pickModel(),
     tools: opts.draft ? draftTools : tools,

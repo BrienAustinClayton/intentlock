@@ -78,7 +78,7 @@ async def _lifespan(app: FastAPI):  # noqa: ARG001
 _DOCS = os.environ.get("API_DOCS") == "1"  # API schema stays private unless turned on (local dev)
 
 app = FastAPI(
-    title="IntentLock",
+    title="Sepilo API",
     description="Autonomous agent payment guard service",
     version="0.1.0",
     lifespan=_lifespan,

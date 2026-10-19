@@ -81,6 +81,22 @@ export function useChatSessions(activeChatId: string | null = null) {
       }),
   });
 
+  const renameChatMutation = useMutation<ActiveChatThread, Error, { chatId: string; title: string }>({
+    mutationFn: ({ chatId, title }) =>
+      makeApiCall<ActiveChatThread, { title: string }>({
+        endpoint: `/api/me/chats/${encodeURIComponent(chatId)}`,
+        method: HttpMethodEnum.Patch,
+        payload: { title },
+      }),
+    onMutate: ({ chatId, title }) => {
+      queryClient.setQueryData<ActiveChatThread>(["chatThread", chatId], (thread) => (thread ? { ...thread, title } : thread));
+    },
+    onSettled: (_, __, { chatId }) => {
+      queryClient.invalidateQueries({ queryKey: ["chatThread", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["chatList"] });
+    },
+  });
+
   const setChatRuleMutation = useMutation<ActiveChatThread, Error, { chatId: string; ruleId: string | null }>({
     mutationFn: ({ chatId, ruleId }) =>
       makeApiCall<ActiveChatThread, { mandate_id: string | null }>({
@@ -200,6 +216,7 @@ export function useChatSessions(activeChatId: string | null = null) {
     activeChatError: activeChatQuery.error,
     myRules: myRulesQuery.data ?? [],
     setChatRule: setChatRuleMutation.mutateAsync,
+    renameChat: renameChatMutation.mutateAsync,
     isSettingRule: setChatRuleMutation.isPending,
     createChat: createChatMutation.mutateAsync,
     isCreatingChat: createChatMutation.isPending,

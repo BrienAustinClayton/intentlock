@@ -5,7 +5,7 @@ import {
   CreditCard,
   FlaskConical,
   House,
-  MessageSquareText,
+  MessagesSquare,
   Receipt,
   ShieldCheck,
   type LucideIcon,
@@ -28,7 +28,7 @@ export const NAV: NavSection[] = [
   {
     title: "Shopping",
     items: [
-      { href: "/requests", label: "Purchase requests", icon: MessageSquareText },
+      { href: "/chat", label: "Shopping assistant", icon: MessagesSquare },
       { href: "/orders", label: "Orders", icon: Receipt },
     ],
   },

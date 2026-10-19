@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Check, Copy, Plug, Sparkles, X } from "lucide-react";
+import { Bot, Check, Copy, Plug, X } from "lucide-react";
 import { FormError, inputClass } from "@/components/auth/AuthFrame";
 import {
   EmptyState,
@@ -108,7 +108,6 @@ export default function AgentsPage() {
                 Connect your own
               </button>
               <button type="button" onClick={() => (setOpen("hosted"), setError(null))} className="intentlock-btn-primary">
-                <Sparkles className="w-4 h-4" strokeWidth={1.8} />
                 Create agent
               </button>
             </>
@@ -125,7 +124,7 @@ export default function AgentsPage() {
               <div>
                 <h2 className="text-sm font-semibold">Create a shopping agent</h2>
                 <p className="text-xs text-fg-muted max-w-xl">
-                  IntentLock runs this agent for you. It only shops for purchase requests you send, and every checkout still
+                  Secay runs this agent for you. It only shops for purchase requests you send, and every checkout still
                   has to pass your spending rules. No keys or setup needed.
                 </p>
               </div>
@@ -204,11 +203,10 @@ export default function AgentsPage() {
           <EmptyState
             icon={Bot}
             title="No agents yet"
-            body="Create an agent and IntentLock will shop for your purchase requests, inside your spending rules."
+            body="Create an agent and Secay will shop for your purchase requests, inside your spending rules."
             action={
               !open && (
                 <button type="button" onClick={() => setOpen("hosted")} className="intentlock-btn-primary btn-sm">
-                  <Sparkles className="w-3.5 h-3.5" strokeWidth={1.8} />
                   Create agent
                 </button>
               )
@@ -236,7 +234,7 @@ export default function AgentsPage() {
                     <tr key={a.id} className={rowClass}>
                       <td className={`${td} text-fg font-medium`}>{a.name}</td>
                       <td className={td}>
-                        {a.managed ? <Tag tone="brand">Hosted by IntentLock</Tag> : <Tag>Your own</Tag>}
+                        {a.managed ? <Tag tone="brand">Hosted by Secay</Tag> : <Tag>Your own</Tag>}
                       </td>
                       <td className={td}>
                         <CopyId value={a.id} />

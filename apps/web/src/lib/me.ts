@@ -36,6 +36,54 @@ export interface AgentRunView {
 
 export type MyAgent = Agent & { managed: boolean };
 
+export interface ChatProduct {
+  product_id: string;
+  title: string;
+  brand: string | null;
+  price: string;
+  currency: string;
+  merchant: string;
+  category: string;
+  category_title: string | null;
+  image: string | null;
+  url: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  products: ChatProduct[];
+  created_at: string;
+  run: AgentRunView | null;
+}
+
+export interface ChatSummary {
+  id: string;
+  title: string;
+  agent_id: string;
+  updated_at: string;
+  preview: string;
+}
+
+export interface ChatRule {
+  id: string;
+  categories: string[];
+  merchants: string[];
+  budget: string;
+  remaining: string;
+  period: "week" | "month" | "once";
+  currency: string;
+}
+
+export interface ChatThread {
+  id: string;
+  title: string;
+  agent: { id: string; name: string; managed: boolean; active: boolean } | null;
+  rules: ChatRule[];
+  messages: ChatMessage[];
+}
+
 export interface PurchaseRequest {
   id: string;
   agent_id: string;
@@ -101,6 +149,14 @@ export const me = {
   requests: () => call<PurchaseRequest[]>("requests"),
   createRequest: (b: { agent_id: string; request_text: string }) => call<PurchaseRequest>("requests", "POST", b),
   runRequest: (requestId: string) => call<AgentRunView>(`requests/${id(requestId)}/run`, "POST"),
+  chats: () => call<ChatSummary[]>("chats"),
+  createChat: (agentId?: string) => call<ChatSummary>("chats", "POST", agentId ? { agent_id: agentId } : {}),
+  chat: (chatId: string) => call<ChatThread>(`chats/${id(chatId)}`),
+  deleteChat: (chatId: string) => call<{ ok: boolean }>(`chats/${id(chatId)}`, "DELETE"),
+  send: (chatId: string, content: string) =>
+    call<{ messages: ChatMessage[]; title: string }>(`chats/${id(chatId)}/messages`, "POST", { content }),
+  buy: (chatId: string, b: { message_id: string; product_id: string; qty?: number }) =>
+    call<ChatMessage>(`chats/${id(chatId)}/buy`, "POST", b),
   payment: () => call<{ connected: boolean }>("payment"),
   paymentSetup: () => call<{ approve_url: string }>("payment/setup", "POST"),
 };

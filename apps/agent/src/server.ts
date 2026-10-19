@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 import { timingSafeEqual } from "node:crypto";
 import { env, withEnv } from "./config.ts";
 import { emit } from "./log.ts";
-import { RunError, runShopping, type RunResult } from "./run.ts";
+import { LlmLimitError } from "./llm.ts";
+import { RunError, runShopping, type ExactPick, type RunResult } from "./run.ts";
+import { suggest, type Rule, type Turn } from "./suggest.ts";
 
 function authorized(header: string | undefined): boolean {
   const secret = env("AGENT_RUN_SECRET");
@@ -16,6 +18,21 @@ function authorized(header: string | undefined): boolean {
   const given = Buffer.from(header.slice(7));
   const want = Buffer.from(secret);
   return given.length === want.length && timingSafeEqual(given, want);
+}
+
+async function readJson(req: import("node:http").IncomingMessage, limit: number): Promise<unknown | undefined> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > limit) return undefined;
+    chunks.push(c as Buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch {
+    return undefined;
+  }
 }
 
 export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST") ?? "127.0.0.1"): Server {
@@ -29,20 +46,40 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
     try {
       const path = (req.url ?? "").split("?")[0];
       if (req.method === "GET" && path === "/health") return send(200, { ok: true });
-      if (req.method === "POST" && path === "/run") {
-        const chunks: Buffer[] = [];
-        let size = 0;
-        for await (const c of req) {
-          size += (c as Buffer).length;
-          if (size > 10_000) return send(413, { reason: "body too large" });
-          chunks.push(c as Buffer);
-        }
-        let body: { intent_id?: unknown; agent_id?: unknown; agent_private_key?: unknown };
+      if (req.method === "POST" && path === "/suggest") {
+        if (!authorized(req.headers.authorization)) return send(401, { reason: "unauthorized" });
+        const raw = await readJson(req, 40_000);
+        if (raw === undefined) return send(400, { reason: "invalid JSON" });
+        const { message, history, rules } = raw as { message?: unknown; history?: unknown; rules?: unknown };
+        if (typeof message !== "string" || !message.trim() || message.length > 1000) return send(400, { reason: "message required" });
+        const turns: Turn[] = (Array.isArray(history) ? history : [])
+          .filter((t: any) => (t?.role === "user" || t?.role === "assistant") && typeof t?.content === "string")
+          .slice(-8)
+          .map((t: any) => ({ role: t.role, content: String(t.content).slice(0, 1200) }));
+        const ruleList: Rule[] = (Array.isArray(rules) ? rules : [])
+          .filter((r: any) => Array.isArray(r?.categories) && Array.isArray(r?.merchants) && /^\d{1,9}\.\d{2}$/.test(String(r?.remaining)))
+          .slice(0, 20)
+          .map((r: any) => ({
+            categories: r.categories.map(String).slice(0, 50), merchants: r.merchants.map(String).slice(0, 50),
+            remaining: String(r.remaining), currency: String(r.currency ?? "USD"),
+          }));
+        const t0 = Date.now();
         try {
-          body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-        } catch {
-          return send(400, { reason: "invalid JSON" });
+          const out = await suggest(message, turns, ruleList);
+          emit("suggest.finished", { agent_id: (raw as any).agent_id, ms: Date.now() - t0, products: out.products.length });
+          return send(200, out);
+        } catch (e) {
+          emit("suggest.error", { agent_id: (raw as any).agent_id, reason: (e as Error).message.slice(0, 300) });
+          if (e instanceof LlmLimitError) {
+            return send(200, { reply: "I've hit my AI usage limit for the moment. Please try again in a little while.", products: [] });
+          }
+          return send(200, { reply: "Something went wrong while searching. Please try again.", products: [] });
         }
+      }
+      if (req.method === "POST" && path === "/run") {
+        const parsed = await readJson(req, 10_000);
+        if (parsed === undefined) return send(400, { reason: "invalid JSON" });
+        const body = parsed as { intent_id?: unknown; agent_id?: unknown; agent_private_key?: unknown; product_id?: unknown; qty?: unknown };
         intentId = body.intent_id;
         const hosted = body.agent_id !== undefined || body.agent_private_key !== undefined;
         emit("run.received", { run_id: runId, intent_id: intentId, agent_id: body.agent_id, hosted });
@@ -68,8 +105,16 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
         if (typeof body.agent_private_key !== "string" || body.agent_private_key.length > 64) {
           return send(400, { reason: "invalid agent_private_key" });
         }
+        let exact: ExactPick | undefined;
+        if (body.product_id !== undefined) {
+          const qty = Number(body.qty ?? 1);
+          if (typeof body.product_id !== "string" || body.product_id.length > 128 || !Number.isInteger(qty) || qty < 1 || qty > 20) {
+            return send(400, { reason: "invalid product_id or qty" });
+          }
+          exact = { productId: body.product_id, qty };
+        }
         const creds = { AGENT_ID: body.agent_id, AGENT_PRIVATE_KEY: body.agent_private_key };
-        return finish(await withEnv(creds, () => runShopping(id)));
+        return finish(await withEnv(creds, () => runShopping(id, exact)));
       }
       send(404, { reason: "not found" });
     } catch (e) {

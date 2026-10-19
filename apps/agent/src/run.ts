@@ -3,7 +3,7 @@ import { agentId } from "./config.ts";
 import { newRunContext, runWith, type CartLine, type CheckoutResult } from "./context.ts";
 import { getIntent } from "./intentlock.ts";
 import { LlmLimitError } from "./llm.ts";
-import { ShopFailure, shop } from "./shop.ts";
+import { ShopFailure, shop, shopExact } from "./shop.ts";
 
 export interface RunResult {
   intent_id: string;
@@ -22,11 +22,16 @@ export interface RunResult {
 const inflight = new Map<string, Promise<RunResult>>();
 
 /** One shopping run for a signed intent. Concurrent calls for the same intent share one run (no double checkout). */
-export function runShopping(intentId: string): Promise<RunResult> {
+export interface ExactPick {
+  productId: string;
+  qty: number;
+}
+
+export function runShopping(intentId: string, exact?: ExactPick): Promise<RunResult> {
   if (!/^int_[A-Za-z0-9_]{1,60}$/.test(intentId)) return Promise.reject(new RunError(400, "invalid intent_id"));
   const existing = inflight.get(intentId);
   if (existing) return existing;
-  const p = doRun(intentId).finally(() => inflight.delete(intentId));
+  const p = doRun(intentId, exact).finally(() => inflight.delete(intentId));
   inflight.set(intentId, p);
   return p;
 }
@@ -37,7 +42,7 @@ export class RunError extends Error {
   }
 }
 
-async function doRun(intentId: string): Promise<RunResult> {
+async function doRun(intentId: string, exact?: ExactPick): Promise<RunResult> {
   let intent;
   try {
     intent = await getIntent(intentId);
@@ -51,7 +56,8 @@ async function doRun(intentId: string): Promise<RunResult> {
   const ctx = newRunContext(intentId);
   let summary: string;
   try {
-    summary = (await runWith(ctx, () => shop(intent.id, intent.request_text))).summary;
+    const go = exact ? () => shopExact(intent.id, exact.productId, exact.qty) : () => shop(intent.id, intent.request_text);
+    summary = (await runWith(ctx, go)).summary;
   } catch (e) {
     if (e instanceof ShopFailure) summary = e.message;
     else if (e instanceof LlmLimitError) summary = "The AI model's usage limit is reached for now. Try again later.";

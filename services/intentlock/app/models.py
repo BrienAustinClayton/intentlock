@@ -329,3 +329,30 @@ class AgentRun(Base):
     response_ms = Column(Integer, nullable=True)
     response_excerpt = Column(Text, nullable=True)
     attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    product_id = Column(String, nullable=True)  # chat purchases buy this exact Channel3 product
+    qty = Column(Integer, nullable=True)
+
+
+class Chat(Base):
+    """A shopping conversation between a user and one of their hosted agents."""
+    __tablename__ = "chats"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    title = Column(String(120), nullable=False, default="New chat")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True)
+    chat_id = Column(String, ForeignKey("chats.id"), nullable=False, index=True)
+    role = Column(String, nullable=False)  # user | assistant
+    content = Column(Text, nullable=False)
+    products = Column(JSONB, nullable=True)  # suggested Channel3 products shown as cards
+    intent_id = Column(String, ForeignKey("intents.id"), nullable=True)
+    run_id = Column(String, ForeignKey("agent_runs.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

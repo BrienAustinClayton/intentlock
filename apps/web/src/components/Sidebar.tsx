@@ -21,7 +21,7 @@ export default function Sidebar() {
       <div className={`flex items-center h-16 px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
         {!collapsed && (
           <Link href="/" className="pl-2 text-[15px] font-semibold tracking-tight text-fg">
-            IntentLock
+            Secay
           </Link>
         )}
         <button

@@ -157,7 +157,8 @@ def execute_run(run_id: str, db=None) -> None:
         try:
             r = httpx.post(endpoint, timeout=RUN_TIMEOUT_S,
                            headers={"Authorization": f"Bearer {secret}", "X-IntentLock-Run": run.id},
-                           json={"intent_id": run.intent_id, "agent_id": agent.id, "agent_private_key": key})
+                           json={"intent_id": run.intent_id, "agent_id": agent.id, "agent_private_key": key,
+                                 **({"product_id": run.product_id, "qty": run.qty or 1} if run.product_id else {})})
         except httpx.HTTPError as e:
             run.response_ms = int((time.monotonic() - t0) * 1000)
             run.response_excerpt = f"{type(e).__name__}: {str(e)[:300]}"
@@ -194,9 +195,11 @@ def execute_run(run_id: str, db=None) -> None:
             db.close()
 
 
-def start_run(db, intent_id: str, user_id: str, agent_id: str) -> AgentRun:
+def start_run(db, intent_id: str, user_id: str, agent_id: str,
+              product_id: str | None = None, qty: int | None = None) -> AgentRun:
     run = AgentRun(id=new_id("run"), intent_id=intent_id, user_id=user_id, agent_id=agent_id,
-                   status="running", started_at=datetime.now(timezone.utc), attempts=0)
+                   status="running", started_at=datetime.now(timezone.utc), attempts=0,
+                   product_id=product_id, qty=qty)
     db.add(run)
     db.commit()
     runlog.emit("agent_run.queued", run_id=run.id, intent_id=intent_id, agent_id=agent_id, user_id=user_id)
@@ -241,3 +244,32 @@ async def run_loop(interval_s: int = 20) -> None:
         except Exception:
             log.exception("hosted_agents.watchdog_error")
         await asyncio.sleep(interval_s)
+
+
+SUGGEST_TIMEOUT_S = 90
+
+
+def suggest(agent_id: str, message: str, history: list[dict], rules: list[dict]) -> dict[str, Any]:
+    """Ask the hosted agent for products that answer a chat message within the agent's rules."""
+    url, secret = _cfg("AGENT_SERVICE_URL"), _cfg("AGENT_RUN_SECRET")
+    if not url or not secret:
+        raise HostedAgentError(503, "not_configured", "The shopping assistant isn't configured yet.")
+    endpoint = f"{url.rstrip('/')}/suggest"
+    t0 = time.monotonic()
+    try:
+        r = httpx.post(endpoint, timeout=SUGGEST_TIMEOUT_S, headers={"Authorization": f"Bearer {secret}"},
+                       json={"agent_id": agent_id, "message": message, "history": history, "rules": rules})
+    except httpx.HTTPError as e:
+        runlog.emit("chat.suggest_failed", agent_id=agent_id, endpoint=endpoint, error=type(e).__name__)
+        raise HostedAgentError(502, "agent_unreachable", "The shopping assistant is waking up. Try again in a moment.")
+    ms = int((time.monotonic() - t0) * 1000)
+    try:
+        data = r.json()
+    except ValueError:
+        data = {}
+    runlog.emit("chat.suggest", agent_id=agent_id, endpoint=endpoint, response_status=r.status_code, response_ms=ms,
+                products=len(data.get("products") or []) if isinstance(data, dict) else None)
+    if r.status_code != 200 or not isinstance(data, dict):
+        reason = data.get("reason") if isinstance(data, dict) else None
+        raise HostedAgentError(502, "agent_error", f"The shopping assistant couldn't answer: {reason or f'HTTP {r.status_code}'}.")
+    return data

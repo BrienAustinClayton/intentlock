@@ -16,7 +16,10 @@ export default function AuthFrame({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="flex items-center justify-between h-16 px-6 sm:px-10">
-        <span className="text-[15px] font-semibold tracking-tight text-fg">IntentLock</span>
+        <span className="flex items-baseline gap-2">
+          <span className="text-[15px] font-semibold tracking-tight text-fg">Secay</span>
+          <span className="hidden sm:inline text-xs text-fg-dim">Your secured PayPal agent</span>
+        </span>
         {showSignOut && (
           <button type="button" onClick={signOut} className="text-[13px] text-fg-dim hover:text-fg transition">
             Sign out

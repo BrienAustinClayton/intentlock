@@ -176,6 +176,32 @@ The same data is kept on the `agent_runs` row (`endpoint`, `dispatched_at`, `res
 
 A watchdog in the API resends runs that were saved but never sent (for example the API restarted right after the request) and fails runs the agent never answered.
 
+## Step 4d — Custom domains
+
+| Service | Domain | DNS record |
+|---|---|---|
+| intentlock-web | `sepilo.space` | `A` `@` → `216.24.57.1` (or ALIAS/ANAME/flattened CNAME → `intentlock-web.onrender.com`) |
+| intentlock-web | `www.sepilo.space` | `CNAME` `www` → `intentlock-web.onrender.com` |
+| intentlock-api | `api.sepilo.space` | `CNAME` `api` → `intentlock-api-9eo1.onrender.com` |
+| intentlock-agent | `purchase-agent.sepilo.space` | `CNAME` `purchase-agent` → `intentlock-agent.onrender.com` |
+
+Add each domain under the service's **Settings → Custom Domains**, create the DNS records, then **Verify**; Render issues TLS certificates automatically. Remove any `AAAA` records on these names.
+
+Then point every service at the new URLs (no trailing slashes):
+
+| Service | Variable | Value |
+|---|---|---|
+| intentlock-api | `PUBLIC_BASE_URL` | `https://api.sepilo.space` |
+| intentlock-api | `WEB_ORIGIN` | `https://sepilo.space` |
+| intentlock-api | `AGENT_SERVICE_URL` | `https://purchase-agent.sepilo.space` |
+| intentlock-web | `APP_URL` | `https://sepilo.space` |
+| intentlock-web | `NEXT_PUBLIC_API_URL` | `https://api.sepilo.space` (build time: redeploy web after changing) |
+| intentlock-web | `AGENT_RUN_URL` | `https://purchase-agent.sepilo.space/run` |
+| intentlock-agent | `INTENTLOCK_API_URL` | `https://api.sepilo.space` |
+| intentlock-agent | `INTENTLOCK_SIGN_BASE_URL` | `https://api.sepilo.space` (must equal the API's `PUBLIC_BASE_URL`) |
+
+Google OAuth client: add `https://sepilo.space` to Authorized JavaScript origins and `https://sepilo.space/api/auth/google/callback` to Authorized redirect URIs.
+
 ## Step 5 — Verify the deployment
 
 ```bash

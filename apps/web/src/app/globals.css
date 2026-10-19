@@ -34,6 +34,7 @@ html, body {
   color: var(--fg);
   font-family: var(--font-jakarta, ui-sans-serif), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   line-height: 1.5;
+  letter-spacing: -0.018em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -103,53 +104,52 @@ code, pre, kbd, samp {
   border-color: rgba(96, 165, 250, 0.35);
 }
 
-/* Tags: tinted key-caps. Colour comes from --tag (r g b). */
+/* Tags, matching the Unhold Badge: px-2 py-0.5 rounded-md text-[11px] font-medium,
+   fill = colour-500 at 15%, border = colour-500 at 30%, text = colour-400 (700 on light). */
 .saas-badge {
-  --tag: 148 163 184;
+  --tag: 156 163 175;
+  --tag-text: #d1d5db;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 7px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
   font-size: 0.6875rem;
-  font-weight: 550;
-  line-height: 1;
-  letter-spacing: 0.005em;
+  line-height: 1rem;
+  font-weight: 500;
   white-space: nowrap;
-  color: rgb(var(--tag) / 1);
-  background: linear-gradient(180deg, rgb(var(--tag) / 0.16) 0%, rgb(var(--tag) / 0.07) 100%);
-  border: 1px solid rgb(var(--tag) / 0.26);
-  box-shadow:
-    inset 0 1px 0 var(--hl),
-    inset 0 -1px 0 var(--shade),
-    0 1px 1.5px var(--drop);
+  color: var(--tag-text);
+  background: rgb(var(--tag) / 0.15);
+  border: 1px solid rgb(var(--tag) / 0.3);
 }
 
-.saas-badge-success { --tag: 52 211 153; }
-.saas-badge-warning { --tag: 251 191 36; }
-.saas-badge-danger { --tag: 251 113 133; }
-.saas-badge-neutral { --tag: 148 163 184; }
-.saas-badge-brand { --tag: 147 197 253; }
+.saas-badge-success { --tag: 16 185 129; --tag-text: #34d399; }
+.saas-badge-warning { --tag: 245 158 11; --tag-text: #fbbf24; }
+.saas-badge-danger { --tag: 244 63 94; --tag-text: #fb7185; }
+.saas-badge-brand { --tag: 59 130 246; --tag-text: #60a5fa; }
+.saas-badge-neutral { --tag: 107 114 128; --tag-text: #d1d5db; }
 
-[data-theme="light"] .saas-badge-success { --tag: 4 140 98; }
-[data-theme="light"] .saas-badge-warning { --tag: 180 83 9; }
-[data-theme="light"] .saas-badge-danger { --tag: 214 31 72; }
-[data-theme="light"] .saas-badge-neutral { --tag: 82 90 108; }
-[data-theme="light"] .saas-badge-brand { --tag: 29 78 216; }
+[data-theme="light"] .saas-badge { --tag-text: #374151; }
+[data-theme="light"] .saas-badge-success { --tag-text: #047857; }
+[data-theme="light"] .saas-badge-warning { --tag-text: #b45309; }
+[data-theme="light"] .saas-badge-danger { --tag-text: #be123c; }
+[data-theme="light"] .saas-badge-brand { --tag-text: #1d4ed8; }
+[data-theme="light"] .saas-badge-neutral { --tag-text: #374151; }
 
 .tag-dot {
   width: 6px;
   height: 6px;
   border-radius: 9999px;
-  background: rgb(var(--tag) / 1);
-  box-shadow: 0 0 0 2px rgb(var(--tag) / 0.18), 0 0 6px rgb(var(--tag) / 0.7);
+  background: var(--tag-text);
 }
 
 /* Buttons */
-/* Buttons: one shape, colour per variant. px-4 py-2 text-sm font-medium rounded-xl, solid fill,
-   lighter on hover, darker when pressed, 30% tinted border, 150 ms transitions. */
+/* Buttons, matching the Unhold design system (shared/components/Button.tsx):
+   md = px-4 py-2 text-sm font-medium rounded-xl; sm = px-3 py-1.5 text-xs rounded-lg; lg = px-5 py-2.5 text-base.
+   Solid fill, lighter on hover, darker when pressed, tinted border, 1px top highlight, pressed inset + 0.5px nudge. */
 .intentlock-btn-primary,
 .intentlock-btn-outline,
+.btn-ghost,
 .btn-success,
 .btn-danger {
   display: inline-flex;
@@ -162,6 +162,7 @@ code, pre, kbd, samp {
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 500;
+  user-select: none;
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
@@ -170,47 +171,96 @@ code, pre, kbd, samp {
   color: #ffffff;
   background: #2563eb;
   border-color: rgb(96 165 250 / 0.3);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.25), 0 1px 2px 0 rgb(0 0 0 / 0.4);
 }
-.intentlock-btn-primary:hover { background: #3b82f6; }
-.intentlock-btn-primary:active { background: #1d4ed8; }
+.intentlock-btn-primary:hover {
+  background: #3b82f6;
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.35), 0 2px 4px 0 rgb(0 0 0 / 0.3);
+}
+.intentlock-btn-primary:active {
+  background: #1d4ed8;
+  box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.3);
+  transform: translateY(0.5px);
+}
 
 .btn-success {
   color: #ffffff;
   background: #059669;
   border-color: rgb(52 211 153 / 0.3);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.25), 0 1px 2px 0 rgb(0 0 0 / 0.4);
 }
-.btn-success:hover { background: #10b981; }
-.btn-success:active { background: #047857; }
-
-.btn-danger {
-  color: #ffffff;
-  background: #e11d48;
-  border-color: rgb(251 113 133 / 0.3);
+.btn-success:hover {
+  background: #10b981;
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.35), 0 2px 4px 0 rgb(0 0 0 / 0.3);
 }
-.btn-danger:hover { background: #f43f5e; }
-.btn-danger:active { background: #be123c; }
+.btn-success:active {
+  background: #047857;
+  box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.3);
+  transform: translateY(0.5px);
+}
 
 .intentlock-btn-outline {
-  color: var(--fg);
+  color: var(--btn-text);
   background: var(--btn-bg);
   border-color: var(--btn-edge);
+  box-shadow: var(--btn-shadow);
 }
-.intentlock-btn-outline:hover { background: var(--btn-bg-hover); }
-.intentlock-btn-outline:active { background: var(--btn-bg-active); }
+.intentlock-btn-outline:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-edge-hover);
+}
+.intentlock-btn-outline:active {
+  background: var(--btn-bg-active);
+  box-shadow: var(--btn-shadow-active);
+  transform: translateY(0.5px);
+}
+
+.btn-ghost {
+  color: var(--fg-2);
+  background: transparent;
+}
+.btn-ghost:hover {
+  color: var(--fg);
+  background: var(--ghost-hover);
+  border-color: var(--ghost-edge);
+}
+.btn-ghost:active { background: var(--ghost-active); }
+
+.btn-danger {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  border-color: var(--danger-edge);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.12), 0 1px 2px 0 rgb(0 0 0 / 0.4);
+}
+.btn-danger:hover { background: var(--danger-bg-hover); }
+.btn-danger:active {
+  background: var(--danger-bg-active);
+  transform: translateY(0.5px);
+}
 
 .intentlock-btn-primary:disabled,
 .intentlock-btn-outline:disabled,
+.btn-ghost:disabled,
 .btn-success:disabled,
 .btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
   pointer-events: none;
 }
 
 .btn-sm {
   padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
-  border-radius: 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  border-radius: 0.5rem;
+}
+
+.btn-lg {
+  padding: 0.625rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
 }
 
 /* Hairline edges with a very faint glow */

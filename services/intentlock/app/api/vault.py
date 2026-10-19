@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.config import settings, web_origins
 from app.db import get_db
 from app.models import User
 from app.paypal import service as paypal
@@ -33,7 +33,7 @@ def _bad(reason: str):
 
 
 def _web() -> str:
-    return (settings.WEB_ORIGIN or "http://localhost:3000").rstrip("/")
+    return web_origins()[0]
 
 
 def _remember(sid: str, uid: str) -> None:

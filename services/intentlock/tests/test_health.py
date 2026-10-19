@@ -15,7 +15,9 @@ from fastapi.testclient import TestClient
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVICE_ROOT))
 
-from app.main import app, _web_origin  # noqa: E402
+from app.main import _web_origins, app  # noqa: E402
+
+_web_origin = _web_origins[0]
 
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -183,3 +185,11 @@ def test_settings_fields_match_manifest():
     assert not extra_in_settings, (
         f"Settings fields not in MANIFEST: {sorted(extra_in_settings)}"
     )
+
+
+def test_web_origins_parsing(monkeypatch):
+    from app.config import settings, web_origins
+    monkeypatch.setattr(settings, "WEB_ORIGIN", " https://sepilo.space/ , www.sepilo.space,https://sepilo.space")
+    assert web_origins() == ["https://sepilo.space", "https://www.sepilo.space"]
+    monkeypatch.setattr(settings, "WEB_ORIGIN", None)
+    assert web_origins() == ["http://localhost:3000"]

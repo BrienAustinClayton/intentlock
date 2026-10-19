@@ -129,7 +129,7 @@ export function LoginPage() {
               maxLength={6}
               value={code}
               onChange={(e) => handleCodeChange(e.target.value)}
-              className="w-full h-14! rounded-xl bg-input border border-line px-3.5 text-center font-mono text-2xl! tracking-[0.5em] pl-[0.5em] text-fg placeholder:text-fg-dim focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+              className="saas-input h-14! rounded-xl px-3.5 text-center font-mono text-2xl! tracking-[0.5em] pl-[0.5em]"
               placeholder="••••••"
             />
 
@@ -162,7 +162,11 @@ export function LoginPage() {
               type="button"
               disabled={isResendDisabled}
               onClick={() => sendEmailCode()}
-              className="text-blue-400 hover:text-blue-300 disabled:text-fg-dim transition"
+              className={`transition ${
+                isResendDisabled
+                  ? "text-fg-dim cursor-not-allowed"
+                  : "text-blue-400 hover:text-blue-300"
+              }`}
             >
               {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : "Resend code"}
             </button>

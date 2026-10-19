@@ -113,7 +113,7 @@ export function OnboardingPage() {
                   inputMode="numeric"
                   value={monthlyBudget}
                   onChange={(e) => handleBudgetChange(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-input border border-line pl-14 pr-3.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+                  className="saas-input h-11 rounded-xl pl-14 pr-3.5"
                   placeholder="500"
                 />
               </div>
@@ -151,7 +151,7 @@ export function OnboardingPage() {
                     inputMode="numeric"
                     value={approvalLimit}
                     onChange={(e) => handleLimitChange(e.target.value)}
-                    className="w-full h-11 rounded-xl bg-input border border-line pl-14 pr-3.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+                    className="saas-input h-11 rounded-xl pl-14 pr-3.5"
                     placeholder="50"
                   />
                 </div>
@@ -177,7 +177,7 @@ export function OnboardingPage() {
                 maxLength={120}
                 value={referralSource}
                 onChange={(e) => setReferralSource(e.target.value)}
-                className="w-full h-11 rounded-xl bg-input border border-line px-3.5 text-sm text-fg placeholder:text-fg-dim focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+                className="saas-input h-11 rounded-xl px-3.5"
                 placeholder="Twitter, GitHub, friend..."
               />
             </AuthField>

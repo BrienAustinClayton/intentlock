@@ -70,7 +70,7 @@ export function SignupPage() {
               <select
                 value={country}
                 onChange={(e) => handleCountryChange(e.target.value)}
-                className="w-full h-11 rounded-xl bg-input border border-line px-3.5 text-sm text-fg focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+                className="saas-input h-11 rounded-xl px-3.5"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -84,7 +84,7 @@ export function SignupPage() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full h-11 rounded-xl bg-input border border-line px-3.5 text-sm text-fg focus:outline-none focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 transition"
+                className="saas-input h-11 rounded-xl px-3.5"
               >
                 {CURRENCIES.map((c: string) => (
                   <option key={c} value={c}>

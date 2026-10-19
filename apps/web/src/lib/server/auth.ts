@@ -49,7 +49,7 @@ export async function callApi(
       cache: "no-store",
     });
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    if (Array.isArray(data)) return { status: res.status, data: { items: data } };
+    if (Array.isArray(data)) return { status: res.status, data: { __list: data } };
     return { status: res.status, data };
   } catch {
     return { status: 502, data: { error: "api_unreachable", reason: "Service is unavailable. Try again shortly." } };

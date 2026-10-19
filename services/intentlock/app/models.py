@@ -331,6 +331,7 @@ class AgentRun(Base):
     attempts = Column(Integer, nullable=False, default=0, server_default="0")
     product_id = Column(String, nullable=True)  # chat purchases buy this exact Channel3 product
     qty = Column(Integer, nullable=True)
+    items = Column(JSONB, nullable=True)  # approved cart lines [{product_id, qty}] from one store
 
 
 class Chat(Base):
@@ -341,6 +342,7 @@ class Chat(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     title = Column(String(120), nullable=False, default="New chat")
+    cart = Column(JSONB, nullable=True)  # [{...product snapshot, qty}] waiting for the user's approval
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

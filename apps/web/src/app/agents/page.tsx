@@ -213,7 +213,32 @@ export default function AgentsPage() {
             }
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {rows && (
+            <ul className="sm:hidden divide-y divide-line">
+              {rows.map((a) => (
+                <li key={a.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-fg truncate">{a.name}</span>
+                    {a.revoked_at ? <Tag tone="neutral">Disconnected</Tag> : <Tag tone="success" dot>Active</Tag>}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {a.managed ? <Tag tone="brand">Hosted by Secay</Tag> : <Tag>Your own</Tag>}
+                    <span className="text-xs text-fg-dim">{when(a.created_at)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <CopyId value={a.id} />
+                    {!a.revoked_at && (
+                      <button type="button" onClick={() => disconnect(a)} className="intentlock-btn-outline btn-sm">
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className={`${rows ? "hidden sm:block" : ""} overflow-x-auto`}>
             <table className={tableClass}>
               <thead className={theadClass}>
                 <tr>
@@ -257,6 +282,7 @@ export default function AgentsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Panel>
     </div>

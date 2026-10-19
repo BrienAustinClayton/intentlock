@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, House } from "lucide-react";
+import { ChevronRight, House, Menu } from "lucide-react";
 import { findNav } from "@/lib/nav";
 
 const DETAIL: Record<string, (id: string) => string> = {
   "/orders": (id) => `Order ${id.slice(-6).toUpperCase()}`,
 };
 
-export default function TopHeader() {
+export default function TopHeader({ onMenu }: { onMenu?: () => void }) {
   const pathname = usePathname() ?? "/";
   const hit = findNav(pathname);
   const crumbs: { label: string; href?: string }[] = [];
@@ -28,9 +28,14 @@ export default function TopHeader() {
   }
 
   return (
-    <header className="header-edge sticky top-0 z-30 flex items-center h-16 px-6 sm:px-8 bg-canvas/85 backdrop-blur-md">
-      <nav aria-label="Breadcrumb">
-        <ol className="flex items-center gap-1.5 text-[13px]">
+    <header className="header-edge sticky top-0 z-30 flex items-center gap-2 h-14 lg:h-16 px-3 sm:px-6 lg:px-8 bg-canvas/85 backdrop-blur-md">
+      {onMenu && (
+        <button type="button" onClick={onMenu} className="lg:hidden p-2 -ml-1 rounded-lg text-fg-muted hover:text-fg hover:bg-fg/5" aria-label="Open menu">
+          <Menu className="w-5 h-5" strokeWidth={1.8} />
+        </button>
+      )}
+      <nav aria-label="Breadcrumb" className="min-w-0">
+        <ol className="flex items-center gap-1.5 text-[13px] min-w-0">
           <li>
             <Link
               href="/"
@@ -43,10 +48,10 @@ export default function TopHeader() {
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
             return (
-              <li key={i} className="flex items-center gap-1.5">
+              <li key={i} className={`flex items-center gap-1.5 min-w-0 ${!last ? "hidden sm:flex" : ""}`}>
                 <ChevronRight className="w-3.5 h-3.5 text-fg-faint" strokeWidth={2} />
                 {last ? (
-                  <span aria-current="page" className="font-medium text-blue-400">
+                  <span aria-current="page" className="font-medium text-blue-400 truncate">
                     {c.label}
                   </span>
                 ) : c.href ? (

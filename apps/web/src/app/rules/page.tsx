@@ -278,7 +278,44 @@ export default function RulesPage() {
               body="Without a rule, every checkout from your agent is rejected. Add one to say what it may buy and how much it may spend."
             />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {rules && (
+              <ul className="sm:hidden divide-y divide-line">
+                {rules.map((m) => (
+                  <li key={m.id} className="px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-fg truncate">{agentName(m.agent_id)}</span>
+                      {status(m)}
+                    </div>
+                    <div className="text-sm">
+                      <span className="tabular-nums text-fg">{money(m.budget_amount, m.currency)}</span>
+                      <span className="text-fg-dim"> {periodLabel(m.budget_period)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {m.categories.map((c) => (
+                        <Tag key={c}>{categoryName(c)}</Tag>
+                      ))}
+                      {m.merchants.map((c) => (
+                        <Tag key={c} tone="brand">
+                          {merchantName(c)}
+                        </Tag>
+                      ))}
+                    </div>
+                    {!m.revoked_at && (
+                      <div className="flex gap-2 pt-1">
+                        <button type="button" onClick={() => openEdit(m)} className="intentlock-btn-outline btn-sm flex-1">
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => end(m)} className="intentlock-btn-outline btn-sm flex-1">
+                          End
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className={`${rules ? "hidden sm:block" : ""} overflow-x-auto`}>
               <table className={tableClass}>
                 <thead className={theadClass}>
                   <tr>
@@ -337,6 +374,7 @@ export default function RulesPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Panel>
       )}

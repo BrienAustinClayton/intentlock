@@ -381,6 +381,15 @@ input[type="text"], input[type="search"], input[type="number"], textarea, select
 [data-theme="light"] .text-rose-300, [data-theme="light"] .text-rose-400 { color: #be123c; }
 [data-theme="light"] .text-blue-300, [data-theme="light"] .text-blue-400 { color: #1d4ed8; }
 
+/* Text fields that sit inside their own framed container (e.g. the chat composer). */
+.input-bare,
+.input-bare:focus,
+.input-bare:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
+
 /* Keyboard focus visibility */
 :focus-visible {
   outline: 2px solid #60a5fa;

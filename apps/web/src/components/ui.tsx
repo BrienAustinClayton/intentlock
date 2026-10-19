@@ -1,5 +1,6 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import type { OrderStatus } from "@/lib/types";
+import type { Order, OrderStatus } from "@/lib/types";
 
 export const MERCHANTS: Record<string, string> = {
   "*": "Any store",
@@ -64,6 +65,37 @@ export function OrderStatusTag({ status }: { status: OrderStatus }) {
   return <Tag tone={tone}>{label}</Tag>;
 }
 
+export function orderItems(o: Order) {
+  const cart = o.cart ?? [];
+  if (!cart.length) return "No items";
+  const first = cart[0].title || cart[0].product_id;
+  return cart.length > 1 ? `${first} and ${cart.length - 1} more` : first;
+}
+
+/** Phone layout for order lists; tables take over from the sm breakpoint. */
+export function OrderCards({ orders }: { orders: Order[] }) {
+  return (
+    <ul className="sm:hidden divide-y divide-line">
+      {orders.map((o) => (
+        <li key={o.id}>
+          <Link href={`/orders/${o.id}`} className="flex items-start justify-between gap-3 px-4 py-3 active:bg-fg/[0.04]">
+            <div className="min-w-0">
+              <div className="text-sm text-fg line-clamp-2">{orderItems(o)}</div>
+              <div className="mt-0.5 text-xs text-fg-dim truncate">
+                {merchantName(o.merchant)} · {when(o.created_at)}
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <span className="text-sm font-semibold tabular-nums">{money(o.total, o.currency)}</span>
+              <OrderStatusTag status={o.status} />
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function money(amount: string | number, currency = "USD") {
   const n = typeof amount === "number" ? amount : Number(amount);
   try {
@@ -98,7 +130,7 @@ export function PageHeader({
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {description && <p className="text-sm text-fg-muted max-w-2xl">{description}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
     </div>
   );
 }

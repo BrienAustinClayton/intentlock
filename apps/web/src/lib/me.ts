@@ -76,12 +76,24 @@ export interface ChatRule {
   currency: string;
 }
 
+export type CartLine = ChatProduct & { qty: number };
+
+export interface Cart {
+  items: CartLine[];
+  total: string;
+  count: number;
+  currency: string;
+  stores: number;
+  issues: string[];
+}
+
 export interface ChatThread {
   id: string;
   title: string;
   agent: { id: string; name: string; managed: boolean; active: boolean } | null;
   rules: ChatRule[];
   messages: ChatMessage[];
+  cart: Cart;
 }
 
 export interface PurchaseRequest {
@@ -128,7 +140,7 @@ async function call<T>(path: string, method = "GET", body?: unknown): Promise<T>
     const reason = typeof data.reason === "string" ? data.reason : "Something went wrong.";
     throw new ApiError(res.status, typeof data.error === "string" ? data.error : "http_error", reason);
   }
-  return ("items" in data && Array.isArray(data.items) ? data.items : data) as T;
+  return (Array.isArray(data.__list) ? data.__list : data) as T;
 }
 
 const id = encodeURIComponent;
@@ -155,8 +167,11 @@ export const me = {
   deleteChat: (chatId: string) => call<{ ok: boolean }>(`chats/${id(chatId)}`, "DELETE"),
   send: (chatId: string, content: string) =>
     call<{ messages: ChatMessage[]; title: string }>(`chats/${id(chatId)}/messages`, "POST", { content }),
-  buy: (chatId: string, b: { message_id: string; product_id: string; qty?: number }) =>
-    call<ChatMessage>(`chats/${id(chatId)}/buy`, "POST", b),
+  addToCart: (chatId: string, b: { message_id: string; product_id: string; qty?: number }) =>
+    call<Cart>(`chats/${id(chatId)}/cart`, "POST", b),
+  setCartQty: (chatId: string, productId: string, qty: number) =>
+    call<Cart>(`chats/${id(chatId)}/cart/${id(productId)}`, "PATCH", { qty }),
+  checkout: (chatId: string) => call<{ messages: ChatMessage[]; cart: Cart }>(`chats/${id(chatId)}/checkout`, "POST"),
   payment: () => call<{ connected: boolean }>("payment"),
   paymentSetup: () => call<{ approve_url: string }>("payment/setup", "POST"),
 };

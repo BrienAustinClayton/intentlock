@@ -167,9 +167,10 @@ def get_chat(chat_id: str, user: User = Depends(current_user), db: Session = Dep
         select(ChatMessage).where(ChatMessage.chat_id == chat.id).order_by(ChatMessage.created_at)
     ).scalars().all()
     runs = _runs_for(db, msgs)
+    rules = agent_rules(db, chat.agent_id)
     return {
         "id": chat.id, "title": chat.title, "agent": _agent_view(db.get(Agent, chat.agent_id)),
-        "rules": agent_rules(db, chat.agent_id), "messages": [_message_view(m, runs) for m in msgs],
+        "rules": rules, "messages": [_message_view(m, runs) for m in msgs], "cart": _cart_view(chat, rules),
     }
 
 
@@ -231,16 +232,36 @@ def send_message(chat_id: str, body: MessageIn, user: User = Depends(current_use
     return {"messages": [_message_view(mine, {}), _message_view(reply, {})], "title": chat.title}
 
 
-class BuyIn(BaseModel):
+MAX_CART_LINES = 20
+
+
+def _cart_view(chat: Chat, rules: list[dict[str, Any]]) -> dict[str, Any]:
+    lines = list(chat.cart or [])
+    total = sum((Decimal(l["price"]) * l["qty"] for l in lines), Decimal("0")).quantize(CENT)
+    issues: list[str] = []
+    for l in lines:
+        fits = [r for r in rules if l["category"] in r["categories"]
+                and ("*" in r["merchants"] or l["merchant"] in r["merchants"])]
+        if not fits:
+            issues.append(f"{l['title'][:60]} isn't allowed by your spending rules (category or store).")
+    left = max((Decimal(r["remaining"]) for r in rules), default=Decimal("0"))
+    if lines and total > left:
+        issues.append(f"The cart total ${format_amount(total)} is more than the ${format_amount(left)} your rules have left.")
+    if lines and not rules:
+        issues.append("Your agent has no active spending rule.")
+    return {"items": lines, "total": format_amount(total), "count": sum(l["qty"] for l in lines),
+            "currency": "USD", "stores": len({l["merchant"] for l in lines}), "issues": issues}
+
+
+class CartAdd(BaseModel):
     model_config = ConfigDict(extra="forbid")
     message_id: str = Field(min_length=1, max_length=64)
     product_id: str = Field(min_length=1, max_length=128)
     qty: int = Field(default=1, ge=1, le=20)
 
 
-@router.post("/{chat_id}/buy")
-def buy(chat_id: str, body: BuyIn, background: BackgroundTasks, user: User = Depends(current_user),
-        db: Session = Depends(get_db)):
+@router.post("/{chat_id}/cart")
+def add_to_cart(chat_id: str, body: CartAdd, user: User = Depends(current_user), db: Session = Depends(get_db)):
     chat = _own_chat(db, user, chat_id)
     shown = db.get(ChatMessage, body.message_id)
     if shown is None or shown.chat_id != chat.id or shown.role != "assistant":
@@ -248,28 +269,81 @@ def buy(chat_id: str, body: BuyIn, background: BackgroundTasks, user: User = Dep
     product = next((p for p in (shown.products or []) if p.get("product_id") == body.product_id), None)
     if product is None:
         raise _not_found("product")
+    lines = [dict(l) for l in chat.cart or []]  # copies: JSONB changes are only saved when the value differs
+    line = next((l for l in lines if l["product_id"] == body.product_id), None)
+    if line is not None:
+        line["qty"] = min(line["qty"] + body.qty, 20)
+    else:
+        if len(lines) >= MAX_CART_LINES:
+            raise HTTPException(409, detail={"error": "cart_full", "reason": "Your cart is full. Check out or remove something first."})
+        lines.append({**product, "qty": body.qty})
+    chat.cart = lines
+    chat.updated_at = utcnow()
+    db.commit()
+    return _cart_view(chat, agent_rules(db, chat.agent_id))
+
+
+class CartQty(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    qty: int = Field(ge=0, le=20)
+
+
+@router.patch("/{chat_id}/cart/{product_id}")
+def update_cart(chat_id: str, product_id: str, body: CartQty, user: User = Depends(current_user),
+                db: Session = Depends(get_db)):
+    chat = _own_chat(db, user, chat_id)
+    lines = list(chat.cart or [])
+    if not any(l["product_id"] == product_id for l in lines):
+        raise _not_found("cart item")
+    chat.cart = [({**l, "qty": body.qty} if l["product_id"] == product_id else l)
+                 for l in lines if body.qty > 0 or l["product_id"] != product_id]
+    db.commit()
+    return _cart_view(chat, agent_rules(db, chat.agent_id))
+
+
+@router.post("/{chat_id}/checkout")
+def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depends(current_user),
+                  db: Session = Depends(get_db)):
+    """The user's approval: one signed purchase request per store, listing exactly the approved items."""
+    chat = _own_chat(db, user, chat_id)
+    lines = list(chat.cart or [])
+    if not lines:
+        raise HTTPException(409, detail={"error": "cart_empty", "reason": "Your cart is empty."})
     agent = db.get(Agent, chat.agent_id)
     if agent is None or not agent.managed or agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_unavailable", "reason": "This chat's agent is disconnected."})
+    view = _cart_view(chat, agent_rules(db, chat.agent_id))
+    if view["issues"]:
+        raise HTTPException(409, detail={"error": "cart_not_allowed", "reason": " ".join(view["issues"])})
 
     asked = db.execute(
-        select(ChatMessage).where(ChatMessage.chat_id == chat.id, ChatMessage.role == "user",
-                                  ChatMessage.created_at <= shown.created_at)
+        select(ChatMessage).where(ChatMessage.chat_id == chat.id, ChatMessage.role == "user")
         .order_by(ChatMessage.created_at.desc()).limit(1)
     ).scalars().first()
-    request_text = (
-        f"{asked.content if asked else ''}\n\n"
-        f"I chose: {product['title']} from {product['merchant']} at ${product['price']} each, quantity {body.qty}."
-    ).strip()[:2000]
-    try:
-        intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text)
-    except ServiceError as e:
-        raise HTTPException(e.status_code, detail={"error": e.error, "reason": e.reason})
-    run = hosted_agents.start_run(db, intent.id, user.id, agent.id, product_id=body.product_id, qty=body.qty)
-    msg = _add(db, chat, "assistant",
-               f"Buying {body.qty} × {product['title']} from {product['merchant']}. "
-               "Secay checks the order against your request and rules before anything is paid.",
-               intent_id=intent.id, run_id=run.id)
+    stores: dict[str, list[dict]] = {}
+    for l in lines:
+        stores.setdefault(l["merchant"], []).append(l)
+    messages, run_ids = [], []
+    for merchant, group in stores.items():
+        listing = "; ".join(f"{l['qty']} × {l['title']} at ${l['price']}" for l in group)
+        request_text = (f"{asked.content if asked else ''}\n\nI approved this cart from {merchant}: {listing}.").strip()[:2000]
+        try:
+            intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text)
+        except ServiceError as e:
+            raise HTTPException(e.status_code, detail={"error": e.error, "reason": e.reason})
+        run = hosted_agents.start_run(db, intent.id, user.id, agent.id,
+                                      items=[{"product_id": l["product_id"], "qty": l["qty"]} for l in group])
+        total = sum((Decimal(l["price"]) * l["qty"] for l in group), Decimal("0")).quantize(CENT)
+        count = sum(l["qty"] for l in group)
+        msg = _add(db, chat, "assistant",
+                   f"Buying {count} item{'s' if count > 1 else ''} from {merchant} for ${format_amount(total)}. "
+                   "Secay checks the order against your request and rules before anything is paid.",
+                   intent_id=intent.id, run_id=run.id)
+        messages.append((msg, run))
+        run_ids.append(run.id)
+    chat.cart = []
     db.commit()
-    background.add_task(hosted_agents.execute_run, run.id)
-    return _message_view(msg, {run.id: hosted_agents.run_to_dict(run)})
+    for rid in run_ids:
+        background.add_task(hosted_agents.execute_run, rid)
+    return {"messages": [_message_view(m, {r.id: hosted_agents.run_to_dict(r)}) for m, r in messages],
+            "cart": _cart_view(chat, agent_rules(db, chat.agent_id))}

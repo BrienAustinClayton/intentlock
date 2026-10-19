@@ -15,8 +15,9 @@ export function ChatCartDrawer({
   onUpdateQty,
   onCheckout,
 }: CartDrawerProps) {
-  const storeNames = Array.from(new Set(cart.items.map((item: CartItemLine) => item.merchant)));
-  const hasNoItems = cart.items.length === 0;
+  const cartItems = cart && Array.isArray(cart.items) ? cart.items : [];
+  const storeNames = Array.from(new Set(cartItems.map((item: CartItemLine) => item.merchant)));
+  const hasNoItems = cartItems.length === 0;
 
   return (
     <div className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`} aria-hidden={!isOpen}>
@@ -61,7 +62,7 @@ export function ChatCartDrawer({
           )}
 
           {storeNames.map((store: string) => {
-            const storeItems = cart.items.filter((item: CartItemLine) => item.merchant === store);
+            const storeItems = cartItems.filter((item: CartItemLine) => item.merchant === store);
 
             return (
               <div key={store} className="rounded-2xl bg-fg/4 p-3.5 space-y-3">

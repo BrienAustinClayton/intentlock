@@ -71,9 +71,9 @@ export function useSpendingRules() {
   });
 
   return {
-    rules: rulesQuery.data || [],
+    rules: Array.isArray(rulesQuery.data) ? rulesQuery.data : [],
     isLoadingRules: rulesQuery.isLoading,
-    agents: agentsQuery.data || [],
+    agents: Array.isArray(agentsQuery.data) ? agentsQuery.data : [],
     isLoadingAgents: agentsQuery.isLoading,
     createRule: createRuleMutation.mutateAsync,
     isCreatingRule: createRuleMutation.isPending,

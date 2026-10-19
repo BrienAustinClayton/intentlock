@@ -40,8 +40,8 @@ export function ChatPage() {
     deleteChat,
   } = useChatSessions(activeChatId);
 
-  const cart = activeChat ? activeChat.cart : DEFAULT_EMPTY_CART;
-  const messages = activeChat ? activeChat.messages : [];
+  const cart = activeChat && activeChat.cart ? activeChat.cart : DEFAULT_EMPTY_CART;
+  const messages = activeChat && Array.isArray(activeChat.messages) ? activeChat.messages : [];
 
   const handleSendMessage = (event: React.FormEvent) => {
     event.preventDefault();

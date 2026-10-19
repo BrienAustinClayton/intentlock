@@ -54,7 +54,7 @@ export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilte
   });
 
   return {
-    orders: ordersListQuery.data || [],
+    orders: Array.isArray(ordersListQuery.data) ? ordersListQuery.data : [],
     isLoadingOrders: ordersListQuery.isLoading,
     orderDetail: orderDetailQuery.data || null,
     isLoadingOrderDetail: orderDetailQuery.isLoading,

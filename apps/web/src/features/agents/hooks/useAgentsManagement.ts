@@ -55,7 +55,7 @@ export function useAgentsManagement() {
   });
 
   return {
-    agents: agentsQuery.data || [],
+    agents: Array.isArray(agentsQuery.data) ? agentsQuery.data : [],
     isLoadingAgents: agentsQuery.isLoading,
     createHostedAgent: createHostedAgentMutation.mutateAsync,
     isCreatingHostedAgent: createHostedAgentMutation.isPending,

@@ -102,5 +102,9 @@ export function forbidden() {
 }
 
 export function relay(status: number, data: Record<string, unknown>) {
+  const isListWrapper = Array.isArray(data.__list);
+  if (isListWrapper) {
+    return NextResponse.json(data.__list, { status });
+  }
   return NextResponse.json(data, { status });
 }

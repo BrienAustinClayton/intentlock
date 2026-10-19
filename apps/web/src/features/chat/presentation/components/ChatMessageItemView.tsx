@@ -25,8 +25,10 @@ export function ChatMessageItemView({
     );
   }
 
-  const hasProducts = message.products.length > 0;
+  const productList = Array.isArray(message.products) ? message.products : [];
+  const hasProducts = productList.length > 0;
   const hasRun = Boolean(message.run);
+  const cartItems = cart && Array.isArray(cart.items) ? cart.items : [];
 
   return (
     <div className="flex gap-3">
@@ -45,8 +47,8 @@ export function ChatMessageItemView({
 
         {hasProducts && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {message.products.map((product: ChatProductItem) => {
-              const matchedCartLine = cart.items.find(
+            {productList.map((product: ChatProductItem) => {
+              const matchedCartLine = cartItems.find(
                 (item: CartItemLine) => item.product_id === product.product_id
               );
               const inCartCount = matchedCartLine ? matchedCartLine.qty : 0;

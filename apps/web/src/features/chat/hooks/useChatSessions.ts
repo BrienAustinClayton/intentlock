@@ -124,7 +124,7 @@ export function useChatSessions(activeChatId: string | null = null) {
   });
 
   return {
-    chats: chatsListQuery.data || [],
+    chats: Array.isArray(chatsListQuery.data) ? chatsListQuery.data : [],
     isLoadingChats: chatsListQuery.isLoading,
     activeChat: activeChatQuery.data || null,
     isLoadingActiveChat: activeChatQuery.isLoading,

@@ -114,7 +114,7 @@ services:
 
       # Hosted shopping agent: the API runs it for agents IntentLock hosts
       - key: AGENT_SERVICE_URL
-        value: https://purchase-agent.sepilo.space
+        value: https://intentlock-agent.onrender.com
       - key: AGENT_RUN_SECRET
         generateValue: true
 

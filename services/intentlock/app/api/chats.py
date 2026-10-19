@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app import hosted_agents, runlog
+from app import hosted_agents, runlog, velocity
 from app.cart_review import review_cart
 from app.untrusted import clean, guard_reply, had_hidden_chars, talks_to_agent
 from app.auth import current_user
@@ -251,6 +251,7 @@ def _history(db: Session, chat: Chat) -> list[dict[str, str]]:
 @router.post("/{chat_id}/messages")
 def send_message(chat_id: str, body: MessageIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     chat = _own_chat(db, user, chat_id)
+    velocity.check_chat_rate(db, user.id)
     history = _history(db, chat)
     mine = _add(db, chat, "user", body.content)
     if chat.title == "New chat":
@@ -364,6 +365,7 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, body: Optional[Chec
     agent = db.get(Agent, chat.agent_id)
     if agent is None or not agent.managed or agent.revoked_at is not None:
         raise HTTPException(409, detail={"error": "agent_unavailable", "reason": "This chat's agent is disconnected."})
+    velocity.check_cart_checkout_rate(db, user.id)
     view = _cart_view(chat, chat_rules(db, chat))
 
     recent = db.execute(

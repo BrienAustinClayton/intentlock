@@ -28,14 +28,14 @@ export function useOrdersManagement(selectedTab: OrderFilterTabEnum = OrderFilte
     enabled: shouldFetchDetail,
   });
 
-  const approveOrderMutation = useMutation<OrderSummary, Error, string>({
-    mutationFn: (orderId: string) =>
-      makeApiCall<OrderSummary, { decision: string }>({
+  const approveOrderMutation = useMutation<OrderSummary, Error, { orderId: string; confirmTotal?: string }>({
+    mutationFn: ({ orderId, confirmTotal }) =>
+      makeApiCall<OrderSummary, { decision: string; confirm_total?: string }>({
         endpoint: `/api/me/orders/${encodeURIComponent(orderId)}/approval`,
         method: HttpMethodEnum.Post,
-        payload: { decision: "approve" },
+        payload: { decision: "approve", ...(confirmTotal ? { confirm_total: confirmTotal } : {}) },
       }),
-    onSuccess: (_, orderId: string) => {
+    onSuccess: (_, { orderId }) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["orderDetail", orderId] });
     },

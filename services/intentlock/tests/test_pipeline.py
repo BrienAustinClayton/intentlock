@@ -944,3 +944,42 @@ def test_intent_signature_covers_the_approved_cart(db, seed):
     i.approved_cart = [{**cart[0], "qty": 5}]
     assert verify_intent_signature(i) is False
     assert verify_intent_signature(seed.intent) is True  # requests without a cart keep the old payload
+
+
+def _hold_everything(monkeypatch):
+    from app.policy import Decision
+
+    real = core.decide
+
+    def hold(*a, **k):
+        d = real(*a, **k)
+        return Decision("hold", ["Graph risk is high"]) if d.decision != "reject" else d
+    monkeypatch.setattr(core, "decide", hold)
+
+
+def test_pending_approvals_are_capped_per_agent(client, db, seed, monkeypatch):
+    from app.pipeline.core import TOO_MANY_PENDING_REASON
+
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    _hold_everything(monkeypatch)
+    monkeypatch.setattr(core, "PENDING_APPROVALS_PER_AGENT", 2)
+    statuses = []
+    for _ in range(3):
+        statuses.append(ok(client, seed)["status"])
+        seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    assert statuses == ["pending_approval", "pending_approval", "voided"]
+    last = db.query(Order).filter_by(agent_id=seed.agent.id, status="voided").one()
+    assert TOO_MANY_PENDING_REASON in last.reasons
+
+
+def test_agent_daily_order_limit(client, db, seed, monkeypatch):
+    from app import velocity
+
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    monkeypatch.setattr(velocity, "AGENT_ORDERS_PER_DAY", 1)
+    assert ok(client, seed)["status"] == "captured"
+    seed.intent = create_intent(db, user_id=seed.user.id, agent_id=seed.agent.id, request_text="Whole milk from freshmart")
+    r = post(client, seed, body(seed))
+    assert r.status_code == 429 and r.json()["error"] == "rate_limited"

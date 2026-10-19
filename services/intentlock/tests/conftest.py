@@ -166,3 +166,11 @@ def _cart_review_passthrough(monkeypatch, request):
                             "detail": " ".join(rule_issues)}]}
 
     monkeypatch.setattr(chats, "review_cart", ok)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_email(monkeypatch):
+    """Never send real email from tests (the local .env may hold a real Resend key). Tests that check email
+    set RESEND_API_KEY themselves."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "RESEND_API_KEY", None)

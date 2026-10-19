@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app import runlog
 from app.config import web_origins
+from app.auth import send_security_notice
 from app.db import get_db
 from app.models import Chat, ChatMessage, Check, Order, User
 from app.paypal import service as paypal
@@ -101,6 +102,8 @@ def paypal_return(background: BackgroundTasks, order_id: str = "", token: Option
     user = db.get(User, order.user_id)
     if saved and user is not None and not paypal.has_saved_payment(user.paypal_payment_token):
         user.paypal_payment_token = saved
+        send_security_notice(user.email, "PayPal was saved on your Sepilo account",
+                             "Your agents can now pay with this PayPal account, within your spending rules.")
     set_status(order, "authorized", [])
     db.commit()
     runlog.emit("paypal.buyer_approved", order_id=order.id, saved_for_later=bool(saved))

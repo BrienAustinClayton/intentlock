@@ -20,6 +20,7 @@ from app.models import Agent, Intent, Order
 from app.pipeline.runner import run_checkout
 from app.pipeline.steps import record_check
 from app.product_truth import CartNotVerified, domain_of, verify_cart
+from app.velocity import check_agent_order_rate
 
 MONEY_RE = r"^\d{1,9}(\.\d{1,2})?$"
 MAX_TOTAL = Decimal("9999999999.99")
@@ -150,6 +151,7 @@ async def checkout(request: Request, verified: VerifiedAgent = Depends(verified_
                                              Order.status.notin_(RETRY_AFTER)).limit(1)).first()
     if used is not None:
         raise _err(409, "intent_used", "this purchase request already has an order")
+    check_agent_order_rate(db, agent.id)
     # Server-side truth: price, store, category and pages come from Channel3, not from the agent.
     try:
         store, lines, pages = await asyncio.to_thread(verify_cart, body.merchant,

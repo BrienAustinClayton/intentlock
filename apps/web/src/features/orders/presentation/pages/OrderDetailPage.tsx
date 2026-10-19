@@ -121,7 +121,8 @@ export function OrderDetailPage({ orderId }: OrderDetailPageProps) {
         <OrderApprovalActions
           orderId={order.id}
           timeoutAt={order.approval_timeout_at}
-          onApprove={() => approveOrder(order.id)}
+          total={order.total}
+          onApprove={(confirmTotal?: string) => approveOrder({ orderId: order.id, confirmTotal })}
           onDecline={() => declineOrder(order.id)}
           isProcessing={isProcessingApproval}
         />

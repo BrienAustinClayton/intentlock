@@ -348,3 +348,20 @@ def google_login(db: Session, code: str, code_verifier: str, user_agent: str | N
     if not user.avatar_url and isinstance(claims.get("picture"), str):
         user.avatar_url = claims["picture"][:500]
     return _login(db, user, user_agent, is_new)
+
+
+def send_security_notice(email: str | None, subject: str, text: str) -> None:
+    """Best-effort email when something sensitive changes on the account (payment method, new agent).
+    Never raises: a failed notice must not undo the change; it is logged for developers instead."""
+    key = _cfg("RESEND_API_KEY")
+    if not email or not key:
+        log.info("auth.security_notice_skipped subject=%r", subject)
+        return
+    body = {"from": _cfg("RESEND_FROM") or "Sepilo <onboarding@resend.dev>", "to": [email], "subject": subject,
+            "text": text + "\n\nIf this wasn't you, sign in to Sepilo now and disconnect it."}
+    try:
+        r = httpx.post(RESEND_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=10)
+        if r.status_code >= 300:
+            log.warning("auth.security_notice_failed status=%s", r.status_code)
+    except httpx.HTTPError as e:
+        log.warning("auth.security_notice_failed %s", type(e).__name__)

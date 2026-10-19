@@ -16,14 +16,14 @@ from app.api.approvals import ApprovalRequest, post_approval
 from app.api.mandates import MandateCreate, MandatePatch, _http
 from app.api.orders import _order_to_dict, user_order_dict
 from app.api.vault import vault_setup
-from app.auth import current_user
+from app.auth import current_session, current_user, send_security_notice
 from app.crypto.keys import load_public_key
 from app.db import get_db
-from app import hosted_agents
+from app import hosted_agents, velocity
 from app.ids import new_id
 from app.intents import create_intent, intent_to_dict
 from app.mandates import create_mandate, list_mandates_for_user, mandate_to_dict, revoke_mandate, update_mandate
-from app.models import Agent, AgentRun, Intent, Mandate, Order, User
+from app.models import Agent, AgentRun, Intent, Mandate, Order, User, UserSession
 from app.paypal import service as paypal
 from app.service_errors import ServiceError
 
@@ -123,7 +123,8 @@ def orders(
     stmt = select(Order).where(Order.user_id == user.id)
     if view != "all":
         stmt = stmt.where(Order.status.in_(BUCKETS[view]))
-    stmt = stmt.order_by(Order.created_at.desc()).limit(500)
+    # Waiting approvals: biggest first, so the order that matters most isn't buried (approval fatigue)
+    stmt = stmt.order_by(Order.total.desc() if view == "needs_approval" else Order.created_at.desc()).limit(500)
     return [_order_to_dict(o) for o in db.execute(stmt).scalars().all()]
 
 
@@ -170,6 +171,8 @@ def connect_agent(body: AgentConnect, user: User = Depends(current_user), db: Se
     db.add(agent)
     db.commit()
     db.refresh(agent)
+    send_security_notice(user.email, "A new agent was connected to your Sepilo account",
+                         f"The agent “{agent.name}” can now shop for you within your spending rules.")
     return _agent_view(agent)
 
 
@@ -187,6 +190,8 @@ def create_hosted_agent(body: HostedAgentCreate, user: User = Depends(current_us
     db.add(agent)
     db.commit()
     db.refresh(agent)
+    send_security_notice(user.email, "A new agent was created on your Sepilo account",
+                         f"The hosted agent “{agent.name}” can now shop for you within your spending rules.")
     return _agent_view(agent)
 
 
@@ -332,5 +337,7 @@ def payment(user: User = Depends(current_user)) -> dict[str, Optional[bool]]:
 
 
 @router.post("/payment/setup")
-def payment_setup(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def payment_setup(user: User = Depends(current_user), sess: UserSession = Depends(current_session),
+                  db: Session = Depends(get_db)):
+    velocity.require_fresh_sign_in(sess)  # someone with a stolen session can't swap the payment method
     return vault_setup(user.id, db)

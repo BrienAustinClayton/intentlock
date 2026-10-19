@@ -560,3 +560,99 @@ def test_checkout_runs_cart_check_and_needs_confirmation_for_warnings(client, db
     run = next(kw["json"] for u, kw in calls if u.endswith("/run"))
     intent = db.get(Intent, run["intent_id"])
     assert intent.approved_cart == [{"product_id": "c3_cable", "qty": 1, "unit_price": "9.99", "merchant": "baseus.com"}]
+
+
+# --------------------------------------------------------------------------- #
+# Payment, approval and identity abuse (threats 23-26)
+# --------------------------------------------------------------------------- #
+def test_chat_messages_are_rate_limited(client, two, chat_agent, monkeypatch):
+    from app import velocity
+
+    monkeypatch.setattr(velocity, "CHAT_MESSAGES_PER_MINUTE", 3)
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"])
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    codes = [client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": f"cable {i}"}).status_code
+             for i in range(4)]
+    assert codes[:3] == [200, 200, 200] and codes[3] == 429
+
+
+def test_cart_checkouts_are_rate_limited(client, db, two, chat_agent, monkeypatch):
+    from app import velocity
+
+    monkeypatch.setattr(velocity, "CART_CHECKOUTS_PER_HOUR", 1)
+    calls, suggest, reply = chat_agent
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"], budget_amount="100.00")
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    reply["value"] = _Resp(200, {"order_id": None, "summary": "Out of stock.", "errors": []})
+    for expected in (200, 429):
+        shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a cable"}).json()["messages"][1]
+        client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "c3_cable"})
+        assert client.post(f"/me/chats/{chat['id']}/checkout", headers=ha).status_code == expected
+
+
+def test_payment_method_change_needs_a_fresh_sign_in(client, db, two, monkeypatch):
+    from datetime import timedelta
+
+    from app.api import me as me_api
+    from app.models import UserSession
+
+    (alice, ha), _ = two
+    monkeypatch.setattr(me_api, "vault_setup", lambda uid, db: {"approve_url": "https://paypal.test/approve"})
+    assert client.post("/me/payment/setup", headers=ha).status_code == 200
+    sess = db.query(UserSession).filter_by(user_id=alice.id).one()
+    sess.created_at = sess.created_at - timedelta(minutes=30)
+    db.commit()
+    r = client.post("/me/payment/setup", headers=ha)
+    assert r.status_code == 403 and r.json()["error"] == "reauth_required"
+
+
+def test_new_agent_sends_a_security_notice(client, two, monkeypatch):
+    from app import auth as auth_mod
+    from app.config import settings
+
+    sent = []
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test")
+    monkeypatch.setattr(auth_mod.httpx, "post", lambda url, **kw: sent.append(kw["json"]) or _Resp(200, {}))
+    (_, ha), _ = two
+    _agent(client, ha, name="Night shopper")
+    assert sent and sent[0]["to"] == ["alice@example.com"] and "Night shopper" in sent[0]["text"]
+
+
+def test_large_approval_needs_the_total_typed(client, db, two):
+    from app.models import Approval
+    from app.signing import utcnow
+    from datetime import timedelta
+
+    (alice, ha), _ = two
+    agent = _agent(client, ha)
+    intent = client.post("/me/requests", headers=ha, json={"agent_id": agent["id"], "request_text": "a laptop"}).json()
+    held = _order(db, alice, intent["id"], agent["id"], "pending_approval", total="899.00")
+    held.authorization_id = "MOCK-A-X"
+    db.add(Approval(id=new_id("apr"), order_id=held.id, requested_at=utcnow(),
+                    expires_at=utcnow() + timedelta(minutes=10)))
+    db.commit()
+    r = client.post(f"/me/orders/{held.id}/approval", headers=ha, json={"decision": "approve"})
+    assert r.status_code == 422 and r.json()["error"] == "confirm_total_required"
+    r = client.post(f"/me/orders/{held.id}/approval", headers=ha, json={"decision": "approve", "confirm_total": "$89.00"})
+    assert r.status_code == 422
+    r = client.post(f"/me/orders/{held.id}/approval", headers=ha, json={"decision": "approve", "confirm_total": "899"})
+    assert r.status_code == 200 and r.json()["status"] == "captured"
+
+
+def test_run_summary_comes_from_the_order_not_the_agent(client, db, two, hosted):
+    _, reply = hosted
+    (alice, ha), _ = two
+    a = _hosted_agent(client, ha)
+    req = client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "a cable"}).json()
+    o = _order(db, alice, req["id"], a["id"], "captured", total="19.95")
+    o.cart_json = [{"product_id": "p", "title": "Gift card", "qty": 3, "unit_price": "6.65"}]
+    o.merchant = "giftcards.example"
+    db.commit()
+    reply["value"] = _Resp(200, {"order_id": o.id, "summary": "Bought a USB-C cable from bestbuy.com.", "errors": []})
+    client.post(f"/me/requests/{req['id']}/run", headers=ha)
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["summary"] == "Bought 3 × Gift card from giftcards.example for $19.95."

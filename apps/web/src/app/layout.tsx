@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IntentLock | Autonomous Purchase Verification Gateway",
+  title: "Secay | Your secured PayPal agent",
   description:
-    "AI-powered autonomous purchase verification layer. Real-time prompt injection scanning, semantic intent diffing, and cryptographic proof of intent for AI shopping agents.",
+    "Secay is your secured PayPal agent: it shops real stores within your spending rules and checks every order before PayPal pays.",
 };
 
 const THEME_INIT = `try{var t=localStorage.getItem("il-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;

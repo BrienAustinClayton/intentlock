@@ -21,6 +21,7 @@ from app.api import (
     auth,
     approvals,
     catalog,
+    chats,
     checkout,
     console,
     graph,
@@ -126,6 +127,7 @@ async def health() -> dict[str, Any]:
 # ------------------------------------------------------------------ #
 app.include_router(auth.router)
 app.include_router(me.router)
+app.include_router(chats.router)
 app.include_router(users.router)
 app.include_router(vault.router)
 app.include_router(agents.router)

@@ -4,7 +4,7 @@
  *   2. choose: request + in-stock Channel3 candidates -> one product, or why none fits
  * Search, price filtering, cart building, money and checkout are plain code.
  */
-import { channel3Search, moneyString, toCents, type Product } from "./catalog.ts";
+import { channel3Get, channel3Search, moneyString, toCents, type Product } from "./catalog.ts";
 import { currentRun, type CheckoutResult } from "./context.ts";
 import { chatJson } from "./llm.ts";
 import { remember, submitCheckout } from "./tools.ts";
@@ -111,4 +111,14 @@ export async function shop(intentId: string, request: string): Promise<ShopOutco
   const summary =
     `Chose ${qty} × ${product.title.slice(0, 120)} from ${product.merchant} for ${usd(total)}.` + (reason ? ` ${reason}` : "");
   return { checkout: result, summary };
+}
+
+/** Chat purchase: buy exactly the product the user picked, re-read from Channel3 for the current price. */
+export async function shopExact(intentId: string, productId: string, qty: number): Promise<ShopOutcome> {
+  const product = await channel3Get(productId);
+  if (!product) throw new ShopFailure("That product is no longer available on Channel3.");
+  remember([product]);
+  const result = await submitCheckout(intentId, [{ product_id: product.product_id, qty }]);
+  const total = currentRun().lastCart?.total ?? product.price;
+  return { checkout: result, summary: `Bought ${qty} × ${product.title.slice(0, 120)} from ${product.merchant} for ${usd(total)}.` };
 }

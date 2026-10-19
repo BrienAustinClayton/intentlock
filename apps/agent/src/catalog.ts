@@ -16,6 +16,7 @@ export interface Product {
   source: "catalog" | "channel3";
   brand?: string;
   category_title?: string;
+  image?: string;
 }
 
 const MERCHANT_CATEGORY: Record<string, string> = {
@@ -143,6 +144,7 @@ function fromChannel3(raw: any, merchant?: string): Product | null {
       category: String(top?.slug ?? "other").slice(0, 64),
       category_title: typeof top?.title === "string" ? top.title : undefined,
       brand: typeof raw.brands?.[0]?.name === "string" ? raw.brands[0].name : undefined,
+      image: isPublicHttpUrl(raw.images?.[0]?.url) ? raw.images[0].url : undefined,
       title: String(raw.title ?? "").slice(0, 300),
       description: typeof raw.description === "string" ? raw.description : undefined,
       key_features: Array.isArray(raw.key_features) ? raw.key_features.map(String) : undefined,

@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
       { source: "/wallet", destination: "/payment", permanent: false },
       { source: "/wallet/orders", destination: "/orders", permanent: false },
       { source: "/wallet/orders/:id", destination: "/orders/:id", permanent: false },
-      { source: "/wallet/request", destination: "/requests", permanent: false },
+      { source: "/wallet/request", destination: "/chat", permanent: false },
+      { source: "/requests", destination: "/chat", permanent: false },
     ];
   },
   turbopack: {

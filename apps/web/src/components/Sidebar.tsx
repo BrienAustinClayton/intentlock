@@ -63,7 +63,7 @@ export default function Sidebar() {
       <div className={`flex items-center h-16 px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
         {!collapsed && (
           <Link href="/" className="pl-2 text-[15px] font-semibold tracking-tight text-fg">
-            Secay
+            Sepilo
           </Link>
         )}
         <button
@@ -109,7 +109,7 @@ export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => voi
       >
         <div className="flex items-center justify-between h-16 px-4">
           <Link href="/" onClick={onClose} className="pl-2 text-[15px] font-semibold tracking-tight text-fg">
-            Secay
+            Sepilo
           </Link>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-fg-dim hover:text-fg hover:bg-fg/5" aria-label="Close menu">
             <X className="w-4 h-4" strokeWidth={1.8} />

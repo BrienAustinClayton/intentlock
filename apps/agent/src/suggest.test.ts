@@ -18,7 +18,7 @@ function fake(plan: unknown, pick: unknown, products: unknown[]) {
     calls.push({ url, body });
     const json = (o: unknown) => new Response(JSON.stringify(o), { status: 200 });
     if (url.endsWith("/chat/completions")) {
-      const isPlan = body.messages[0].content.startsWith("You are Secay");
+      const isPlan = body.messages[0].content.startsWith("You are Sepilo");
       return json({ choices: [{ message: { content: JSON.stringify(isPlan ? plan : pick) } }] });
     }
     return json({ products });

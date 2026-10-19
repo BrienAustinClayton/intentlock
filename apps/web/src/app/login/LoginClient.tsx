@@ -74,7 +74,7 @@ export default function LoginClient() {
       {step === "email" ? (
         <div className="space-y-6">
           <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight">Sign in to Secay</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Sign in to Sepilo</h1>
             <p className="text-sm text-fg-muted">Your secured PayPal agent. New here? The same steps create your account.</p>
           </div>
 

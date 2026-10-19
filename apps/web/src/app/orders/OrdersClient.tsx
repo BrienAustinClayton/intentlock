@@ -26,7 +26,7 @@ import { me, type OrderView } from "@/lib/me";
 import type { Order } from "@/lib/types";
 
 const VIEWS: { id: OrderView; label: string; empty: string }[] = [
-  { id: "all", label: "All", empty: "When your agent checks out, each order shows up here with every check Secay ran." },
+  { id: "all", label: "All", empty: "When your agent checks out, each order shows up here with every check Sepilo ran." },
   { id: "needs_approval", label: "Needs approval", empty: "Nothing is waiting for you. Held orders appear here until you approve or decline." },
   { id: "paid", label: "Paid", empty: "No orders have been paid yet." },
   { id: "blocked", label: "Blocked", empty: "Nothing has been blocked. Orders that fail a check are stopped before payment." },
@@ -59,7 +59,7 @@ export default function OrdersClient() {
     <div>
       <PageHeader
         title="Orders"
-        description="Every checkout your agents attempted. Secay holds the payment, runs its checks, then pays, blocks or asks you."
+        description="Every checkout your agents attempted. Sepilo holds the payment, runs its checks, then pays, blocks or asks you."
       />
 
       <div role="tablist" className="flex items-center gap-1 mb-4 border-b border-line overflow-x-auto whitespace-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">

@@ -40,7 +40,7 @@ interface Plan {
 }
 
 const PLAN_SYSTEM =
-  "You are Secay, a shopping assistant that buys from real online stores within the user's spending rules. " +
+  "You are Sepilo, a shopping assistant that buys from real online stores within the user's spending rules. " +
   "Given the recent conversation and the user's latest message, decide whether to search for products. " +
   'Reply with JSON only: {"search": boolean, "query": string|null, "max_unit_price": number|null, "quantity": integer, "reply": string}. ' +
   "search is false for greetings, thanks or questions you can answer directly; then reply answers in one or two sentences. " +
@@ -83,7 +83,7 @@ const toSuggestion = (p: Product): Suggestion => ({
 
 export async function suggest(message: string, history: Turn[], rules: Rule[]): Promise<{ reply: string; products: Suggestion[] }> {
   const budget = Math.max(0, ...rules.map((r) => toCents(r.remaining)));
-  const convo = history.slice(-8).map((t) => `${t.role === "user" ? "User" : "Secay"}: ${t.content.slice(0, 600)}`).join("\n");
+  const convo = history.slice(-8).map((t) => `${t.role === "user" ? "User" : "Sepilo"}: ${t.content.slice(0, 600)}`).join("\n");
   const plan = await chatJson<Plan>(
     PLAN_SYSTEM,
     `<conversation>\n${convo}\n</conversation>\n<latest>\n${message.slice(0, 1000)}\n</latest>\n` +

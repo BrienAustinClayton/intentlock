@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Secay | Your secured PayPal agent",
+  title: "Sepilo | Your secured PayPal agent",
   description:
-    "Secay is your secured PayPal agent: it shops real stores within your spending rules and checks every order before PayPal pays.",
+    "Sepilo is your secured PayPal agent: it shops real stores within your spending rules and checks every order before PayPal pays.",
 };
 
 const THEME_INIT = `try{var t=localStorage.getItem("il-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;

@@ -43,10 +43,10 @@ export default function HomePage() {
 
   const steps = s
     ? [
-        { done: s.payment_connected, label: "Connect a payment method", body: "Secay holds funds and only pays once checks pass.", href: "/payment" },
-        { done: s.agents_active > 0, label: "Create your shopping agent", body: "Secay runs it for you, or connect an agent you already use.", href: "/agents" },
+        { done: s.payment_connected, label: "Connect a payment method", body: "Sepilo holds funds and only pays once checks pass.", href: "/payment" },
+        { done: s.agents_active > 0, label: "Create your shopping agent", body: "Sepilo runs it for you, or connect an agent you already use.", href: "/agents" },
         { done: s.rules_active > 0, label: "Set a spending rule", body: "Budget, categories and stores your agent is allowed to use.", href: "/rules" },
-        { done: s.requests > 0, label: "Ask Secay to buy something", body: "Chat with your agent; it suggests products within your rules.", href: "/chat" },
+        { done: s.requests > 0, label: "Ask Sepilo to buy something", body: "Chat with your agent; it suggests products within your rules.", href: "/chat" },
       ]
     : [];
   const setupLeft = steps.filter((x) => !x.done).length;
@@ -57,7 +57,7 @@ export default function HomePage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold tracking-tight">{first ? `Welcome back, ${first}` : "Welcome back"}</h1>
-          <p className="text-sm text-fg-muted">What your agents bought this month, and what Secay stopped.</p>
+          <p className="text-sm text-fg-muted">What your agents bought this month, and what Sepilo stopped.</p>
         </div>
         <Link href="/chat" className="intentlock-btn-primary">
           <MessageSquarePlus className="w-4 h-4" strokeWidth={1.8} />
@@ -137,7 +137,7 @@ export default function HomePage() {
             <EmptyState
               icon={Receipt}
               title="No orders yet"
-              body="When your agent checks out, the order and every check Secay ran on it show up here."
+              body="When your agent checks out, the order and every check Sepilo ran on it show up here."
             />
           </div>
         ) : (

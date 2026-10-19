@@ -122,7 +122,7 @@ export default function OnboardingPage() {
         {part === 0 && (
           <>
             <div className="space-y-1.5">
-              <h1 className="text-2xl font-semibold tracking-tight">What brings you to Secay?</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">What brings you to Sepilo?</h1>
               <p className="text-sm text-fg-muted">We&apos;ll set up your checks around how your agents shop.</p>
             </div>
             <div className="grid gap-2.5">
@@ -166,7 +166,7 @@ export default function OnboardingPage() {
             <div className="space-y-1.5">
               <h1 className="text-2xl font-semibold tracking-tight">When should we ask you?</h1>
               <p className="text-sm text-fg-muted">
-                Secay always blocks hidden instructions and wrong items. This sets when you approve.
+                Sepilo always blocks hidden instructions and wrong items. This sets when you approve.
               </p>
             </div>
             <div className="grid gap-2.5">

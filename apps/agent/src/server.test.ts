@@ -37,3 +37,17 @@ test("hosted run with agent credentials needs the run secret", async () => {
   assert.equal((await run(body, "Bearer wrong")).status, 401);
   assert.equal((await run({ ...body, agent_id: "nope" }, "Bearer s3cret-value")).status, 400);
 });
+
+test("ping answers cron jobs without credentials", async () => {
+  const server = startServer(0, "127.0.0.1");
+  await new Promise((r) => server.once("listening", r));
+  const { port } = server.address() as { port: number };
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/ping`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true });
+    assert.equal((await fetch(`http://127.0.0.1:${port}/ping`, { method: "HEAD" })).status, 200);
+  } finally {
+    server.close();
+  }
+});

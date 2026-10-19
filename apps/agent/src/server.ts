@@ -47,6 +47,8 @@ export function startServer(port = Number(env("PORT") ?? 8808), host = env("HOST
     try {
       const path = (req.url ?? "").split("?")[0];
       if (req.method === "GET" && path === "/health") return send(200, { ok: true });
+      // Uptime / keep-awake cron: always 200, no model or Channel3 calls.
+      if ((req.method === "GET" || req.method === "HEAD") && path === "/ping") return send(200, { ok: true });
       if (req.method === "POST" && path === "/suggest") {
         if (!authorized(req.headers.authorization)) return send(401, { reason: "unauthorized" });
         const raw = await readJson(req, 40_000);

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Optimistic gate on cookie presence only; the API validates the session on every call.
-const PUBLIC = [/^\/api\/auth\//, /^\/store\//, /^\/proof\//];
+const PUBLIC = [/^\/api\/auth\//, /^\/api\/ping$/, /^\/store\//, /^\/proof\//];
 const FLOW: Record<string, string> = { signup: "/signup", onboarding: "/onboarding" };
 
 export function proxy(req: NextRequest) {

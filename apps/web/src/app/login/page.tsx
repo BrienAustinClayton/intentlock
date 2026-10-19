@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import LoginClient from "./LoginClient";
+import { LoginPage } from "@/features/auth/presentation/pages/LoginPage";
 
 export const metadata = { title: "Sign in | Sepilo" };
 
-export default function LoginPage() {
+export default function Page() {
   return (
     <Suspense>
-      <LoginClient />
+      <LoginPage />
     </Suspense>
   );
 }

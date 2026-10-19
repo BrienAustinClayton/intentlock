@@ -121,6 +121,16 @@ def client(db, wallet_key_b64, monkeypatch):
         yield db
 
     fastapi_app.dependency_overrides[get_db] = _override
-    with TestClient(fastapi_app, raise_server_exceptions=True) as c:
+    with TestClient(fastapi_app, raise_server_exceptions=True, headers=ADMIN) as c:
         yield c
     fastapi_app.dependency_overrides.pop(get_db, None)
+
+ADMIN_KEY = "test-operator-key-0123456789"
+ADMIN = {"X-Admin-Key": ADMIN_KEY}
+
+
+@pytest.fixture(autouse=True)
+def _operator_key(monkeypatch):
+    """Operator-only routes are closed unless ADMIN_API_KEY is set; tests use this key."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "ADMIN_API_KEY", ADMIN_KEY)

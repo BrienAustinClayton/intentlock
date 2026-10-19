@@ -43,6 +43,7 @@ from app.pipeline.core import run_pipeline  # noqa: E402
 from app.pipeline.runner import LocalExecutor  # noqa: E402
 from app.pipeline.steps import ALL_STEPS, record_check  # noqa: E402
 from app.signing import b64url_encode, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 ADVISORY_LOCK_KEY = 912345
 PAGES = {
@@ -143,7 +144,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        yield TestClient(fastapi_app)
+        yield TestClient(fastapi_app, headers=ADMIN)
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
 
@@ -812,3 +813,28 @@ def test_refused_saved_paypal_falls_back_to_buyer_in_sandbox(client, db, seed, b
     o = _awaiting(client, db, seed)
     assert ops() == ["authorize", "create_checkout"]
     assert o.status == "awaiting_payment"
+
+
+def test_agent_reads_only_its_own_intent_with_a_signature(client, db, seed):  # client: DB override
+    from app.main import app
+
+    url = f"/intents/{seed.intent.id}"
+    anon = TestClient(app)
+    assert anon.get(url).status_code == 401
+    h = sign_request("GET", f"http://testserver{url}", b"", seed.priv, seed.agent.id)
+    r = anon.get(url, headers=h)
+    assert r.status_code == 200 and r.json()["request_text"] == seed.intent.request_text
+    other = _make_seed(db, name="Ravi")
+    h2 = sign_request("GET", f"http://testserver{url}", b"", other.priv, other.agent.id)
+    assert anon.get(url, headers=h2).status_code == 404
+
+
+def test_lab_test_key_agent_cannot_use_real_checkout(client, db, seed):
+    from app.crypto.vector import VECTOR_PRIVATE_KEY, VECTOR_PUBLIC_KEY
+
+    seed.agent.public_key = VECTOR_PUBLIC_KEY
+    db.commit()
+    raw = json.dumps(body(seed)).encode()
+    h = sign_request("POST", "http://testserver/checkout", raw, VECTOR_PRIVATE_KEY, seed.agent.id)
+    r = client.post("/checkout", content=raw, headers=h)
+    assert r.status_code == 403 and r.json()["error"] == "lab_agent"

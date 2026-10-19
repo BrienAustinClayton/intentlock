@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.agents import _agent_out
 from app.api.approvals import ApprovalRequest, post_approval
 from app.api.mandates import MandateCreate, MandatePatch, _http
-from app.api.orders import _order_to_dict
+from app.api.orders import _order_to_dict, user_order_dict
 from app.api.vault import vault_setup
 from app.auth import current_user
 from app.crypto.keys import load_public_key
@@ -129,7 +129,7 @@ def orders(
 
 @router.get("/orders/{order_id}")
 def order(order_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
-    return _order_to_dict(_own_order(db, user, order_id), include_checks=True)
+    return user_order_dict(_own_order(db, user, order_id))
 
 
 @router.post("/orders/{order_id}/approval")

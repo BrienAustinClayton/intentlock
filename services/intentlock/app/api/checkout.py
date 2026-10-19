@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy.orm import Session
 
+from app.crypto.vector import VECTOR_PUBLIC_KEY
 from app.db import get_db
 from app.deps import require_agent
 from app.ids import new_id
@@ -74,6 +75,9 @@ class VerifiedAgent:
 async def verified_agent(request: Request, db: Session = Depends(get_db)) -> VerifiedAgent:
     t0 = time.perf_counter()
     agent = await require_agent(request, db)  # raises 401 HTTPException
+    if agent.public_key == VECTOR_PUBLIC_KEY:
+        # Lab agents sign with the published RFC 9421 test key: only the lab may use them.
+        raise HTTPException(status_code=403, detail={"error": "lab_agent", "reason": "lab agents can't check out"})
     return VerifiedAgent(agent, max(0, int((time.perf_counter() - t0) * 1000)))
 
 

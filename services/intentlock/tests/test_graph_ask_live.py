@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVICE_ROOT))
@@ -38,7 +39,7 @@ def test_live_voided_today_cites_at_least_two_facts(request, monkeypatch):
 
     from app.main import app
 
-    with TestClient(app) as c:
+    with TestClient(app, headers=ADMIN) as c:
         for s in ("hidden_gift_card", "bot_farm"):
             r = c.post(f"/lab/{s}", json={})
             assert r.status_code == 200, r.text

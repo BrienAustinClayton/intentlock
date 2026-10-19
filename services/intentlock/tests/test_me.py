@@ -476,3 +476,35 @@ def test_delete_chat(client, db, two, chat_agent):
     assert client.delete(f"/me/chats/{chat['id']}", headers=hb).status_code == 404
     assert client.delete(f"/me/chats/{chat['id']}", headers=ha).status_code == 200
     assert db.get(Chat, chat["id"]) is None
+
+
+def test_proof_is_private_to_the_owner_and_checks_hide_internals(client, db, two):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.pipeline.steps import record_check
+    from app.proof import issue_proof
+
+    (alice, ha), (bob, hb) = two
+    agent = _agent(client, ha)
+    intent = client.post("/me/requests", headers=ha, json={"agent_id": agent["id"], "request_text": "kids shoes size 3"}).json()
+    o = _order(db, alice, intent["id"], agent["id"], "captured")
+    record_check(db, o.id, "intent_diff", "pass", {"items": [{"product_id": "p", "title": "Shoe", "explained": "yes",
+                 "issue": "none", "reason": "ok", "p_explained": 0.93, "source": "llm"}], "price_anomaly": False,
+                 "threshold": 0.7}, 5, score=0.93)
+    record_check(db, o.id, "scan_injection", "pass", {"score": 0.02, "jev": 0.01, "threshold": 0.5}, 5, score=0.02)
+    db.commit()
+    issue_proof(db, o.id)
+    db.commit()
+
+    anon = TestClient(app)  # no session, no operator key
+    assert anon.get(f"/orders/{o.id}/proof").status_code == 404
+    assert anon.get(f"/orders/{o.id}/proof", headers=hb).status_code == 404
+    mine = anon.get(f"/orders/{o.id}/proof", headers=ha)
+    assert mine.status_code == 200 and mine.json()["valid"] is True
+
+    checks = {c["step"]: c for c in client.get(f"/me/orders/{o.id}", headers=ha).json()["checks"]}
+    assert checks["intent_diff"]["score"] is None
+    assert checks["intent_diff"]["details"] == {"items": [{"product_id": "p", "title": "Shoe", "explained": "yes",
+                                                           "issue": "none", "reason": "ok"}], "price_anomaly": False}
+    assert checks["scan_injection"]["details"] is None and checks["scan_injection"]["score"] is None

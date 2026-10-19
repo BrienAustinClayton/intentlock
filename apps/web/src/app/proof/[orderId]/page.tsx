@@ -1,7 +1,8 @@
 export const instant = false;
 
-import { getProof } from "@/lib/api";
-import { ApiError } from "@/lib/api";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, callApi } from "@/lib/server/auth";
+import type { GetProofResponse } from "@/lib/types";
 import ProofClient from "./ProofClient";
 
 export default async function ProofPage({
@@ -14,20 +15,15 @@ export default async function ProofPage({
   let errorMessage: string | null = null;
   let proofData = null;
 
-  try {
-    proofData = await getProof(orderId);
-  } catch (err) {
-    if (err instanceof ApiError) {
-      if (err.status === 404) {
-        errorMessage = "Proof not issued yet for this order.";
-      } else if (err.status === 0 && err.code === "config_error") {
-        errorMessage = "API is not configured (NEXT_PUBLIC_API_URL missing).";
-      } else {
-        errorMessage = `Failed to load proof: ${err.message}`;
-      }
-    } else {
-      errorMessage = "An unexpected error occurred.";
-    }
+  // Proofs are private to the order's owner (the attack lab's demo orders are open), so ask as the signed-in user.
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const r = await callApi(`/orders/${encodeURIComponent(orderId)}/proof`, { token });
+  if (r.status === 200) {
+    proofData = r.data as unknown as GetProofResponse;
+  } else if (r.status === 404) {
+    errorMessage = "No proof to show: the order doesn't exist, isn't yours, or its proof isn't issued yet.";
+  } else {
+    errorMessage = `Failed to load proof: ${String(r.data.reason ?? r.status)}`;
   }
 
   if (errorMessage || !proofData) {

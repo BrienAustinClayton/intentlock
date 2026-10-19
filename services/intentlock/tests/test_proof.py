@@ -38,6 +38,7 @@ from app.pipeline import adapters, limits  # noqa: E402
 from app.proof import build_bundle, issue_proof, latest_proof  # noqa: E402
 from app.proof.sign import proof_public_key_b64, sha256_hex, sign_bundle, verify_bundle  # noqa: E402
 from app.signing import b64url_encode, canonical_json, load_private_key, public_key_b64, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 ADVISORY_LOCK_KEY = 912345
 PAGE = REPO_ROOT / "data/lab/pages/normal/normal_01_whole_milk.html"
@@ -142,7 +143,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        yield TestClient(fastapi_app)
+        yield TestClient(fastapi_app, headers=ADMIN)
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
 

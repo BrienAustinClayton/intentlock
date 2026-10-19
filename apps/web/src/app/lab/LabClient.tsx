@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ArrowRight, Check as CheckIcon, TriangleAlert, X } from "lucide-react";
-import { runLabScenario, labReset, getOrder, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { me } from "@/lib/me";
 import { getOrderStatusStyle } from "@/lib/status";
 import type {
   Check,
@@ -27,6 +28,7 @@ export interface ScenarioInfo {
 
 interface FullRunResult {
   order_id: string;
+  order: { checks?: Check[] } | null;
   scenario: string;
   expected_decision: string;
   actual_decision: string;
@@ -442,20 +444,8 @@ export default function LabClient({
     async (scenario: string): Promise<boolean> => {
       updateState(scenario, { phase: "running", error: null, result: null, checks: [] });
       try {
-        const raw = await runLabScenario(scenario as LabScenario, {
-          user_id: DEMO_USER,
-        });
-        const res = raw as unknown as FullRunResult;
-
-        updateState(scenario, { phase: "fetching" });
-
-        let checks: Check[] = [];
-        try {
-          const order = await getOrder(res.order_id);
-          checks = order.checks ?? [];
-        } catch {
-          // non-fatal, checks stay empty
-        }
+        const res = await me.labRun<FullRunResult>(scenario);
+        const checks: Check[] = res.order?.checks ?? [];
 
         updateState(scenario, {
           phase: "done",
@@ -491,7 +481,7 @@ export default function LabClient({
     );
 
     try {
-      await labReset();
+      await me.labReset();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Reset failed";
       setRunAll({ ...IDLE_RUN_ALL, phase: "done", error: msg });

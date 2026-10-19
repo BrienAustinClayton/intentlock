@@ -296,3 +296,14 @@ sandbox.paypal.com › Activity).
 
 Needs: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` from a sandbox app linked to a **US Business** account
 with Vault enabled, a **US Personal** sandbox account to pay with, and `PUBLIC_BASE_URL` set to the API URL.
+
+
+## Access to the API
+
+Every route needs a signed-in user (`/me/*`), an agent signature (`/checkout`, the agent's `GET /intents/{id}`
+and `/schedule/propose`), or the operator key. Operator-only routes (the older `/mandates`, `/orders`,
+`/intents`, `/lab`, `/graph`, `/console`, `/llm` …) need the header `X-Admin-Key: <ADMIN_API_KEY>`; Render
+generates `ADMIN_API_KEY`, and with it unset those routes stay closed. Public on purpose: `/health`, sign-in,
+the PayPal return URLs, `/.well-known/agent-keys`, `/catalog`, `POST /proofs/verify`. Proofs are visible to the
+order's owner (and for the attack lab's demo orders). `/docs` and `/openapi.json` are off unless `API_DOCS=1`.
+`tests/security/test_route_access.py` fails if a new route is reachable without credentials.

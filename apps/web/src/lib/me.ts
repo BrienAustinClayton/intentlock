@@ -180,4 +180,6 @@ export const me = {
   checkout: (chatId: string) => call<{ messages: ChatMessage[]; cart: Cart }>(`chats/${id(chatId)}/checkout`, "POST"),
   payment: () => call<{ connected: boolean }>("payment"),
   paymentSetup: () => call<{ approve_url: string }>("payment/setup", "POST"),
+  labRun: <T,>(scenario: string) => call<T>(`lab/${id(scenario)}`, "POST", {}),
+  labReset: () => call<{ ok: boolean }>("lab/reset", "POST"),
 };

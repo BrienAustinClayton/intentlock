@@ -63,6 +63,7 @@ from app.models import Agent, Check, Intent, Mandate, Nonce, Order, Proof, User 
 from app.paypal import service as paypal_service  # noqa: E402
 from app.pipeline import adapters, limits  # noqa: E402
 from app.signing import b64url_encode, sign_payload, utcnow  # noqa: E402
+ADMIN = {"X-Admin-Key": "test-operator-key-0123456789"}  # same key as conftest._operator_key
 
 pytestmark = pytest.mark.security
 
@@ -159,7 +160,7 @@ def client(db):
 
     fastapi_app.dependency_overrides[get_db] = _override
     try:
-        yield TestClient(fastapi_app)
+        yield TestClient(fastapi_app, headers=ADMIN)
     finally:
         fastapi_app.dependency_overrides.pop(get_db, None)
 

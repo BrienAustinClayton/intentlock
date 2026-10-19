@@ -137,7 +137,8 @@ def api(sig_db):
 
     app.dependency_overrides[get_db] = lambda: sig_db
     try:
-        yield TestClient(app, raise_server_exceptions=False)
+        yield TestClient(app, raise_server_exceptions=False,
+                         headers={"X-Admin-Key": "test-operator-key-0123456789"})
     finally:
         app.dependency_overrides.pop(get_db, None)
 

@@ -119,3 +119,17 @@ async def _run_render(db, order_id, allow_fixtures):
                 pass
         raise RenderUnavailable("timeout_not_started" if timed_out else "run_no_effect")
     return outcome_from_order(order)
+
+
+async def resume_checkout(order_id: str) -> None:
+    """Background task after the buyer approved the payment in PayPal: run the checks, then capture or void."""
+    from app.db import new_session
+    from app.pipeline.core import resume_after_payment
+
+    db = new_session()
+    try:
+        await resume_after_payment(db, order_id, LocalExecutor(db))
+    except Exception:
+        log.exception("pipeline.resume_failed order_id=%s", order_id)
+    finally:
+        db.close()

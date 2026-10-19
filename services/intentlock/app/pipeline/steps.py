@@ -21,7 +21,8 @@ ALL_STEPS = (
     "graph_risk", "decide", "capture_or_void", "build_proof",
 )
 TRANSITIONS = {
-    "received": {"rejected", "authorized", "failed"},
+    "received": {"rejected", "awaiting_payment", "authorized", "failed"},
+    "awaiting_payment": {"authorized", "failed"},
     "authorized": {"checking", "failed"},
     "checking": {"captured", "voided", "pending_approval", "failed"},
     "pending_approval": {"captured", "voided", "failed"},

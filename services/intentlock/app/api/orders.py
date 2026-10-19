@@ -63,6 +63,7 @@ def _order_to_dict(order: Order, *, include_checks: bool = False) -> dict[str, A
         "authorization_id": order.authorization_id,
         "capture_id": order.capture_id,
         "status": order.status,
+        "pay_url": order.payer_action_url if order.status == "awaiting_payment" else None,
         "decision": order.decision,
         "reasons": order.reasons if order.reasons is not None else [],
         "page_urls": order.page_urls,

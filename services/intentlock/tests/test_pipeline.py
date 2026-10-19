@@ -679,3 +679,136 @@ def test_paypal_mock_state_machine():
     with pytest.raises(PayPalError) as e:
         paypal_service.authorize(o3)
     assert e.value.code == "INVALID_AMOUNT"
+
+
+# --------------------------------------------------------------------------- #
+# Buyer approval in PayPal (no saved PayPal account yet)
+# --------------------------------------------------------------------------- #
+@pytest.fixture()
+def buyer_flow(db, monkeypatch):
+    from app.api import paypal_return
+
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "http://testserver")  # also the signed checkout URL
+    monkeypatch.setattr(settings, "WEB_ORIGIN", "https://shop.example.test")
+
+    async def resume(order_id):
+        await core.resume_after_payment(db, order_id, LocalExecutor(db))
+
+    monkeypatch.setattr(paypal_return, "resume_checkout", resume)
+    paypal_service.mock_fail_next("authorize", PayPalError("no_payment_token"))
+
+
+def _awaiting(client, db, seed):
+    j = ok(client, seed)
+    assert (j["status"], j["decision"]) == ("awaiting_payment", None)
+    return order_of(db, j["order_id"])
+
+
+def test_no_saved_paypal_asks_buyer_to_approve(client, db, seed, buyer_flow):
+    o = _awaiting(client, db, seed)
+    assert ops() == ["authorize", "create_checkout"]
+    assert o.paypal_order_id.startswith("MOCK-O-")
+    assert o.payer_action_url.startswith(f"http://testserver/paypal/return?order_id={o.id}")
+    c = checks(db, o.id)
+    assert c["authorize_payment"].result == "flag"
+    assert c["authorize_payment"].details_json["action"] == "buyer_approval"
+    assert "scan_injection" not in c and "capture_or_void" not in c
+    view = client.get(f"/orders/{o.id}").json()
+    assert view["status"] == "awaiting_payment" and view["pay_url"] == o.payer_action_url
+
+
+def test_buyer_approval_authorizes_checks_and_captures(client, db, seed, buyer_flow, monkeypatch):
+    clean_graph(monkeypatch)
+    yes_hook(monkeypatch)
+    o = _awaiting(client, db, seed)
+    r = client.get(f"/paypal/return?order_id={o.id}&token={o.paypal_order_id}&PayerID=X", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == f"https://shop.example.test/orders/{o.id}?paypal=approved"
+    o = order_of(db, o.id)
+    assert (o.status, o.decision) == ("captured", "capture")
+    assert o.authorization_id.startswith("MOCK-A-") and o.capture_id and o.payer_action_url is None
+    assert ops() == ["authorize", "create_checkout", "authorize_approved", "capture"]
+    c = checks(db, o.id)
+    assert c["authorize_payment"].result == "pass"
+    assert c["authorize_payment"].details_json["saved_for_later"] is True
+    assert c["decide"].details_json["decision"] == "capture"
+    db.expire_all()
+    assert db.get(User, seed.user.id).paypal_payment_token.startswith("MOCK-PT-")
+    again = client.get(f"/paypal/return?order_id={o.id}&token={o.paypal_order_id}", follow_redirects=False)
+    assert again.headers["location"].endswith("paypal=done")
+    assert ops().count("authorize_approved") == 1
+
+
+def test_buyer_cancel_keeps_order_waiting(client, db, seed, buyer_flow):
+    o = _awaiting(client, db, seed)
+    r = client.get(f"/paypal/return?order_id={o.id}&token={o.paypal_order_id}&cancelled=1", follow_redirects=False)
+    assert r.headers["location"].endswith("paypal=cancelled")
+    assert order_of(db, o.id).status == "awaiting_payment"
+    assert "authorize_approved" not in ops()
+
+
+def test_buyer_return_with_wrong_token_is_ignored(client, db, seed, buyer_flow):
+    o = _awaiting(client, db, seed)
+    r = client.get(f"/paypal/return?order_id={o.id}&token=SOMEONEELSE", follow_redirects=False)
+    assert r.headers["location"].endswith("paypal=error")
+    assert order_of(db, o.id).status == "awaiting_payment"
+    bad = client.get("/paypal/return?order_id=../../x", follow_redirects=False)
+    assert bad.status_code == 303 and bad.headers["location"] == "https://shop.example.test/orders"
+
+
+def test_buyer_not_yet_approved_stays_waiting(client, db, seed, buyer_flow):
+    o = _awaiting(client, db, seed)
+    paypal_service.mock_fail_next("authorize_approved", PayPalError("ORDER_NOT_APPROVED"))
+    r = client.get(f"/paypal/return?order_id={o.id}&token={o.paypal_order_id}", follow_redirects=False)
+    assert r.headers["location"].endswith("paypal=cancelled")
+    assert order_of(db, o.id).status == "awaiting_payment"
+
+
+def test_buyer_authorization_failure_fails_order(client, db, seed, buyer_flow):
+    o = _awaiting(client, db, seed)
+    paypal_service.mock_fail_next("authorize_approved", PayPalError("INSTRUMENT_DECLINED"))
+    r = client.get(f"/paypal/return?order_id={o.id}&token={o.paypal_order_id}", follow_redirects=False)
+    assert r.headers["location"].endswith("paypal=failed")
+    o = order_of(db, o.id)
+    assert o.status == "failed" and o.reasons == ["Payment could not be authorized"]
+    assert checks(db, o.id)["authorize_payment"].details_json["error"] == "INSTRUMENT_DECLINED"
+
+
+def test_buyer_approval_creation_failure_fails_order(client, db, seed, buyer_flow):
+    paypal_service.mock_fail_next("create_checkout", PayPalError("UNPROCESSABLE_ENTITY"))
+    j = ok(client, seed)
+    assert j["status"] == "failed"
+    assert checks(db, j["order_id"])["authorize_payment"].details_json["error"] == "UNPROCESSABLE_ENTITY"
+
+
+def test_waiting_order_holds_budget_and_expires(client, db, seed, buyer_flow):
+    from app.jobs import expire_approvals
+    from app.mandates import spent_in_period
+
+    o = _awaiting(client, db, seed)
+    assert spent_in_period(db, seed.mandate) == Decimal("3.50")
+    o.created_at = utcnow() - timedelta(hours=4)
+    db.commit()
+    expire_approvals.run_once(db)
+    o = order_of(db, o.id)
+    assert o.status == "failed" and o.payer_action_url is None
+    assert spent_in_period(db, seed.mandate) == Decimal("0")
+
+
+def test_saved_payment_only_counts_real_paypal_ids_in_sandbox(monkeypatch):
+    monkeypatch.setenv("PAYPAL_MODE", "sandbox")
+    assert paypal_service.has_saved_payment("MOCK-PT-ABC") is False
+    assert paypal_service.has_saved_payment("8kk8451t") is True
+    assert paypal_service.has_saved_payment(None) is False
+    monkeypatch.setenv("PAYPAL_MODE", "mock")
+    assert paypal_service.has_saved_payment("MOCK-PT-ABC") is True
+
+
+def test_refused_saved_paypal_falls_back_to_buyer_in_sandbox(client, db, seed, buyer_flow, monkeypatch):
+    paypal_service.reset_mock()
+    monkeypatch.setenv("PAYPAL_MODE", "sandbox")
+    monkeypatch.setattr(paypal_service, "_impl", lambda: None)  # still the mock PayPal, but sandbox rules
+    paypal_service.mock_fail_next("authorize", PayPalError("PAYEE_ACCOUNT_RESTRICTED"))
+    o = _awaiting(client, db, seed)
+    assert ops() == ["authorize", "create_checkout"]
+    assert o.status == "awaiting_payment"

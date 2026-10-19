@@ -9,6 +9,7 @@
 
 export type OrderStatus =
   | "received"
+  | "awaiting_payment"
   | "authorized"
   | "checking"
   | "captured"
@@ -160,6 +161,8 @@ export interface Order {
   shipping_address: Record<string, string>;
   trace_id: string;
   status: OrderStatus;
+  /** PayPal page where the buyer approves the payment (only while awaiting_payment). */
+  pay_url?: string | null;
   decision: Decision | null;
   reasons: string[];
   checks?: Check[];

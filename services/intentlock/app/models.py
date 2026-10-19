@@ -123,6 +123,7 @@ class Order(Base):
     total = Column(Numeric(12, 2), nullable=False)
     currency = Column(String, nullable=False)
     paypal_order_id = Column(String, nullable=True)
+    payer_action_url = Column(String, nullable=True)  # PayPal page where the buyer approves this payment
     authorization_id = Column(String, nullable=True)
     capture_id = Column(String, nullable=True)
     status = Column(String, nullable=False)
@@ -136,7 +137,7 @@ class Order(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('received', 'rejected', 'authorized', 'checking', 'captured', 'voided', 'pending_approval', 'failed')",
+            "status IN ('received', 'awaiting_payment', 'rejected', 'authorized', 'checking', 'captured', 'voided', 'pending_approval', 'failed')",
             name="ck_orders_status",
         ),
         CheckConstraint(

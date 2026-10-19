@@ -24,6 +24,7 @@ from app.ids import new_id
 from app.intents import create_intent, intent_to_dict
 from app.mandates import create_mandate, list_mandates_for_user, mandate_to_dict, revoke_mandate, update_mandate
 from app.models import Agent, AgentRun, Intent, Mandate, Order, User
+from app.paypal import service as paypal
 from app.service_errors import ServiceError
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -32,7 +33,7 @@ BUCKETS: dict[str, tuple[str, ...]] = {
     "needs_approval": ("pending_approval",),
     "paid": ("captured",),
     "blocked": ("voided", "rejected", "failed"),
-    "in_progress": ("received", "authorized", "checking"),
+    "in_progress": ("received", "awaiting_payment", "authorized", "checking"),
 }
 
 
@@ -104,7 +105,7 @@ def summary(user: User = Depends(current_user), db: Session = Depends(get_db)) -
         "agents_active": sum(1 for a in agents if a.revoked_at is None),
         "rules_active": sum(1 for m in rules if m.revoked_at is None),
         "requests": requests,
-        "payment_connected": bool(user.paypal_payment_token),
+        "payment_connected": paypal.has_saved_payment(user.paypal_payment_token),
         "recent_orders": [_order_to_dict(o) for o in recent],
     }
 
@@ -327,7 +328,7 @@ def rerun_request(request_id: str, background: BackgroundTasks, user: User = Dep
 
 @router.get("/payment")
 def payment(user: User = Depends(current_user)) -> dict[str, Optional[bool]]:
-    return {"connected": bool(user.paypal_payment_token)}
+    return {"connected": paypal.has_saved_payment(user.paypal_payment_token)}
 
 
 @router.post("/payment/setup")

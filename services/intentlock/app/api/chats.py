@@ -369,7 +369,9 @@ def checkout_cart(chat_id: str, background: BackgroundTasks, user: User = Depend
         listing = "; ".join(f"{l['qty']} × {l['title']} at ${l['price']}" for l in group)
         request_text = (f"{asked.content if asked else ''}\n\nI approved this cart from {merchant}: {listing}.").strip()[:2000]
         try:
-            intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text)
+            intent = create_intent(db, user_id=user.id, agent_id=agent.id, request_text=request_text,
+                                   approved_cart=[{"product_id": l["product_id"], "qty": l["qty"],
+                                                   "unit_price": l["price"], "merchant": merchant} for l in group])
         except ServiceError as e:
             raise HTTPException(e.status_code, detail={"error": e.error, "reason": e.reason})
         run = hosted_agents.start_run(db, intent.id, user.id, agent.id,

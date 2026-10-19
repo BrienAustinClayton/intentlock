@@ -134,3 +134,18 @@ def _operator_key(monkeypatch):
     """Operator-only routes are closed unless ADMIN_API_KEY is set; tests use this key."""
     from app.config import settings
     monkeypatch.setattr(settings, "ADMIN_API_KEY", ADMIN_KEY)
+
+
+
+@pytest.fixture(autouse=True)
+def _catalog_truth_passthrough(monkeypatch, request):
+    """Checkout re-reads every line from Channel3 (app.product_truth). Tests use fixture products, so the
+    lookup passes lines through unless a test marks itself @pytest.mark.real_catalog_check."""
+    if request.node.get_closest_marker("real_catalog_check"):
+        return
+    from app.api import checkout
+
+    def passthrough(merchant, lines, db=None):
+        return merchant, [dict(l) for l in lines], []
+
+    monkeypatch.setattr(checkout, "verify_cart", passthrough)

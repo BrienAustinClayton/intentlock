@@ -508,3 +508,17 @@ def test_proof_is_private_to_the_owner_and_checks_hide_internals(client, db, two
     assert checks["intent_diff"]["details"] == {"items": [{"product_id": "p", "title": "Shoe", "explained": "yes",
                                                            "issue": "none", "reason": "ok"}], "price_anomaly": False}
     assert checks["scan_injection"]["details"] is None and checks["scan_injection"]["score"] is None
+
+
+def test_agent_cannot_claim_someone_elses_order(client, db, two, hosted):
+    _, reply = hosted
+    (alice, ha), (bob, hb) = two
+    a = _hosted_agent(client, ha)
+    b = _hosted_agent(client, hb)
+    bob_req = client.post("/me/requests", headers=hb, json={"agent_id": b["id"], "request_text": "Bob's socks"}).json()
+    bobs_order = _order(db, bob, bob_req["id"], b["id"], "captured")
+    reply["value"] = _Resp(200, {"order_id": bobs_order.id, "summary": "Bought it.", "errors": []})
+    client.post("/me/requests", headers=ha, json={"agent_id": a["id"], "request_text": "Alice's socks"})
+    run = client.get("/me/requests", headers=ha).json()[0]["run"]
+    assert run["status"] == "failed" and run["order_id"] is None
+    assert "isn't this purchase" in run["summary"]

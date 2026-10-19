@@ -14,7 +14,7 @@ export function AuthFrame({ children, step, showSignOut, wide }: AuthFrameProps)
       <header className="flex items-center justify-between h-16 px-6 sm:px-10">
         <span className="flex items-center gap-3">
           <BrandMark href="/login" />
-          <span className="hidden sm:inline text-xs text-fg-dim">Your secured PayPal agent</span>
+          <span className="hidden sm:inline text-xs tracking-normal text-fg-dim">Your secured PayPal agent</span>
         </span>
         {showSignOut ? (
           <button

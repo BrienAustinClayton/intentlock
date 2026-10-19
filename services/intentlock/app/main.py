@@ -130,7 +130,7 @@ async def health() -> dict[str, Any]:
     return {"ok": True, "version": VERSION}
 
 
-@app.api_route("/ping", methods=["GET", "HEAD"], tags=["health"])
+@app.api_route("/ping", methods=["GET", "HEAD"], tags=["health"], include_in_schema=False)
 async def ping() -> dict[str, bool]:
     """For uptime / keep-awake cron jobs: always 200, no database, no external calls."""
     return {"ok": True}

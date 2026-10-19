@@ -694,3 +694,31 @@ def test_poisoned_listings_and_leaky_replies_never_reach_the_user(client, two, c
     out = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a cable"}).json()["messages"][1]
     assert [p["product_id"] for p in out["products"]] == ["c3_cable"]
     assert out["content"] == SAFE_REPLY
+
+
+@pytest.mark.real_catalog_check
+def test_cart_uses_the_store_checkout_will_confirm(client, db, two, chat_agent, monkeypatch):
+    """Channel3 search can list stores its product endpoint no longer has (seen live: CCbpu2z listed at
+    walmart.com in search, only kohls.com on /v1/products). The cart takes the store checkout will confirm."""
+    from app import product_truth
+
+    offers = {"value": [{"domain": "kohls.com", "availability": "InStock", "price": {"price": 24.99, "currency": "USD"}},
+                        {"domain": "target.com", "availability": "OutOfStock", "price": {"price": 5.0, "currency": "USD"}}]}
+    monkeypatch.setattr(product_truth, "get_product", lambda pid, db=None, fresh=False: {
+        "id": pid, "title": "USB-C cable", "category": {"path": [{"slug": "electronics"}]}, "offers": offers["value"]})
+    calls, suggest, reply = chat_agent
+    (_, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"], budget_amount="100.00")
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a cable"}).json()["messages"][1]
+
+    r = client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "c3_cable"})
+    assert r.status_code == 200, r.text
+    cart = r.json()
+    assert cart["items"][0]["merchant"] == "kohls.com" and cart["items"][0]["price"] == "24.99"
+    assert "baseus.com no longer lists it" in cart["notice"] and "kohls.com at $24.99" in cart["notice"]
+
+    offers["value"] = [{"domain": "kohls.com", "availability": "OutOfStock", "price": {"price": 24.99, "currency": "USD"}}]
+    r = client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "js_url"})
+    assert r.status_code == 409 and r.json()["error"] == "product_unavailable"

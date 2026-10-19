@@ -150,6 +150,14 @@ def _catalog_truth_passthrough(monkeypatch, request):
 
     monkeypatch.setattr(checkout, "verify_cart", passthrough)
 
+    from app.api import chats
+
+    def same_offer(product, db=None):
+        return {"merchant": product.get("merchant"), "price": product.get("price"), "currency": "USD",
+                "url": product.get("url"), "title": product.get("title"), "category": product.get("category")}
+
+    monkeypatch.setattr(chats, "current_offer", same_offer)
+
 
 @pytest.fixture(autouse=True)
 def _cart_review_passthrough(monkeypatch, request):

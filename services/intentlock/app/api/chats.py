@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import hosted_agents, runlog, velocity
 from app.cart_review import review_cart
+from app.product_truth import ProductUnavailable, current_offer
 from app.untrusted import clean, guard_reply, had_hidden_chars, talks_to_agent
 from app.auth import current_user
 from app.db import get_db
@@ -318,16 +319,29 @@ def add_to_cart(chat_id: str, body: CartAdd, user: User = Depends(current_user),
         raise _not_found("product")
     lines = [dict(l) for l in chat.cart or []]  # copies: JSONB changes are only saved when the value differs
     line = next((l for l in lines if l["product_id"] == body.product_id), None)
+    notice = None
     if line is not None:
         line["qty"] = min(line["qty"] + body.qty, 20)
     else:
         if len(lines) >= MAX_CART_LINES:
             raise HTTPException(409, detail={"error": "cart_full", "reason": "Your cart is full. Check out or remove something first."})
-        lines.append({**product, "qty": body.qty})
+        # The cart holds the store and price checkout will confirm (Channel3's product read), not the search card's.
+        try:
+            offer = current_offer(product)
+        except ProductUnavailable as e:
+            raise HTTPException(409, detail={"error": "product_unavailable", "reason": e.reason})
+        if offer["merchant"] != product.get("merchant"):
+            notice = (f"{product.get('merchant')} no longer lists it on Channel3, so it was added from "
+                      f"{offer['merchant']} at ${offer['price']}.")
+        elif offer["price"] != product.get("price"):
+            notice = f"The price is now ${offer['price']} at {offer['merchant']}."
+        lines.append({**product, "merchant": offer["merchant"], "price": offer["price"],
+                      "url": offer["url"] or product.get("url"), "category": offer["category"] or product.get("category"),
+                      "qty": body.qty})
     chat.cart = lines
     chat.updated_at = utcnow()
     db.commit()
-    return _cart_view(chat, chat_rules(db, chat))
+    return {**_cart_view(chat, chat_rules(db, chat)), "notice": notice}
 
 
 class CartQty(BaseModel):

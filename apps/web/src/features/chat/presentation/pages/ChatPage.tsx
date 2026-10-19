@@ -140,6 +140,9 @@ export function ChatPage() {
     if (!activeChatId || addingProductId) return;
     setAddingProductId(`${message.id}:${product.product_id}`);
     addToCart({ chatId: activeChatId, messageId: message.id, productId: product.product_id })
+      .then((cartAfter) => {
+        if (cartAfter.notice) showToast(cartAfter.notice, ToastTypeEnum.Info);
+      })
       .catch(() => {})
       .finally(() => setAddingProductId(null));
   };

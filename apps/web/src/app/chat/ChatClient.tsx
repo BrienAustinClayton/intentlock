@@ -15,7 +15,6 @@ import {
   Loader2,
   Minus,
   Plus,
-  ShieldCheck,
   ShieldPlus,
   ShoppingCart,
   SquarePen,
@@ -114,15 +113,14 @@ function RulePicker({
         aria-haspopup="menu"
         aria-expanded={open}
         title="Spending rule"
-        className={`flex items-center gap-1.5 max-w-[62vw] sm:max-w-sm h-9 px-3 rounded-full text-[13px] text-fg-2 hover:text-fg hover:bg-fg/[0.06] transition ${open ? "bg-fg/[0.06] text-fg" : ""}`}
+        className={`flex items-center gap-1 max-w-[62vw] sm:max-w-sm h-8 pl-3.5 pr-2.5 rounded-full text-[13px] font-medium text-fg-2 hover:text-fg transition ${open ? "bg-fg/[0.12] text-fg" : "bg-fg/[0.07] hover:bg-fg/[0.1]"}`}
       >
-        {busy ? (
-          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
-        ) : (
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
-        )}
         <span className="truncate">{label}</span>
-        <ChevronDown className="w-3.5 h-3.5 shrink-0 text-fg-dim" strokeWidth={1.8} />
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-fg-dim" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 shrink-0 text-fg-dim" strokeWidth={1.8} />
+        )}
       </button>
       {open && (
         <div role="menu" className="popover absolute left-0 bottom-full mb-2 w-80 max-w-[calc(100vw-2rem)] p-1.5 z-50">

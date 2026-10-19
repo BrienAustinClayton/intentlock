@@ -455,30 +455,30 @@ function CartSheet({
         aria-label="Close cart"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Cart"
-        className={`popover !rounded-b-none sm:!rounded-none absolute inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] flex flex-col transition-transform duration-200 ${
-          open ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
+        className={`sheet absolute inset-x-0 bottom-0 max-h-[88dvh] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[420px] flex flex-col overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          open ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-[calc(100%+1rem)]"
         } ${drag?.dy ? "!transition-none" : ""}`}
         style={drag?.dy ? { transform: `translateY(${drag.dy}px)` } : undefined}
       >
-        <div {...swipe} className="sm:hidden flex justify-center pt-2.5 pb-1 touch-none" aria-hidden>
-          <span className="h-1.5 w-10 rounded-full bg-fg/20" />
+        <div {...swipe} className="sm:hidden flex justify-center pt-3 pb-1 touch-none" aria-hidden>
+          <span className="h-1.5 w-11 rounded-full bg-fg/20" />
         </div>
-        <div {...swipe} className="flex items-center justify-between px-5 h-12 sm:h-14 border-b border-line shrink-0 touch-none sm:touch-auto">
-          <div className="text-sm font-semibold">
+        <div {...swipe} className="flex items-center justify-between px-5 h-12 sm:h-16 shrink-0 touch-none sm:touch-auto">
+          <div className="text-base font-semibold">
             Cart <span className="text-fg-dim font-normal">· {cart.count} item{cart.count === 1 ? "" : "s"}</span>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-fg-dim hover:text-fg hover:bg-fg/5" aria-label="Close cart">
+          <button type="button" onClick={onClose} className="p-2 rounded-full bg-fg/[0.06] text-fg-dim hover:text-fg hover:bg-fg/10" aria-label="Close cart">
             <X className="w-4 h-4" strokeWidth={1.8} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
           {cart.items.length === 0 && (
             <div className="py-10 text-center text-sm text-fg-muted">
               <ShoppingCart className="w-6 h-6 mx-auto mb-3 text-fg-dim" strokeWidth={1.8} />
@@ -486,17 +486,17 @@ function CartSheet({
             </div>
           )}
           {stores.map((store) => (
-            <div key={store} className="space-y-3">
-              <div className="text-xs font-medium text-fg-dim">{store}</div>
+            <div key={store} className="rounded-3xl bg-fg/[0.04] p-3 space-y-3">
+              <div className="px-1 text-xs font-medium text-fg-dim">{store}</div>
               {cart.items
                 .filter((l) => l.merchant === store)
                 .map((l) => (
                   <div key={l.product_id} className="flex gap-3">
-                    <Thumb src={l.image} className="h-16 w-16 shrink-0 rounded-lg p-1.5" />
+                    <Thumb src={l.image} className="h-16 w-16 shrink-0 rounded-2xl p-1.5" />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-fg line-clamp-2 leading-snug">{l.title}</div>
                       <div className="mt-1 flex items-center justify-between gap-2">
-                        <div className="inline-flex items-center rounded-lg border border-line">
+                        <div className="inline-flex items-center rounded-full bg-fg/[0.06] px-0.5">
                           <button
                             type="button"
                             onClick={() => onQty(l.product_id, l.qty - 1)}
@@ -525,7 +525,7 @@ function CartSheet({
             </div>
           ))}
           {cart.issues.length > 0 && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+            <div className="rounded-3xl bg-amber-500/10 p-3.5 space-y-1.5">
               {cart.issues.map((i) => (
                 <p key={i} className="flex gap-2 text-xs text-amber-400">
                   <TriangleAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={1.8} />
@@ -536,7 +536,7 @@ function CartSheet({
           )}
         </div>
 
-        <div className="border-t border-line px-5 py-4 space-y-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="px-5 pt-3 space-y-3 shrink-0 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-12px_24px_-12px_var(--drop)]">
           <div className="flex items-center justify-between">
             <span className="text-sm text-fg-muted">Total</span>
             <span className="text-lg font-semibold tabular-nums">{money(cart.total, cart.currency)}</span>
@@ -547,14 +547,14 @@ function CartSheet({
           </p>
           {error && <p role="alert" className="text-xs text-rose-400">{error}</p>}
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1">
+            <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1 !rounded-full h-11">
               Keep shopping
             </button>
             <button
               type="button"
               onClick={onApprove}
               disabled={busy || cart.items.length === 0 || cart.issues.length > 0}
-              className="intentlock-btn-primary flex-[1.4]"
+              className="intentlock-btn-primary flex-[1.4] !rounded-full h-11"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Approve and buy

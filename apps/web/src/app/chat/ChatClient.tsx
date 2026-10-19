@@ -55,13 +55,9 @@ function promptsFor(rules: ChatRule[]): string[] {
   return (out.length ? out : DEFAULT_PROMPTS).slice(0, 4);
 }
 
-function rulesLine(rules: ChatRule[]): string | null {
-  if (!rules.length) return null;
-  const cats = [...new Set(rules.flatMap((r) => r.categories))].map(categoryName);
-  const anyStore = rules.some((r) => r.merchants.includes("*"));
-  const left = rules.reduce((m, r) => Math.max(m, Number(r.remaining)), 0);
-  const catText = cats.length > 2 ? `${cats.slice(0, 2).join(", ")} +${cats.length - 2}` : cats.join(", ");
-  return `${catText} · ${anyStore ? "Any store" : "Selected stores"} · ${money(left, rules[0].currency)} left`;
+function ruleName(r: ChatRule): string {
+  const cats = r.categories.map(categoryName);
+  return cats.length > 2 ? `${cats.slice(0, 2).join(", ")} +${cats.length - 2}` : cats.join(", ");
 }
 
 const PERIOD_TEXT: Record<ChatRule["period"], string> = { month: "a month", week: "a week", once: "once" };
@@ -96,7 +92,13 @@ function RulePicker({
   }, [open]);
 
   const current = options.filter((r) => r.id === selected);
-  const label = rulesLine(current.length ? current : options) ?? "No spending rule yet";
+  const label = current.length
+    ? ruleName(current[0])
+    : options.length > 1
+      ? "All spending rules"
+      : options.length
+        ? ruleName(options[0])
+        : "No spending rule yet";
   const pick = (id: string | null) => {
     setOpen(false);
     if (id !== selected) onPick(id);
@@ -112,7 +114,7 @@ function RulePicker({
         aria-haspopup="menu"
         aria-expanded={open}
         title="Spending rule"
-        className={`flex items-center gap-1.5 max-w-[11rem] sm:max-w-xs px-2 py-1.5 rounded-lg text-xs text-fg-muted hover:text-fg hover:bg-fg/5 transition ${open ? "bg-fg/5 text-fg" : ""}`}
+        className={`flex items-center gap-1.5 max-w-[62vw] sm:max-w-sm h-9 px-3 rounded-full text-[13px] text-fg-2 hover:text-fg hover:bg-fg/[0.06] transition ${open ? "bg-fg/[0.06] text-fg" : ""}`}
       >
         {busy ? (
           <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
@@ -123,7 +125,7 @@ function RulePicker({
         <ChevronDown className="w-3.5 h-3.5 shrink-0 text-fg-dim" strokeWidth={1.8} />
       </button>
       {open && (
-        <div role="menu" className="popover absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.5rem)] p-1.5 z-50">
+        <div role="menu" className="popover absolute left-0 bottom-full mb-2 w-80 max-w-[calc(100vw-2rem)] p-1.5 z-50">
           <div className="px-2.5 pt-2 pb-1.5 text-[11px] font-medium text-fg-dim">Shop under</div>
           <div className="max-h-[60vh] overflow-y-auto">
             {options.length > 1 && (
@@ -146,7 +148,7 @@ function RulePicker({
               >
                 {tick(r.id === selected || options.length === 1)}
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-medium text-fg truncate">{r.categories.map(categoryName).join(", ")}</span>
+                  <span className="block text-[13px] font-medium text-fg truncate">{ruleName(r)}</span>
                   <span className="block text-xs text-fg-dim">
                     {r.merchants.includes("*") ? "Any store" : r.merchants.join(", ")} · {money(r.remaining, r.currency)} left of{" "}
                     {money(r.budget, r.currency)} {PERIOD_TEXT[r.period]}
@@ -193,7 +195,7 @@ function ProductCard({
 }) {
   return (
     <div className="saas-card flex sm:flex-col overflow-hidden">
-      <Thumb src={p.image} className="w-28 shrink-0 sm:w-auto sm:h-36 p-2 sm:p-3" />
+      <Thumb src={p.image} className="w-24 shrink-0 sm:w-auto sm:h-36 p-2 sm:p-3" />
       <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2 p-3">
         <div className="text-sm font-medium text-fg line-clamp-2 leading-snug">{p.title}</div>
         <div className="text-xs text-fg-dim truncate">
@@ -203,9 +205,9 @@ function ProductCard({
         <div className="hidden sm:block">
           <Tag>{p.category_title ?? categoryName(p.category)}</Tag>
         </div>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <span className="text-base font-semibold tabular-nums">{money(p.price, p.currency)}</span>
-          <div className="flex items-center gap-1.5">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1 min-w-0">
+          <span className="text-[15px] sm:text-base font-semibold tabular-nums truncate">{money(p.price, p.currency)}</span>
+          <div className="flex items-center gap-1 shrink-0">
             {p.url && (
               <a href={p.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm !px-2" aria-label="View in store">
                 <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.8} />
@@ -215,7 +217,8 @@ function ProductCard({
               type="button"
               onClick={onAdd}
               disabled={adding}
-              className={`btn-sm whitespace-nowrap ${inCart ? "intentlock-btn-outline" : "intentlock-btn-primary"}`}
+              aria-label={inCart ? `In cart, ${inCart}. Add one more` : "Add to cart"}
+              className={`btn-sm whitespace-nowrap !px-2.5 sm:!px-3 ${inCart ? "intentlock-btn-outline" : "intentlock-btn-primary"}`}
             >
               {adding ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -225,14 +228,12 @@ function ProductCard({
                 <ShoppingCart className="w-3.5 h-3.5" strokeWidth={1.8} />
               )}
               {inCart ? (
-                <span>
+                <span className="tabular-nums">
                   <span className="hidden sm:inline">In cart · </span>
                   {inCart}
                 </span>
               ) : (
-                <span>
-                  Add<span className="hidden sm:inline"> to cart</span>
-                </span>
+                <span className="hidden sm:inline">Add to cart</span>
               )}
             </button>
           </div>
@@ -269,7 +270,7 @@ function PurchaseStatus({ m }: { m: ChatMessage }) {
 }
 
 const Avatar = () => (
-  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
+  <span className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-[13px] font-semibold text-blue-400">
     S
   </span>
 );
@@ -288,7 +289,7 @@ function Message({
   if (m.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-br-md bg-blue-600 px-4 py-2.5 text-sm text-white whitespace-pre-wrap">
+        <div className="max-w-[85%] sm:max-w-[75%] rounded-3xl bg-fg/[0.07] px-4 py-2.5 text-[15px] sm:text-sm leading-relaxed text-fg whitespace-pre-wrap break-words">
           {m.content}
         </div>
       </div>
@@ -297,8 +298,8 @@ function Message({
   return (
     <div className="flex gap-3">
       <Avatar />
-      <div className="min-w-0 flex-1 space-y-3 pt-1">
-        {m.run ? <PurchaseStatus m={m} /> : <p className="text-sm text-fg-2 leading-relaxed whitespace-pre-wrap">{m.content}</p>}
+      <div className="min-w-0 flex-1 space-y-3 sm:pt-1">
+        {m.run ? <PurchaseStatus m={m} /> : <p className="text-[15px] sm:text-sm text-fg-2 leading-relaxed whitespace-pre-wrap">{m.content}</p>}
         {m.products.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {m.products.map((p) => (
@@ -317,15 +318,32 @@ function Message({
   );
 }
 
+const SHOPPING_WORDS = [
+  "Rummaging", "Window-shopping", "Haggling", "Bargain-hunting", "Combing the aisles", "Finagling",
+  "Coupon-clipping", "Price-sleuthing", "Shelf-scouring", "Sniffing out deals", "Wrangling carts", "Whooping",
+  "Squinting at price tags", "Checking your rules",
+];
+const GLYPHS = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+
 function Typing() {
+  const [word, setWord] = useState(() => Math.floor(Math.random() * SHOPPING_WORDS.length));
+  const [glyph, setGlyph] = useState(0);
+  useEffect(() => {
+    const g = setInterval(() => setGlyph((i) => (i + 1) % GLYPHS.length), 120);
+    const w = setInterval(() => setWord((i) => (i + 1 + Math.floor(Math.random() * 3)) % SHOPPING_WORDS.length), 2400);
+    return () => {
+      clearInterval(g);
+      clearInterval(w);
+    };
+  }, []);
   return (
     <div className="flex gap-3">
       <Avatar />
-      <div className="flex items-center gap-1 pt-3" aria-label="Sepilo is searching">
-        {[0, 150, 300].map((d) => (
-          <span key={d} className="h-1.5 w-1.5 rounded-full bg-fg-dim animate-bounce" style={{ animationDelay: `${d}ms` }} />
-        ))}
-        <span className="ml-2 text-xs text-fg-dim">Searching stores…</span>
+      <div className="flex items-center gap-2 pt-1.5 text-sm" role="status" aria-label="Sepilo is searching stores">
+        <span aria-hidden className="w-4 text-center text-base leading-none text-blue-400">
+          {GLYPHS[glyph]}
+        </span>
+        <span aria-hidden className="shimmer-text">{SHOPPING_WORDS[word]}…</span>
       </div>
     </div>
   );
@@ -421,6 +439,15 @@ function CartSheet({
   onApprove: () => void;
 }) {
   const stores = [...new Set(cart.items.map((l) => l.merchant))];
+  const [drag, setDrag] = useState<{ start: number; dy: number } | null>(null);
+  const swipe = {
+    onTouchStart: (e: React.TouchEvent) => setDrag({ start: e.touches[0].clientY, dy: 0 }),
+    onTouchMove: (e: React.TouchEvent) => drag && setDrag({ ...drag, dy: Math.max(0, e.touches[0].clientY - drag.start) }),
+    onTouchEnd: () => {
+      if (drag && drag.dy > 90) onClose();
+      setDrag(null);
+    },
+  };
   return (
     <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
       <button
@@ -428,26 +455,30 @@ function CartSheet({
         aria-label="Close cart"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Cart"
-        className={`popover !rounded-b-none sm:!rounded-none absolute inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] flex flex-col transition-transform duration-200 ${
-          open ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
-        }`}
+        className={`sheet absolute inset-x-0 bottom-0 max-h-[88dvh] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[420px] flex flex-col overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          open ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-[calc(100%+1rem)]"
+        } ${drag?.dy ? "!transition-none" : ""}`}
+        style={drag?.dy ? { transform: `translateY(${drag.dy}px)` } : undefined}
       >
-        <div className="flex items-center justify-between px-5 h-14 border-b border-line shrink-0">
-          <div className="text-sm font-semibold">
+        <div {...swipe} className="sm:hidden flex justify-center pt-3 pb-1 touch-none" aria-hidden>
+          <span className="h-1.5 w-11 rounded-full bg-fg/20" />
+        </div>
+        <div {...swipe} className="flex items-center justify-between px-5 h-12 sm:h-16 shrink-0 touch-none sm:touch-auto">
+          <div className="text-base font-semibold">
             Cart <span className="text-fg-dim font-normal">· {cart.count} item{cart.count === 1 ? "" : "s"}</span>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-fg-dim hover:text-fg hover:bg-fg/5" aria-label="Close cart">
+          <button type="button" onClick={onClose} className="p-2 rounded-full bg-fg/[0.06] text-fg-dim hover:text-fg hover:bg-fg/10" aria-label="Close cart">
             <X className="w-4 h-4" strokeWidth={1.8} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
           {cart.items.length === 0 && (
             <div className="py-10 text-center text-sm text-fg-muted">
               <ShoppingCart className="w-6 h-6 mx-auto mb-3 text-fg-dim" strokeWidth={1.8} />
@@ -455,17 +486,17 @@ function CartSheet({
             </div>
           )}
           {stores.map((store) => (
-            <div key={store} className="space-y-3">
-              <div className="text-xs font-medium text-fg-dim">{store}</div>
+            <div key={store} className="rounded-3xl bg-fg/[0.04] p-3 space-y-3">
+              <div className="px-1 text-xs font-medium text-fg-dim">{store}</div>
               {cart.items
                 .filter((l) => l.merchant === store)
                 .map((l) => (
                   <div key={l.product_id} className="flex gap-3">
-                    <Thumb src={l.image} className="h-16 w-16 shrink-0 rounded-lg p-1.5" />
+                    <Thumb src={l.image} className="h-16 w-16 shrink-0 rounded-2xl p-1.5" />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-fg line-clamp-2 leading-snug">{l.title}</div>
                       <div className="mt-1 flex items-center justify-between gap-2">
-                        <div className="inline-flex items-center rounded-lg border border-line">
+                        <div className="inline-flex items-center rounded-full bg-fg/[0.06] px-0.5">
                           <button
                             type="button"
                             onClick={() => onQty(l.product_id, l.qty - 1)}
@@ -494,7 +525,7 @@ function CartSheet({
             </div>
           ))}
           {cart.issues.length > 0 && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+            <div className="rounded-3xl bg-amber-500/10 p-3.5 space-y-1.5">
               {cart.issues.map((i) => (
                 <p key={i} className="flex gap-2 text-xs text-amber-400">
                   <TriangleAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={1.8} />
@@ -505,7 +536,7 @@ function CartSheet({
           )}
         </div>
 
-        <div className="border-t border-line px-5 py-4 space-y-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="px-5 pt-3 space-y-3 shrink-0 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-12px_24px_-12px_var(--drop)]">
           <div className="flex items-center justify-between">
             <span className="text-sm text-fg-muted">Total</span>
             <span className="text-lg font-semibold tabular-nums">{money(cart.total, cart.currency)}</span>
@@ -516,14 +547,14 @@ function CartSheet({
           </p>
           {error && <p role="alert" className="text-xs text-rose-400">{error}</p>}
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1">
+            <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1 !rounded-full h-11">
               Keep shopping
             </button>
             <button
               type="button"
               onClick={onApprove}
               disabled={busy || cart.items.length === 0 || cart.issues.length > 0}
-              className="intentlock-btn-primary flex-[1.4]"
+              className="intentlock-btn-primary flex-[1.4] !rounded-full h-11"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Approve and buy
@@ -772,7 +803,6 @@ export default function ChatClient() {
               <span className="truncate">{view?.agent?.name ?? "Your shopping agent"}</span>
             </div>
           </div>
-          <RulePicker options={ruleOptions} selected={ruleId} busy={ruleBusy} onPick={pickRule} />
           <button
             type="button"
             onClick={() => setCartOpen(true)}
@@ -839,16 +869,25 @@ export default function ChatClient() {
               <button
                 type="button"
                 onClick={() => setCartOpen(true)}
-                className="mb-2 w-full flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm text-blue-400"
+                className="mb-2 w-full flex items-center gap-3 rounded-2xl border border-line bg-input px-2.5 py-2 text-left hover:border-blue-500/40 transition"
               >
-                <span className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" strokeWidth={1.8} />
-                  {cart.count} in cart · {money(cart.total, cart.currency)}
+                <span className="flex -space-x-2 shrink-0">
+                  {cart.items.slice(0, 3).map((l) => (
+                    <Thumb key={l.product_id} src={l.image} className="h-9 w-9 rounded-lg p-1 ring-2 ring-input" />
+                  ))}
                 </span>
-                <span className="font-medium">Review and approve</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-fg truncate">
+                    {cart.count} item{cart.count === 1 ? "" : "s"} · {money(cart.total, cart.currency)}
+                  </span>
+                  <span className={`block text-xs truncate ${cart.issues.length ? "text-amber-400" : "text-fg-dim"}`}>
+                    {cart.issues.length ? "Needs a look before you approve" : "Nothing is bought until you approve"}
+                  </span>
+                </span>
+                <span className="intentlock-btn-primary btn-sm shrink-0">Review</span>
               </button>
             )}
-            <div className="flex items-end gap-2 rounded-2xl border border-line bg-input p-2 focus-within:border-blue-500/60 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
+            <div className="rounded-3xl border border-line bg-input p-2 focus-within:border-blue-500/60 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -866,11 +905,14 @@ export default function ChatClient() {
                   }
                 }}
                 placeholder="Ask Sepilo to find something…"
-                className="input-bare flex-1 resize-none bg-transparent px-2 py-1.5 text-[16px] sm:text-sm text-fg placeholder:text-fg-dim"
+                className="input-bare block w-full resize-none bg-transparent px-2.5 pt-1.5 pb-2 text-[16px] sm:text-sm text-fg placeholder:text-fg-dim"
               />
-              <button type="submit" disabled={sending || !draft.trim()} className="intentlock-btn-primary !p-2 !rounded-xl" aria-label="Send">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2} />}
-              </button>
+              <div className="flex items-center justify-between gap-2">
+                <RulePicker options={ruleOptions} selected={ruleId} busy={ruleBusy} onPick={pickRule} />
+                <button type="submit" disabled={sending || !draft.trim()} className="intentlock-btn-primary !p-0 w-9 h-9 !rounded-full shrink-0" aria-label="Send">
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2} />}
+                </button>
+              </div>
             </div>
             <p className="mt-2 hidden sm:block text-center text-[11px] text-fg-dim">
               Sepilo only suggests what your spending rules allow, and buys nothing until you approve your cart.

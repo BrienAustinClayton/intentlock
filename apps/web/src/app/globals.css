@@ -395,3 +395,20 @@ input[type="text"], input[type="search"], input[type="number"], textarea, select
   outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }
+
+/* Chat "thinking" word: a soft highlight sweeping across the text. */
+.shimmer-text {
+  color: transparent;
+  background: linear-gradient(90deg, var(--color-fg-dim) 0%, var(--color-fg-dim) 40%, var(--color-fg) 50%, var(--color-fg-dim) 60%, var(--color-fg-dim) 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer-text 2s linear infinite;
+}
+@keyframes shimmer-text {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text { animation: none; color: var(--color-fg-dim); background: none; }
+}

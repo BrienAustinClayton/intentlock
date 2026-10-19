@@ -131,12 +131,12 @@ export function useChatSessions(activeChatId: string | null = null) {
   });
 
   const addToCartMutation = useMutation<
-    ChatCartState,
+    ChatCartState & { notice?: string | null },
     Error,
     { chatId: string; messageId: string; productId: string }
   >({
     mutationFn: ({ chatId, messageId, productId }) =>
-      makeApiCall<ChatCartState, { message_id: string; product_id: string }>({
+      makeApiCall<ChatCartState & { notice?: string | null }, { message_id: string; product_id: string }>({
         endpoint: `/api/me/chats/${encodeURIComponent(chatId)}/cart`,
         method: HttpMethodEnum.Post,
         payload: { message_id: messageId, product_id: productId },

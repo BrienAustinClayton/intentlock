@@ -106,3 +106,45 @@ def verify_cart(merchant: str, lines: list[dict], db=None) -> tuple[str, list[di
     if reasons:
         raise CartNotVerified(reasons)
     return store, out, pages[:10]
+
+
+class ProductUnavailable(Exception):
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def current_offer(product: dict[str, Any], db=None) -> dict[str, Any]:
+    """The store and price checkout will confirm for a product, read now from Channel3's product endpoint.
+
+    Search results can list stores the product endpoint no longer has, so the cart takes its store and price
+    from here: the suggested store when it is still listed in stock, otherwise the cheapest in-stock offer.
+    Returns {"merchant", "price", "currency", "url", "title", "category"}.
+    """
+    try:
+        raw = get_product(str(product.get("product_id") or ""), db=db, fresh=True)
+    except ValueError:
+        raise ProductUnavailable("This product can't be checked.") from None
+    except httpx.HTTPStatusError as e:
+        raise ProductUnavailable("This product isn't on Channel3 any more." if e.response.status_code == 404
+                                 else "Couldn't check this product with Channel3. Try again.") from None
+    except Channel3Unavailable as e:
+        raise ProductUnavailable("Sepilo has used today's product-check allowance. Try again tomorrow."
+                                 if e.reason == "budget" else
+                                 "Couldn't check this product with Channel3 right now. Try again in a minute.") from None
+    offers = []
+    for o in raw.get("offers") or []:
+        if not isinstance(o, dict) or str(o.get("availability") or "InStock") != "InStock":
+            continue
+        store = domain_of(o.get("domain"))
+        price_obj = o.get("price") if isinstance(o.get("price"), dict) else {}
+        price = _money(price_obj.get("price"))
+        currency = str(price_obj.get("currency") or "USD").upper()
+        if store and price is not None and price > 0 and currency == "USD":
+            offers.append((store, price, _https(o.get("url"))))
+    if not offers:
+        raise ProductUnavailable("No store has this product in stock on Channel3 right now.")
+    preferred = domain_of(product.get("merchant"))
+    store, price, url = next((o for o in offers if o[0] == preferred), min(offers, key=lambda o: o[1]))
+    return {"merchant": store, "price": f"{price:.2f}", "currency": "USD", "url": url,
+            "title": str(raw.get("title") or "")[:300], "category": _top_category(raw)}

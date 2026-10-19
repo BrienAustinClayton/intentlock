@@ -1,0 +1,42 @@
+name: Keep awake
+
+# Render free web services sleep after 15 minutes without traffic, and the first
+# request after that waits ~30 s for a cold start. Ping the API and the agent
+# every 5 minutes so they stay warm. GitHub can delay scheduled runs under load.
+#
+# Override the URLs with repository variables API_URL / AGENT_URL if they change.
+# Turn it off with: gh workflow disable keep-awake.yml
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-awake
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            url: ${{ vars.API_URL || 'https://intentlock-api.onrender.com' }}
+          - name: agent
+            url: ${{ vars.AGENT_URL || 'https://intentlock-agent.onrender.com' }}
+    name: ping ${{ matrix.name }}
+    steps:
+      - name: GET /health
+        env:
+          URL: ${{ matrix.url }}/health
+        # A cold start can take up to a minute, so allow a long timeout and a few retries.
+        run: |
+          curl --fail --silent --show-error --max-time 90 \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            -o /dev/null -w "$URL %{http_code} in %{time_total}s\n" "$URL"

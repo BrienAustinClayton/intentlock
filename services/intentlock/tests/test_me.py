@@ -435,7 +435,7 @@ def test_cart_add_update_and_rule_checks(client, db, two, chat_agent):
     cart = add("c3_chair").json()
     assert any("Office Chair" in i for i in cart["issues"])
     r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha)
-    assert r.status_code == 409 and r.json()["error"] == "cart_not_allowed"
+    assert r.status_code == 409 and r.json()["error"] == "cart_blocked" and r.json()["review"]["checks"][0]["status"] == "block"
     cart = client.patch(f"/me/chats/{chat['id']}/cart/c3_chair", headers=ha, json={"qty": 0}).json()
     assert [i["product_id"] for i in cart["items"]] == ["c3_cable"]
     cart = add("c3_hub").json()
@@ -522,3 +522,41 @@ def test_agent_cannot_claim_someone_elses_order(client, db, two, hosted):
     run = client.get("/me/requests", headers=ha).json()[0]["run"]
     assert run["status"] == "failed" and run["order_id"] is None
     assert "isn't this purchase" in run["summary"]
+
+
+
+@pytest.mark.real_cart_review
+def test_checkout_runs_cart_check_and_needs_confirmation_for_warnings(client, db, two, chat_agent, monkeypatch):
+    from app import cart_review
+    from app.jev import Answer
+
+    calls, suggest, reply = chat_agent
+    (alice, ha), _ = two
+    a = _hosted_agent(client, ha)
+    _rule(client, ha, a["id"], budget_amount="100.00")
+    monkeypatch.setattr(cart_review, "verify_cart", lambda m, lines, db=None: (m, lines, []))
+    p = {"match": 0.1, "steer": 0.0}
+    monkeypatch.setattr(cart_review.jev, "decide", lambda s, qs, step, **k: {
+        q: Answer(type="noul", engine="jev",
+                  noul=p["match"] if q.startswith("match_") else p["steer"] if q.startswith("steer_") else 0.9)
+        for q in qs})
+    chat = client.post("/me/chats", headers=ha, json={}).json()
+    shown = client.post(f"/me/chats/{chat['id']}/messages", headers=ha, json={"content": "a cable"}).json()["messages"][1]
+    client.post(f"/me/chats/{chat['id']}/cart", headers=ha, json={"message_id": shown["id"], "product_id": "c3_cable"})
+
+    r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha)
+    assert r.status_code == 409 and r.json()["error"] == "needs_confirmation"
+    assert r.json()["review"]["decision"] == "confirm"
+    assert not [u for u, _ in calls if u.endswith("/run")]  # nothing bought yet
+
+    p["steer"] = 0.95  # Jev says the listing talks to an AI: blocked, even with confirm
+    r = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha, json={"confirm": True})
+    assert r.status_code == 409 and r.json()["error"] == "cart_blocked"
+
+    p["steer"] = 0.0
+    reply["value"] = _Resp(200, {"order_id": None, "summary": "Out of stock now.", "errors": []})
+    out = client.post(f"/me/chats/{chat['id']}/checkout", headers=ha, json={"confirm": True}).json()
+    assert out["review"]["decision"] == "confirm" and len(out["messages"]) == 1
+    run = next(kw["json"] for u, kw in calls if u.endswith("/run"))
+    intent = db.get(Intent, run["intent_id"])
+    assert intent.approved_cart == [{"product_id": "c3_cable", "qty": 1, "unit_price": "9.99", "merchant": "baseus.com"}]

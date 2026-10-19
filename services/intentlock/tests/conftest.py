@@ -149,3 +149,20 @@ def _catalog_truth_passthrough(monkeypatch, request):
         return merchant, [dict(l) for l in lines], []
 
     monkeypatch.setattr(checkout, "verify_cart", passthrough)
+
+
+@pytest.fixture(autouse=True)
+def _cart_review_passthrough(monkeypatch, request):
+    """Chat checkout runs app.cart_review (Channel3 + Jev). Other tests get an "ok" review unless they mark
+    themselves @pytest.mark.real_cart_review and fake Channel3/Jev themselves."""
+    if request.node.get_closest_marker("real_cart_review"):
+        return
+    from app.api import chats
+
+    def ok(request_text, lines, rule_issues):
+        status = "block" if rule_issues else "pass"
+        return {"decision": "block" if rule_issues else "ok",
+                "checks": [{"key": "rules", "label": "Within your spending rules", "status": status,
+                            "detail": " ".join(rule_issues)}]}
+
+    monkeypatch.setattr(chats, "review_cart", ok)

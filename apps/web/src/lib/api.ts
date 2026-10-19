@@ -47,7 +47,9 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
-    message: string
+    message: string,
+    /** Full error body, for errors that carry more than a reason (e.g. a cart check). */
+    public readonly data: Record<string, unknown> = {}
   ) {
     super(message);
     this.name = "ApiError";

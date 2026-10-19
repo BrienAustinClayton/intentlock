@@ -23,6 +23,12 @@ export interface Summary {
   recent_orders: Order[];
 }
 
+/** Sepilo's check of a cart before anything is bought: code checks plus Jev's second opinion. */
+export interface CartReview {
+  decision: "ok" | "confirm" | "block";
+  checks: { key: string; label: string; status: "pass" | "warn" | "block"; detail: string }[];
+}
+
 export interface AgentRunView {
   id: string;
   status: "running" | "ordered" | "failed";
@@ -142,7 +148,7 @@ async function call<T>(path: string, method = "GET", body?: unknown): Promise<T>
   }
   if (!res.ok) {
     const reason = typeof data.reason === "string" ? data.reason : "Something went wrong.";
-    throw new ApiError(res.status, typeof data.error === "string" ? data.error : "http_error", reason);
+    throw new ApiError(res.status, typeof data.error === "string" ? data.error : "http_error", reason, data);
   }
   return (Array.isArray(data.__list) ? data.__list : data) as T;
 }
@@ -177,7 +183,9 @@ export const me = {
     call<Cart>(`chats/${id(chatId)}/cart`, "POST", b),
   setCartQty: (chatId: string, productId: string, qty: number) =>
     call<Cart>(`chats/${id(chatId)}/cart/${id(productId)}`, "PATCH", { qty }),
-  checkout: (chatId: string) => call<{ messages: ChatMessage[]; cart: Cart }>(`chats/${id(chatId)}/checkout`, "POST"),
+  checkout: (chatId: string, confirm = false) =>
+    call<{ messages: ChatMessage[]; cart: Cart; review: CartReview }>(
+      `chats/${id(chatId)}/checkout`, "POST", confirm ? { confirm: true } : undefined),
   payment: () => call<{ connected: boolean }>("payment"),
   paymentSetup: () => call<{ approve_url: string }>("payment/setup", "POST"),
   labRun: <T,>(scenario: string) => call<T>(`lab/${id(scenario)}`, "POST", {}),

@@ -7,6 +7,7 @@
 import { channel3Get, channel3Search, moneyString, toCents, type Product } from "./catalog.ts";
 import { currentRun, type CheckoutResult } from "./context.ts";
 import { chatJson } from "./llm.ts";
+import { safeListings } from "./untrusted.ts";
 import { remember, submitCheckout } from "./tools.ts";
 
 export class ShopFailure extends Error {}
@@ -91,7 +92,8 @@ export async function shop(intentId: string, request: string): Promise<ShopOutco
     throw new ShopFailure(`Channel3 has no in-stock products for "${plan.query}".`);
   }
 
-  const candidates = found.slice(0, 10);
+  const candidates = safeListings(found).slice(0, 10);
+  if (candidates.length === 0) throw new ShopFailure(`The listings Channel3 found for "${plan.query}" looked unsafe, so none were bought.`);
   const prompt =
     `<request>\n${request.slice(0, 1500)}\n</request>\n` +
     `Price limit per item: ${plan.max_unit_price ? usd(moneyString(plan.max_unit_price)) : "none"}. Quantity: ${plan.quantity}.\n` +

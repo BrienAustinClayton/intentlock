@@ -24,11 +24,13 @@ import {
   X,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
+import { ApiError } from "@/lib/api";
 import { NavDrawer } from "@/components/Sidebar";
 import { OrderStatusTag, Tag, categoryName, money, when } from "@/components/ui";
 import {
   me,
   type Cart,
+  type CartReview,
   type ChatMessage,
   type ChatProduct,
   type ChatRule,
@@ -431,6 +433,37 @@ function HistoryPanel({
   );
 }
 
+const CHECK_ICON = {
+  pass: <Check className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} />,
+  warn: <TriangleAlert className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.8} />,
+  block: <X className="w-3.5 h-3.5 text-rose-400" strokeWidth={2} />,
+};
+
+function CartCheck({ review }: { review: CartReview }) {
+  const tone =
+    review.decision === "block" ? "bg-rose-500/10" : review.decision === "confirm" ? "bg-amber-500/10" : "bg-emerald-500/10";
+  return (
+    <div className={`rounded-3xl p-3.5 space-y-1.5 ${tone}`} role="status">
+      <p className="text-xs font-semibold">
+        {review.decision === "block"
+          ? "Sepilo blocked this cart"
+          : review.decision === "confirm"
+            ? "Check these before buying"
+            : "Sepilo checked this cart"}
+      </p>
+      {review.checks.map((c) => (
+        <div key={c.key} className="flex gap-2 text-xs">
+          <span className="mt-0.5 shrink-0">{CHECK_ICON[c.status]}</span>
+          <span>
+            <span className="text-fg-2">{c.label}</span>
+            {c.detail && c.status !== "pass" ? <span className="block text-fg-muted">{c.detail}</span> : null}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CartSheet({
   open,
   cart,
@@ -439,6 +472,7 @@ function CartSheet({
   onClose,
   onQty,
   onApprove,
+  review,
 }: {
   open: boolean;
   cart: Cart;
@@ -446,7 +480,8 @@ function CartSheet({
   error: string | null;
   onClose: () => void;
   onQty: (productId: string, qty: number) => void;
-  onApprove: () => void;
+  onApprove: (confirm: boolean) => void;
+  review: CartReview | null;
 }) {
   const stores = [...new Set(cart.items.map((l) => l.merchant))];
   const [drag, setDrag] = useState<{ start: number; dy: number } | null>(null);
@@ -555,19 +590,20 @@ function CartSheet({
             {cart.stores > 1 ? `Sepilo places one order per store (${cart.stores} stores). ` : ""}
             Each order is checked against what you asked for and your spending rules before PayPal pays.
           </p>
-          {error && <p role="alert" className="text-xs text-rose-400">{error}</p>}
+          {review && <CartCheck review={review} />}
+          {error && !review && <p role="alert" className="text-xs text-rose-400">{error}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="intentlock-btn-outline flex-1 !rounded-full h-11">
               Keep shopping
             </button>
             <button
               type="button"
-              onClick={onApprove}
-              disabled={busy || cart.items.length === 0 || cart.issues.length > 0}
+              onClick={() => onApprove(review?.decision === "confirm")}
+              disabled={busy || cart.items.length === 0 || cart.issues.length > 0 || review?.decision === "block"}
               className="intentlock-btn-primary flex-[1.4] !rounded-full h-11"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Approve and buy
+              {busy ? "Checking cart…" : review?.decision === "confirm" ? "Buy anyway" : "Approve and buy"}
             </button>
           </div>
         </div>
@@ -604,6 +640,7 @@ export default function ChatClient() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartBusy, setCartBusy] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
+  const [review, setReview] = useState<CartReview | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tmpSeq = useRef(0);
@@ -743,6 +780,7 @@ export default function ChatClient() {
     if (!view) return;
     setCartBusy(true);
     setCartError(null);
+    setReview(null); // the cart changed: check it again on approve
     try {
       const c = await me.setCartQty(view.id, productId, Math.max(0, qty));
       setThread((t) => (t ? { ...t, cart: c } : t));
@@ -753,15 +791,18 @@ export default function ChatClient() {
     }
   }
 
-  async function approve() {
+  async function approve(confirm = false) {
     if (!view) return;
     setCartBusy(true);
     setCartError(null);
     try {
-      const out = await me.checkout(view.id);
+      const out = await me.checkout(view.id, confirm);
       setThread((t) => (t ? { ...t, cart: out.cart, messages: [...t.messages, ...out.messages] } : t));
+      setReview(null);
       setCartOpen(false);
     } catch (e) {
+      const r = e instanceof ApiError ? (e.data.review as CartReview | undefined) : undefined;
+      setReview(r ?? null);
       setCartError((e as Error).message);
     } finally {
       setCartBusy(false);
@@ -951,6 +992,7 @@ export default function ChatClient() {
         onClose={() => setCartOpen(false)}
         onQty={setQty}
         onApprove={approve}
+        review={review}
       />
     </div>
   );

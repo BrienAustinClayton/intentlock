@@ -1,7 +1,10 @@
-import type { Metadata } from "next";
+import { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import { ToastContainer } from "@/shared/presentation/components/ToastContainer";
+import { QueryProvider } from "@/shared/providers/QueryProvider";
+import { ProviderProps } from "@/shared/types";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -21,11 +24,7 @@ export const metadata: Metadata = {
 
 const THEME_INIT = `try{var t=localStorage.getItem("il-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: ProviderProps) {
   return (
     <html
       lang="en"
@@ -37,7 +36,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="min-h-full font-sans bg-canvas text-fg flex">
-        <AppShell>{children}</AppShell>
+        <QueryProvider>
+          <AppShell>{children}</AppShell>
+          <ToastContainer />
+        </QueryProvider>
       </body>
     </html>
   );

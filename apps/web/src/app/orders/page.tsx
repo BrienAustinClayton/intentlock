@@ -1,12 +1,7 @@
-import { Suspense } from "react";
-import OrdersClient from "./OrdersClient";
+import { OrdersListPage } from "@/features/orders/presentation/pages/OrdersListPage";
 
 export const metadata = { title: "Orders | Sepilo" };
 
-export default function OrdersPage() {
-  return (
-    <Suspense>
-      <OrdersClient />
-    </Suspense>
-  );
+export default function Page() {
+  return <OrdersListPage />;
 }

@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import ChatClient from "./ChatClient";
+import { ChatPage } from "@/features/chat/presentation/pages/ChatPage";
 
 export const metadata = { title: "Shopping assistant | Sepilo" };
 
-export default function ChatPage() {
+export default function Page() {
   return (
     <Suspense>
-      <ChatClient />
+      <ChatPage />
     </Suspense>
   );
 }

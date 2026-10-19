@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import PaymentClient from "./PaymentClient";
+import { PaymentPage } from "@/features/payment/presentation/pages/PaymentPage";
 
 export const metadata = { title: "Payment method | Sepilo" };
 
-export default function PaymentPage() {
+export default function Page() {
   return (
     <Suspense>
-      <PaymentClient />
+      <PaymentPage />
     </Suspense>
   );
 }
